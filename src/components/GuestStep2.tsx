@@ -99,6 +99,24 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
   const activeTotalPrice =
     activeScenario?.totalPrice ?? bundle.totalPrice;
 
+  const contextCtaLabel =
+    visitTiming === 'pre_visit'
+      ? lang === 'ko'
+        ? '이 와인의 스토리 · 포도밭 미리 살펴보기'
+        : 'Preview Wine Story & Vineyard'
+      : t.chooseWineCta;
+
+  const contextPriceLabel =
+    bundle.sourceMode === 'my_cellar'
+      ? lang === 'ko'
+        ? '셀러 추정가'
+        : 'Cellar Est.'
+      : bundle.sourceMode === 'wine_shop'
+        ? lang === 'ko'
+          ? '와인샵 예상가'
+          : 'Shop Price'
+        : undefined;
+
   const isEmpty =
     (bundle.kind === 'single_or_alacarte' &&
       (!bundle.singleItems || bundle.singleItems.length === 0)) ||
@@ -547,6 +565,8 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
             highlights={
               lang === 'ko' ? item.pairingPointsKo : item.pairingPointsEn
             }
+            ctaLabel={contextCtaLabel}
+            priceLabel={contextPriceLabel}
             onChoose={() => onSelectWineForDrinking(item.wine)}
           />
         ))}
@@ -588,6 +608,8 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
             highlights={
               lang === 'ko' ? item.pairingPointsKo : item.pairingPointsEn
             }
+            ctaLabel={contextCtaLabel}
+            priceLabel={contextPriceLabel}
             onChoose={() => onSelectWineForDrinking(item.wine)}
           />
         ))}
@@ -633,6 +655,8 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
                   : slot.bridgeReasonEn
             }
             tastingTip={lang === 'ko' ? slot.tastingTipKo : slot.tastingTipEn}
+            ctaLabel={contextCtaLabel}
+            priceLabel={contextPriceLabel}
             onChoose={() => onSelectWineForDrinking(slot.wine)}
           />
         ))}
@@ -667,6 +691,7 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
               ? bundle.extraGlass.pairingPointsKo
               : bundle.extraGlass.pairingPointsEn
           }
+          ctaLabel={contextCtaLabel}
           onChoose={() => onSelectWineForDrinking(bundle.extraGlass!.wine)}
         />
       )}
@@ -694,6 +719,8 @@ interface WineCardProps {
   commentary: string;
   tastingTip?: string;
   highlights?: string[];
+  ctaLabel?: string;
+  priceLabel?: string;
   onChoose: () => void;
 }
 
@@ -711,6 +738,8 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
   commentary,
   tastingTip,
   highlights,
+  ctaLabel,
+  priceLabel,
   onChoose,
 }) => {
   const t = TRANSLATIONS[lang];
@@ -826,7 +855,7 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
                 ? lang === 'ko'
                   ? '지참 와인'
                   : 'BYOB'
-                : t.venuePriceLabel}
+                : priceLabel ?? t.venuePriceLabel}
             </div>
             <div className="text-[22px] font-bold tabular-nums text-[var(--text-primary)]">
               {isCorkage
@@ -890,7 +919,7 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
           data-surface="accent"
           className="btn-accent w-full rounded-2xl px-5 py-3.5 text-[14px] font-semibold transition-colors"
         >
-          {t.chooseWineCta}
+          {ctaLabel ?? t.chooseWineCta}
         </button>
       </div>
     </article>
