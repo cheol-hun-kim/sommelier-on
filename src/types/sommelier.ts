@@ -1,6 +1,7 @@
 export type Language = 'ko' | 'en';
 export type ThemeMode = 'ivory' | 'dark';
 export type AppMode = 'guest' | 'admin';
+export type SpeechStyle = 'friendly' | 'expert';
 
 export type WineCategory = 'sparkling' | 'white' | 'rose_orange' | 'red' | 'dessert';
 
@@ -208,6 +209,10 @@ export interface SingleWineRecommendation {
   valueTier: ValueTier;
   commentaryKo: string;
   commentaryEn: string;
+  expertCommentaryKo: string;
+  expertCommentaryEn: string;
+  tastingTipKo: string;
+  tastingTipEn: string;
   pairingPointsKo: string[];
   pairingPointsEn: string[];
 }
@@ -223,6 +228,10 @@ export interface CourseBottleSlotRecommendation {
   valueTier: ValueTier;
   bridgeReasonKo: string;
   bridgeReasonEn: string;
+  expertBridgeReasonKo: string;
+  expertBridgeReasonEn: string;
+  tastingTipKo: string;
+  tastingTipEn: string;
 }
 
 export interface CourseScenario {

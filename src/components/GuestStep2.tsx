@@ -12,10 +12,12 @@ import type {
   Language,
   PairingRecommendationBundle,
   SommelierPersona,
+  SpeechStyle,
   ValueTier,
   WineItem,
 } from '../types/sommelier';
 import { CATEGORY_LABELS, TRANSLATIONS, formatKrw } from '../i18n/translations';
+import { GlossaryText } from './GlossaryText';
 import {
   CountryFlagBadge,
   SommelierAvatar,
@@ -31,6 +33,8 @@ interface GuestStep2Props {
   lang: Language;
   bundle: PairingRecommendationBundle;
   personas: SommelierPersona[];
+  speechStyle: SpeechStyle;
+  onSpeechStyleChange: (style: SpeechStyle) => void;
   onBack: () => void;
   onSelectWineForDrinking: (wine: WineItem) => void;
   onSwitchPersona: (personaId: string) => void;
@@ -41,6 +45,8 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
   lang,
   bundle,
   personas,
+  speechStyle,
+  onSpeechStyleChange,
   onBack,
   onSelectWineForDrinking,
   onSwitchPersona,
@@ -164,29 +170,59 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
           </div>
 
           {!isEmpty && (
-            <button
-              type="button"
-              onClick={() => {
-                setSwapMode((prev) => !prev);
-                setSelectedSwapIds([]);
-              }}
-              className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition-colors ${
-                swapMode
-                  ? 'bg-[#2B1C22] text-[#FFFFFF]'
-                  : 'bg-[#F5EBEF] text-[#6B1D2F] hover:opacity-90 dark:bg-[#2E181F] dark:text-[#F4B8C6]'
-              }`}
-            >
-              <RefreshCw className="h-3.5 w-3.5" strokeWidth={1.5} />
-              <span>
-                {swapMode
-                  ? lang === 'ko'
-                    ? '바틀 교체 취소'
-                    : 'Cancel Swap'
-                  : lang === 'ko'
-                    ? '특정 바틀만 바꿔서 재추천'
-                    : 'Swap Specific Bottles'}
-              </span>
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Speech Style Toggle (Friendly vs Expert) */}
+              <div className="inline-flex rounded-full bg-[var(--bg-tertiary)] p-0.5">
+                <button
+                  type="button"
+                  onClick={() => onSpeechStyleChange('friendly')}
+                  data-surface={speechStyle === 'friendly' ? 'accent' : undefined}
+                  className={`rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${
+                    speechStyle === 'friendly'
+                      ? 'btn-accent'
+                      : 'text-[var(--text-secondary)]'
+                  }`}
+                >
+                  {lang === 'ko' ? '친근한 설명' : 'Friendly'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSpeechStyleChange('expert')}
+                  data-surface={speechStyle === 'expert' ? 'accent' : undefined}
+                  className={`rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${
+                    speechStyle === 'expert'
+                      ? 'btn-accent'
+                      : 'text-[var(--text-secondary)]'
+                  }`}
+                >
+                  {lang === 'ko' ? '전문적인 설명' : 'Sommelier Pro'}
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSwapMode((prev) => !prev);
+                  setSelectedSwapIds([]);
+                }}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition-colors ${
+                  swapMode
+                    ? 'bg-[#2B1C22] text-[#FFFFFF]'
+                    : 'bg-[#F5EBEF] text-[#6B1D2F] hover:opacity-90 dark:bg-[#2E181F] dark:text-[#F4B8C6]'
+                }`}
+              >
+                <RefreshCw className="h-3.5 w-3.5" strokeWidth={1.5} />
+                <span>
+                  {swapMode
+                    ? lang === 'ko'
+                      ? '바틀 교체 취소'
+                      : 'Cancel Swap'
+                    : lang === 'ko'
+                      ? '특정 바틀만 바꿔서 재추천'
+                      : 'Swap Specific Bottles'}
+                </span>
+              </button>
+            </div>
           )}
         </div>
 
@@ -326,7 +362,16 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
             swapMode={swapMode}
             isSwapChecked={selectedSwapIds.includes(item.wine.id)}
             onToggleSwap={() => toggleSwapSelection(item.wine.id)}
-            commentary={lang === 'ko' ? item.commentaryKo : item.commentaryEn}
+            commentary={
+              speechStyle === 'expert'
+                ? lang === 'ko'
+                  ? item.expertCommentaryKo
+                  : item.expertCommentaryEn
+                : lang === 'ko'
+                  ? item.commentaryKo
+                  : item.commentaryEn
+            }
+            tastingTip={lang === 'ko' ? item.tastingTipKo : item.tastingTipEn}
             highlights={
               lang === 'ko' ? item.pairingPointsKo : item.pairingPointsEn
             }
@@ -361,8 +406,15 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
             isSwapChecked={selectedSwapIds.includes(slot.wine.id)}
             onToggleSwap={() => toggleSwapSelection(slot.wine.id)}
             commentary={
-              lang === 'ko' ? slot.bridgeReasonKo : slot.bridgeReasonEn
+              speechStyle === 'expert'
+                ? lang === 'ko'
+                  ? slot.expertBridgeReasonKo
+                  : slot.expertBridgeReasonEn
+                : lang === 'ko'
+                  ? slot.bridgeReasonKo
+                  : slot.bridgeReasonEn
             }
+            tastingTip={lang === 'ko' ? slot.tastingTipKo : slot.tastingTipEn}
             onChoose={() => onSelectWineForDrinking(slot.wine)}
           />
         ))}
@@ -379,9 +431,18 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
           }
           valueTier={bundle.extraGlass.valueTier}
           commentary={
+            speechStyle === 'expert'
+              ? lang === 'ko'
+                ? bundle.extraGlass.expertCommentaryKo
+                : bundle.extraGlass.expertCommentaryEn
+              : lang === 'ko'
+                ? bundle.extraGlass.commentaryKo
+                : bundle.extraGlass.commentaryEn
+          }
+          tastingTip={
             lang === 'ko'
-              ? bundle.extraGlass.commentaryKo
-              : bundle.extraGlass.commentaryEn
+              ? bundle.extraGlass.tastingTipKo
+              : bundle.extraGlass.tastingTipEn
           }
           highlights={
             lang === 'ko'
@@ -412,6 +473,7 @@ interface WineCardProps {
   isSwapChecked?: boolean;
   onToggleSwap?: () => void;
   commentary: string;
+  tastingTip?: string;
   highlights?: string[];
   onChoose: () => void;
 }
@@ -427,6 +489,7 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
   isSwapChecked = false,
   onToggleSwap,
   commentary,
+  tastingTip,
   highlights,
   onChoose,
 }) => {
@@ -527,7 +590,7 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
             </h2>
 
             <p className="mt-1 text-[13px] text-[var(--text-secondary)]">
-              {varietal} · {region}
+              <GlossaryText text={`${varietal} · ${region}`} lang={lang} />
             </p>
 
             <div className="mt-2.5">
@@ -548,11 +611,21 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
         </div>
       </div>
 
-      {/* Sommelier Persona Narrative */}
+      {/* Sommelier Persona Narrative (with tappable wine glossary terms) */}
       <div className="mt-5 rounded-2xl border-l-[3px] border-[#6B1D2F] bg-[var(--bg-tertiary)]/55 px-4 py-3.5">
         <p className="prose-pretty text-[15px] leading-[1.6] text-[var(--text-primary)]">
-          {commentary}
+          <GlossaryText text={commentary} lang={lang} />
         </p>
+
+        {tastingTip && (
+          <div className="mt-3 rounded-xl bg-[#FBF4E8]/85 px-3.5 py-2.5 text-[13px] leading-relaxed text-[#5C3D12] dark:bg-[#2B2214] dark:text-[#ECC88D]">
+            <span className="mr-1.5 font-bold">
+              {lang === 'ko' ? '시음 팁 ·' : 'Tasting Tip ·'}
+            </span>
+            <GlossaryText text={tastingTip} lang={lang} />
+          </div>
+        )}
+
         {highlights && highlights.length > 0 && (
           <ul className="mt-2.5 space-y-1">
             {highlights.map((pt, idx) => (

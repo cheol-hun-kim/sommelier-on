@@ -245,14 +245,63 @@ function scoreWineForContext(
   return score;
 }
 
+function buildTastingTip(
+  wine: WineItem,
+  dishTags: string[],
+  dishNamesKo: string[],
+  dishNamesEn: string[]
+): { tipKo: string; tipEn: string } {
+  const dishKo = dishNamesKo[0] || '요리';
+  const dishEn = dishNamesEn[0] || 'the dish';
+
+  if (wine.category === 'dessert' || dishTags.includes('dessert')) {
+    return {
+      tipKo: `${dishKo} 한 스푼을 먼저 드셔 입안에 부드러운 단맛이 감돌 때 차가운 와인을 한 모금 곁들이시면, 과하지 않고 산뜻하게 마무리됩니다.`,
+      tipEn: `Take a spoonful of ${dishEn} first, then follow with a chilled sip so the bright acidity lifts the sweetness cleanly.`,
+    };
+  }
+  if (wine.category === 'red' && (dishTags.includes('steak') || dishTags.includes('rich'))) {
+    return {
+      tipKo: `${dishKo} 한 점을 먼저 씹어 고소한 육즙이 입안에 돌 때 와인을 마셔보세요. 와인의 구조감이 기름기를 감싸며 고기 풍미가 훨씬 깊어집니다.`,
+      tipEn: `Chew a bite of ${dishEn} first so the savory juices coat your palate, then sip — the wine’s structure melts into the marbling seamlessly.`,
+    };
+  }
+  if (wine.category === 'sparkling' || wine.category === 'white') {
+    if (dishTags.includes('truffle') || dishTags.includes('cream')) {
+      return {
+        tipKo: `와인을 아주 작은 모금 먼저 머금어 입안을 적신 뒤 ${dishKo}를 드셔보세요. 버터·트러플의 고소한 향이 입안에서 훨씬 입체적으로 피어납니다.`,
+        tipEn: `Take a small sip first to awaken your palate, then taste ${dishEn} — creamy truffle and orchard aromas expand dramatically together.`,
+      };
+    }
+    return {
+      tipKo: `${dishKo}와 소스를 먼저 한 입 드신 뒤 곧바로 차가운 와인을 마시면, 비린내나 느끼함은 싹 가시고 재료 본연의 감칠맛만 깨끗하게 남습니다.`,
+      tipEn: `Enjoy a bite of ${dishEn} first and follow right away with a cool sip — crisp freshness clears the palate and highlights pure umami.`,
+    };
+  }
+  return {
+    tipKo: `음식을 한 점 드신 직후 와인을 천천히 머금어 보세요. 허브와 과실의 은은한 여운이 입안의 감칠맛을 기분 좋게 이어줍니다.`,
+    tipEn: `Take a bite first and let a slow sip follow — subtle fruit and savory herbs extend the finish gracefully.`,
+  };
+}
+
 function buildPersonaCommentary(
   wine: WineItem,
   persona: SommelierPersona,
   dishNamesKo: string[],
   dishNamesEn: string[],
   occasion: OccasionType,
-  tasteProfile: UserTasteProfile
-): { ko: string; en: string; pointsKo: string[]; pointsEn: string[] } {
+  tasteProfile: UserTasteProfile,
+  dishTags: string[] = []
+): {
+  ko: string;
+  en: string;
+  expertKo: string;
+  expertEn: string;
+  tipKo: string;
+  tipEn: string;
+  pointsKo: string[];
+  pointsEn: string[];
+} {
   const dishSummaryKo = dishNamesKo.slice(0, 2).join(', ') || '오늘 주문하신 요리';
   const dishSummaryEn = dishNamesEn.slice(0, 2).join(', ') || 'tonight’s dishes';
   const topAromaKey = wine.aromas.primary[0] ?? 'citrus';
@@ -266,26 +315,38 @@ function buildPersonaCommentary(
 
   let ko = '';
   let en = '';
+  let expertKo = '';
+  let expertEn = '';
 
   if (persona.toneStyle === 'classic_french') {
-    ko = `${dishSummaryKo}의 풍미를 가장 정갈하게 받쳐줄 구조감을 찾았습니다. ${wine.regionKo} 특유의 ${topAromaKo} 결에 ${secAromaKo} 뉘앙스가 이어지며, 입안을 산뜻하게 정돈해 다음 한 점의 매력을 또렷하게 살려줍니다.`;
-    en = `I selected this bottle for the poised structure it brings beside ${dishSummaryEn}. Classic ${topAromaEn} and subtle ${secAromaEn} notes cleanse the palate gracefully between each bite.`;
+    ko = `${dishSummaryKo}의 맛을 가장 깔끔하게 살려주는 한 병이에요. ${topAromaKo}처럼 기분 좋은 과실 향이 퍼진 뒤 입안을 상쾌하게 정리해 주어, 마지막 한 점까지 느끼함 없이 즐기실 수 있습니다.`;
+    en = `A poised match that keeps ${dishSummaryEn} tasting bright from the first bite to the last, lifting ${topAromaEn} cleanly on the finish.`;
+    expertKo = `${dishSummaryKo}의 소스 농도와 지질에 정밀하게 대칭되는 구조감을 갖췄습니다. ${wine.regionKo} 테루아에서 기인한 ${topAromaKo} 아로마와 ${secAromaKo}의 숙성 뉘앙스, 그리고 정제된 산도가 팔레트의 긴장감을 유지합니다.`;
+    expertEn = `Selected for structural precision beside ${dishSummaryEn}. ${wine.regionEn} terroir imparts focused ${topAromaEn}, layered ${secAromaEn}, and disciplined acid-tannin tension.`;
   } else if (persona.toneStyle === 'new_korean') {
-    ko = `${dishSummaryKo}처럼 깊은 감칠맛이 살아있는 테이블에는 부드러운 결을 지닌 이 병이 참 편안합니다. 첫 모금에 퍼지는 ${topAromaKo}의 화사함이 요리의 간을 한층 입체적으로 감싸주어 처음부터 끝까지 부담 없이 즐기실 수 있어요.`;
-    en = `Beside savory flavors like ${dishSummaryEn}, this wine’s supple texture feels effortlessly welcoming. Bright ${topAromaEn} lifts the umami depth without ever feeling heavy on the palate.`;
+    ko = `${dishSummaryKo}처럼 깊은 감칠맛이 있는 요리에는 이렇게 부드럽게 감기는 와인이 참 편해요. 첫 모금에 퍼지는 ${topAromaKo} 향이 음식과 싸우지 않고 자연스럽게 어우러져서 처음 드시는 분도 부담 없이 좋아하실 거예요.`;
+    en = `Beside savory plates like ${dishSummaryEn}, this gentle, velvety bottle wraps around the flavors effortlessly without ever feeling harsh.`;
+    expertKo = `${dishSummaryKo}의 복합적인 감칠맛과 발효·로스팅 풍미를 포용하는 유연한 페놀 구조가 돋보입니다. ${topAromaKo}의 화사한 1차 향과 ${secAromaKo} 뉘앙스가 미각의 브릿지를 형성해 조화로운 페어링을 완성합니다.`;
+    expertEn = `Plush phenolic integration bridges roasted umami and savory glazes in ${dishSummaryEn}, pairing expressive ${topAromaEn} with supple ${secAromaEn} depth.`;
   } else {
-    ko = `오늘 ${occasion === 'celebration' ? '기분 좋은 축하 자리에' : '테이블의 분위기를 산뜻하게 환기하고 싶어'} 권해드리는 발견입니다. ${wine.regionKo}에서 저개입 방식으로 빚어낸 생동감 있는 ${topAromaKo}와 ${secAromaKo} 결이 ${dishSummaryKo}와 만나 흥미로운 여운을 남깁니다.`;
-    en = `A lively discovery to brighten the table beside ${dishSummaryEn}. Low-intervention energy from ${wine.regionEn} frames ${topAromaEn} and ${secAromaEn} with crisp, memorable vitality.`;
+    ko = `오늘 ${occasion === 'celebration' ? '기분 좋은 자리에' : '테이블 분위기를 산뜻하게 띄우고 싶어'} 골라본 매력적인 와인입니다. 인위적인 느낌 없이 신선한 ${topAromaKo}와 ${secAromaKo} 향이 살아있어 ${dishSummaryKo}와 함께 마시면 이야기가 절로 즐거워집니다.`;
+    en = `A lively, characterful bottle to brighten the table beside ${dishSummaryEn}, brimming with fresh ${topAromaEn} and ${secAromaEn} vitality.`;
+    expertKo = `${wine.regionKo}의 지질과 미기후를 최소 개입 양조로 직관적으로 담아낸 큐베입니다. 인위적 뉴오크를 배제하고 토착 효모와 자연 산미로 ${topAromaKo} 및 ${secAromaKo} 스펙트럼을 선명히 끌어올려 ${dishSummaryKo}와 생동감 있는 대비를 이룹니다.`;
+    expertEn = `Low-intervention cuvée from ${wine.regionEn} fermented with native energy, preserving vibrant ${topAromaEn} and ${secAromaEn} tension against ${dishSummaryEn}.`;
   }
 
   if (hasAversionRelief) {
-    ko += ' 고객님의 취향노트를 반영해 부담스러운 자극 없이 편하게 넘어가도록 세심하게 골랐습니다.';
+    ko += ' 남겨주신 취향 메모를 반영해 부담스러운 자극 없이 편하게 넘어가도록 세심하게 골랐습니다.';
     en += ' Tailored gently to your saved Taste Note sensitivities for smooth, unforced balance.';
+    expertKo += ' 저장된 취향 프로필의 기피 속성을 감안해 구조적 자극을 완화했습니다.';
+    expertEn += ' Calibrated against your saved palate sensitivity thresholds.';
   }
+
+  const { tipKo, tipEn } = buildTastingTip(wine, dishTags, dishNamesKo, dishNamesEn);
 
   const pointsKo = [
     `${wine.structure.acidity >= 4 ? '생동감 있는 산도가 입안을 개운하게 정돈' : '둥글고 부드러운 질감이 요리 풍미를 감싸줌'}`,
-    `${topAromaKo} · ${secAromaKo} 아로마 스펙트럼 조화`,
+    `${topAromaKo} · ${secAromaKo} 아로마 조화`,
     `${wine.serving.tempMin}~${wine.serving.tempMax}℃ 서빙 시 가장 섬세한 표현력`,
   ];
 
@@ -295,7 +356,7 @@ function buildPersonaCommentary(
     `Most expressive served at ${wine.serving.tempMin}–${wine.serving.tempMax}°C`,
   ];
 
-  return { ko, en, pointsKo, pointsEn };
+  return { ko, en, expertKo, expertEn, tipKo, tipEn, pointsKo, pointsEn };
 }
 
 function partitionDishesIntoSegments(
@@ -415,6 +476,22 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
         desiredCat === 'sparkling'
           ? `Before opening your main bottle, a crisp glass of ${top.nameEn} awakens the palate for the opening bites.`
           : `To close your bottle progression gracefully, enjoy a finishing glass of ${top.nameEn}.`,
+      expertCommentaryKo:
+        desiredCat === 'sparkling'
+          ? `아페리티프 단계에서 ${top.regionKo} 특유의 미네랄 산미로 미각 수용체를 환기하는 글라스 페어링입니다.`
+          : `디제스티프 단계에서 복합적인 잔당과 산도의 균형으로 코스 전체의 여운을 정돈하는 글라스입니다.`,
+      expertCommentaryEn:
+        desiredCat === 'sparkling'
+          ? `An aperitif glass from ${top.regionEn} whose mineral acidity primes the palate for the opening course.`
+          : `A digestif pour balancing residual sweetness and fresh acidity to close the progression.`,
+      tastingTipKo:
+        desiredCat === 'sparkling'
+          ? '첫 요리가 나오기 전 차가운 상태로 한 모금 먼저 드시면 입안이 상쾌하게 깨어납니다.'
+          : '디저트를 한 스푼 먼저 드신 뒤 달콤한 와인을 곁들여 보세요.',
+      tastingTipEn:
+        desiredCat === 'sparkling'
+          ? 'Take a chilled sip before the first dish arrives to awaken your palate.'
+          : 'Take a bite of dessert first, then follow with a cool sip.',
       pairingPointsKo: [
         top.glassPrice ? `글라스 가능 (${top.glassPrice.toLocaleString('ko-KR')}원)` : '업장 잔 와인 문의 가능',
       ],
@@ -453,7 +530,8 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
         dishNamesKo,
         dishNamesEn,
         occasion,
-        tasteProfile
+        tasteProfile,
+        allTags
       );
       return {
         wine: entry.wine,
@@ -462,6 +540,10 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
         valueTier: computeValueTier(entry.wine, venue.priceTransparencyOptIn),
         commentaryKo: commentary.ko,
         commentaryEn: commentary.en,
+        expertCommentaryKo: commentary.expertKo,
+        expertCommentaryEn: commentary.expertEn,
+        tastingTipKo: commentary.tipKo,
+        tastingTipEn: commentary.tipEn,
         pairingPointsKo: commentary.pointsKo,
         pairingPointsEn: commentary.pointsEn,
       };
@@ -630,14 +712,15 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
         segDishesKo,
         segDishesEn,
         occasion,
-        tasteProfile
+        tasteProfile,
+        segTags
       );
 
       const slotPrefixKo =
         coursePairingMode === 'custom_slots'
           ? `지정하신 [${CATEGORY_LABELS[requestedCat].shortKo}] 슬롯에 맞춰 `
           : focusSlotIdx === i
-            ? `이번 구성에서 예산과 퀄리티 비중을 가장 크게 실은 핵심 바틀로, `
+            ? `이번 구성에서 예산과 비중을 가장 크게 실은 핵심 바틀로, `
             : '코스 강도 변화에 맞춰 ';
       const slotPrefixEn =
         coursePairingMode === 'custom_slots'
@@ -657,6 +740,10 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
         valueTier: computeValueTier(chosen, venue.priceTransparencyOptIn),
         bridgeReasonKo: `${slotPrefixKo}${slotNote.ko}`,
         bridgeReasonEn: `${slotPrefixEn}${slotNote.en}`,
+        expertBridgeReasonKo: `${slotPrefixKo}${slotNote.expertKo}`,
+        expertBridgeReasonEn: `${slotPrefixEn}${slotNote.expertEn}`,
+        tastingTipKo: slotNote.tipKo,
+        tastingTipEn: slotNote.tipEn,
       });
     }
 
@@ -904,7 +991,8 @@ export function swapSpecificWinesInBundle(
         query.selectedDishes.map((d) => d.nameKo),
         query.selectedDishes.map((d) => d.nameEn),
         occasion,
-        tasteProfile
+        tasteProfile,
+        allTags
       );
 
       return {
@@ -913,6 +1001,10 @@ export function swapSpecificWinesInBundle(
         valueTier: computeValueTier(replacement, venue.priceTransparencyOptIn),
         commentaryKo: commentary.ko,
         commentaryEn: commentary.en,
+        expertCommentaryKo: commentary.expertKo,
+        expertCommentaryEn: commentary.expertEn,
+        tastingTipKo: commentary.tipKo,
+        tastingTipEn: commentary.tipEn,
         pairingPointsKo: commentary.pointsKo,
         pairingPointsEn: commentary.pointsEn,
       };
@@ -996,6 +1088,10 @@ export function swapSpecificWinesInBundle(
           valueTier: computeValueTier(replacement, venue.priceTransparencyOptIn),
           bridgeReasonKo: `새롭게 교체 추천드리는 바틀입니다. ${note.ko}`,
           bridgeReasonEn: `Fresh replacement selection: ${note.en}`,
+          expertBridgeReasonKo: `대체 페어링 바틀: ${note.expertKo}`,
+          expertBridgeReasonEn: `Fresh replacement pairing: ${note.expertEn}`,
+          tastingTipKo: note.tipKo,
+          tastingTipEn: note.tipEn,
         };
       });
 

@@ -22,6 +22,7 @@ import {
   formatKrw,
 } from '../i18n/translations';
 import { WineBottleIllustration } from './icons/WineVectors';
+import { GlossaryText } from './GlossaryText';
 import { getNextRecommendedWines } from '../engine/pairingEngine';
 
 interface GuestStep3Props {
@@ -140,7 +141,7 @@ export const GuestStep3: React.FC<GuestStep3Props> = ({
                 </span>
               </h1>
               <p className="mt-0.5 text-[13px] text-[var(--text-secondary)]">
-                {varietal} · {region}
+                <GlossaryText text={`${varietal} · ${region}`} lang={lang} />
               </p>
             </div>
           </div>
@@ -168,7 +169,7 @@ export const GuestStep3: React.FC<GuestStep3Props> = ({
                 <span>{t.heavenTitle}</span>
               </div>
               <p className="prose-pretty mt-2 text-[14px] leading-[1.65] text-[var(--text-primary)]">
-                {heavenText}
+                <GlossaryText text={heavenText} lang={lang} />
               </p>
             </div>
 
@@ -179,7 +180,7 @@ export const GuestStep3: React.FC<GuestStep3Props> = ({
                 <span>{t.earthTitle}</span>
               </div>
               <p className="prose-pretty mt-2 text-[14px] leading-[1.65] text-[var(--text-primary)]">
-                {earthText}
+                <GlossaryText text={earthText} lang={lang} />
               </p>
             </div>
 
@@ -190,7 +191,7 @@ export const GuestStep3: React.FC<GuestStep3Props> = ({
                 <span>{t.humanTitle}</span>
               </div>
               <p className="prose-pretty mt-2 text-[14px] leading-[1.65] text-[var(--text-primary)]">
-                {humanText}
+                <GlossaryText text={humanText} lang={lang} />
               </p>
             </div>
           </div>

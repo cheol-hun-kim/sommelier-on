@@ -54,6 +54,7 @@ import type {
   PairingSessionStats,
   ParsedMenuDish,
   SommelierPersona,
+  SpeechStyle,
   TastingJournalEntry,
   ThemeMode,
   UserTasteProfile,
@@ -98,6 +99,7 @@ export function App() {
   const [selectedPersonaId, setSelectedPersonaId] = useState<string>(
     activeVenue.defaultPersonaId
   );
+  const [speechStyle, setSpeechStyle] = useState<SpeechStyle>('friendly');
   const [inspectedPersona, setInspectedPersona] =
     useState<SommelierPersona | null>(null);
 
@@ -574,6 +576,8 @@ export function App() {
             lang={lang}
             bundle={recommendationBundle}
             personas={personas}
+            speechStyle={speechStyle}
+            onSpeechStyleChange={setSpeechStyle}
             onBack={() => {
               setGuestStep(1);
               window.scrollTo({ top: 0, behavior: 'smooth' });
