@@ -2,7 +2,7 @@ import React from 'react';
 import { Moon, Store, Sun, Utensils } from 'lucide-react';
 import type { AppMode, Language, ThemeMode, Venue } from '../types/sommelier';
 import { TRANSLATIONS } from '../i18n/translations';
-import { SommelierBrandEmblem } from './icons/WineVectors';
+import { SommelierBrandEmblem, VenueLogo } from './icons/WineVectors';
 
 interface HeaderBarProps {
   lang: Language;
@@ -43,9 +43,10 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
       <div className="mx-auto max-w-5xl px-4 py-3 sm:px-6">
         {/* Top Meta Bar: Venue QR Context + Live In-Stock Counter + Controls */}
         <div className="flex flex-wrap items-center justify-between gap-2 text-[12px] text-[var(--text-secondary)]">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <VenueLogo venueId={activeVenue.id} size="sm" />
             <span className="inline-flex items-center gap-1.5 font-medium text-[var(--text-primary)]">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#6B1D2F]" />
+              <span aria-hidden="true">·</span>
               <span>{venueName}</span>
               <span aria-hidden="true">·</span>
               <span className="tabular-nums">

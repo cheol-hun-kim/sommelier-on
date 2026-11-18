@@ -1,6 +1,126 @@
 import React from 'react';
 import type { AromaKey, GlassType, WineCategory } from '../../types/sommelier';
 
+export const VenueLogo: React.FC<{
+  venueId: string;
+  size?: 'sm' | 'md';
+}> = ({ venueId, size = 'md' }) => {
+  const isFrere = venueId === 'pilot_01';
+  const heightClass = size === 'sm' ? 'h-7' : 'h-10';
+
+  if (isFrere) {
+    return (
+      <div
+        className={`inline-flex items-center gap-2.5 ${heightClass}`}
+        aria-label="FRÈRE Seoul"
+      >
+        {/* Architectural arch monogram inspired by Samseong-dong Frère menu */}
+        <svg
+          viewBox="0 0 36 36"
+          fill="none"
+          className={size === 'sm' ? 'h-7 w-7' : 'h-9 w-9'}
+          aria-hidden="true"
+        >
+          <rect
+            x="2"
+            y="2"
+            width="32"
+            height="32"
+            rx="8"
+            fill="#F3EAD3"
+            stroke="#8B6F3D"
+            strokeWidth="1.2"
+          />
+          <path
+            d="M11 26V15C11 11.1 14.1 8 18 8C21.9 8 25 11.1 25 15V26"
+            stroke="#4A3820"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+          <path
+            d="M14.5 18H21.5M18 13V26"
+            stroke="#6B1D2F"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+        </svg>
+        <div className="leading-none">
+          <div
+            className={`font-display font-bold tracking-[0.18em] text-[var(--text-primary)] ${
+              size === 'sm' ? 'text-[13px]' : 'text-[16px]'
+            }`}
+          >
+            FRÈRE
+          </div>
+          <div className="mt-0.5 text-[9px] font-semibold tracking-[0.26em] text-[var(--text-secondary)]">
+            SEOUL · SAMSEONG
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // HAVRE Jeju Wine Bar emblem (double-border bistro crest + coastal arc)
+  return (
+    <div
+      className={`inline-flex items-center gap-2.5 ${heightClass}`}
+      aria-label="HAVRE Jeju"
+    >
+      <svg
+        viewBox="0 0 36 36"
+        fill="none"
+        className={size === 'sm' ? 'h-7 w-7' : 'h-9 w-9'}
+        aria-hidden="true"
+      >
+        <rect
+          x="2"
+          y="2"
+          width="32"
+          height="32"
+          rx="8"
+          fill="#F5EBEF"
+          stroke="#6B1D2F"
+          strokeWidth="1.2"
+        />
+        <rect
+          x="5"
+          y="5"
+          width="26"
+          height="26"
+          rx="5.5"
+          stroke="#6B1D2F"
+          strokeWidth="0.7"
+          strokeOpacity="0.45"
+        />
+        <path
+          d="M12 10V26M24 10V26M12 18H24"
+          stroke="#6B1D2F"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+        />
+        <path
+          d="M9.5 23.5C13 21.5 16 25 18 23.5C20 22 23 24.5 26.5 22.8"
+          stroke="#B8863B"
+          strokeWidth="1.3"
+          strokeLinecap="round"
+        />
+      </svg>
+      <div className="leading-none">
+        <div
+          className={`font-display font-bold tracking-[0.18em] text-[var(--text-primary)] ${
+            size === 'sm' ? 'text-[13px]' : 'text-[16px]'
+          }`}
+        >
+          HAVRE
+        </div>
+        <div className="mt-0.5 text-[9px] font-semibold tracking-[0.22em] text-[var(--text-secondary)]">
+          JEJU · WINE BAR
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const SommelierBrandEmblem: React.FC<{ className?: string }> = ({
   className = 'brand-lockup-icon',
 }) => (

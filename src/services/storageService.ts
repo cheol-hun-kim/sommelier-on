@@ -9,8 +9,8 @@ import type {
 } from '../types/sommelier';
 
 const STORAGE_KEYS = {
-  venues: 'sommon_venues_v1',
-  wines: 'sommon_wines_v1',
+  venues: 'sommon_venues_v2',
+  wines: 'sommon_wines_v2',
   tasteProfile: 'sommon_taste_profile_v1',
   stats: 'sommon_stats_v1',
   geminiKey: 'sommon_gemini_api_key',

@@ -33,7 +33,7 @@ import {
   SWEETNESS_LABELS,
   TRANSLATIONS,
 } from '../i18n/translations';
-import { SommelierAvatar } from './icons/WineVectors';
+import { SommelierAvatar, VenueLogo } from './icons/WineVectors';
 
 interface GuestStep1Props {
   lang: Language;
@@ -171,14 +171,19 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
 
   return (
     <div className="mx-auto max-w-4xl space-y-5 px-4 py-6 safe-bottom-scroll sm:px-6">
-      {/* Page Title */}
-      <div>
-        <h1 className="text-[24px] font-bold tracking-tight text-[var(--text-primary)]">
-          {t.step1Title}
-        </h1>
-        <p className="prose-pretty mt-1 text-[15px] leading-[1.6] text-[var(--text-secondary)]">
-          {t.step1Subtitle}
-        </p>
+      {/* Page Title + Connected Venue Crest */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-[24px] font-bold tracking-tight text-[var(--text-primary)]">
+            {t.step1Title}
+          </h1>
+          <p className="prose-pretty mt-1 text-[15px] leading-[1.6] text-[var(--text-secondary)]">
+            {t.step1Subtitle}
+          </p>
+        </div>
+        <div className="somm-card rounded-2xl px-4 py-2.5">
+          <VenueLogo venueId={venue.id} size="md" />
+        </div>
       </div>
 
       {/* Active Taste Note Banner */}
