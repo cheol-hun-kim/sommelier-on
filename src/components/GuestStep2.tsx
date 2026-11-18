@@ -387,14 +387,19 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
             lang={lang}
             wine={slot.wine}
             badgeLabel={
-              bundle.serveFormat === 'glass'
+              slot.isCorkage
                 ? lang === 'ko'
-                  ? `제 ${slot.slotIndex + 1}잔 · ${CATEGORY_LABELS[slot.assignedCategory].shortKo}`
-                  : `Glass ${slot.slotIndex + 1} · ${CATEGORY_LABELS[slot.assignedCategory].shortEn}`
-                : lang === 'ko'
-                  ? `${t.bottleSeqPrefix} ${slot.slotIndex + 1}${t.bottleSeqSuffix} · ${CATEGORY_LABELS[slot.assignedCategory].shortKo}`
-                  : `${t.bottleSeqPrefix} ${slot.slotIndex + 1} · ${CATEGORY_LABELS[slot.assignedCategory].shortEn}`
+                  ? `고객 지참 (콜키지) · ${CATEGORY_LABELS[slot.assignedCategory].shortKo}`
+                  : `Guest Corkage · ${CATEGORY_LABELS[slot.assignedCategory].shortEn}`
+                : bundle.serveFormat === 'glass'
+                  ? lang === 'ko'
+                    ? `제 ${slot.slotIndex + 1}잔 · ${CATEGORY_LABELS[slot.assignedCategory].shortKo}`
+                    : `Glass ${slot.slotIndex + 1} · ${CATEGORY_LABELS[slot.assignedCategory].shortEn}`
+                  : lang === 'ko'
+                    ? `${t.bottleSeqPrefix} ${slot.slotIndex + 1}${t.bottleSeqSuffix} · ${CATEGORY_LABELS[slot.assignedCategory].shortKo}`
+                    : `${t.bottleSeqPrefix} ${slot.slotIndex + 1} · ${CATEGORY_LABELS[slot.assignedCategory].shortEn}`
             }
+            isCorkage={slot.isCorkage}
             courseSegmentTitle={
               lang === 'ko' ? slot.courseSegmentKo : slot.courseSegmentEn
             }
@@ -469,6 +474,7 @@ interface WineCardProps {
   courseSegmentTitle?: string;
   courseDishes?: string[];
   valueTier: ValueTier;
+  isCorkage?: boolean;
   swapMode?: boolean;
   isSwapChecked?: boolean;
   onToggleSwap?: () => void;
@@ -485,6 +491,7 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
   courseSegmentTitle,
   courseDishes,
   valueTier,
+  isCorkage = false,
   swapMode = false,
   isSwapChecked = false,
   onToggleSwap,
@@ -602,10 +609,18 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
         <div className="flex shrink-0 items-baseline justify-between border-t border-[var(--border-subtle)] pt-3 sm:block sm:border-t-0 sm:pt-0 sm:text-right">
           <div>
             <div className="text-[11px] font-medium text-[var(--text-secondary)]">
-              {t.venuePriceLabel}
+              {isCorkage
+                ? lang === 'ko'
+                  ? '지참 와인'
+                  : 'BYOB'
+                : t.venuePriceLabel}
             </div>
             <div className="text-[22px] font-bold tabular-nums text-[var(--text-primary)]">
-              {formatKrw(wine.venuePrice, lang)}
+              {isCorkage
+                ? lang === 'ko'
+                  ? '고객 지참'
+                  : 'Corkage'
+                : formatKrw(wine.venuePrice, lang)}
             </div>
           </div>
         </div>

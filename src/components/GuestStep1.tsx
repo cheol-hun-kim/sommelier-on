@@ -13,6 +13,7 @@ import {
 import type {
   BudgetScope,
   BudgetTier,
+  CorkageBottle,
   CourseBottleCount,
   CoursePairingMode,
   CourseServeFormat,
@@ -28,7 +29,9 @@ import {
   BUDGET_LABELS,
   CATEGORY_LABELS,
   TRANSLATIONS,
+  formatKrw,
 } from '../i18n/translations';
+import { analyzeWineLabelImage } from '../services/aiService';
 import { SommelierAvatar, VenueLogo } from './icons/WineVectors';
 
 interface GuestStep1Props {
@@ -40,8 +43,12 @@ interface GuestStep1Props {
   onInspectPersona: (persona: SommelierPersona) => void;
   budgetTier: BudgetTier;
   onBudgetTierChange: (tier: BudgetTier) => void;
+  customBudgetManWon: string;
+  onCustomBudgetManWonChange: (val: string) => void;
   budgetScope: BudgetScope;
   onBudgetScopeChange: (scope: BudgetScope) => void;
+  corkageWine: CorkageBottle | null;
+  onCorkageWineChange: (bottle: CorkageBottle | null) => void;
   selectedRegisteredDishIds: string[];
   onToggleRegisteredDish: (dishId: string) => void;
   customDishes: ParsedMenuDish[];
@@ -89,8 +96,12 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
   onInspectPersona,
   budgetTier,
   onBudgetTierChange,
+  customBudgetManWon,
+  onCustomBudgetManWonChange,
   budgetScope,
   onBudgetScopeChange,
+  corkageWine,
+  onCorkageWineChange,
   selectedRegisteredDishIds,
   onToggleRegisteredDish,
   customDishes,
@@ -122,7 +133,12 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
 }) => {
   const t = TRANSLATIONS[lang];
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const corkageFileRef = useRef<HTMLInputElement | null>(null);
   const [courseListExpanded, setCourseListExpanded] = useState(false);
+  const [isScanningCorkage, setIsScanningCorkage] = useState(false);
+
+  const customBudgetNum = Number(customBudgetManWon);
+  const hasCustomBudget = !Number.isNaN(customBudgetNum) && customBudgetNum > 0;
 
   const isCourseActive =
     menuAnalysis?.mode === 'course' ||
@@ -234,13 +250,13 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
           </div>
         </div>
 
-        {/* 2. Budget Chips (+ Per-Bottle vs Total toggle for multi-bottle course) */}
+        {/* 2. Budget Chips + Direct Custom Budget Input (e.g. 150만원) */}
         <div>
           <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-[17px] font-semibold text-[var(--text-primary)]">
               {t.budgetSectionTitle}
             </h2>
-            {isCourseMultiBottle && (
+            {(isCourseMultiBottle || hasCustomBudget) && (
               <div className="inline-flex rounded-full bg-[var(--bg-tertiary)] p-0.5">
                 <button
                   type="button"
@@ -270,12 +286,15 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
 
           <div className="flex flex-wrap gap-2">
             {(Object.keys(BUDGET_LABELS) as BudgetTier[]).map((tier) => {
-              const active = tier === budgetTier;
+              const active = !hasCustomBudget && tier === budgetTier;
               return (
                 <button
                   key={tier}
                   type="button"
-                  onClick={() => onBudgetTierChange(tier)}
+                  onClick={() => {
+                    onCustomBudgetManWonChange('');
+                    onBudgetTierChange(tier);
+                  }}
                   data-surface={active ? 'accent' : undefined}
                   className={`rounded-full px-4 py-2 text-[14px] font-semibold tabular-nums transition-colors ${
                     active
@@ -287,6 +306,49 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
                 </button>
               );
             })}
+          </div>
+
+          {/* Direct Custom Budget Input (man-won unit) */}
+          <div className="mt-3 flex flex-wrap items-center gap-2.5">
+            <div className="flex items-center gap-2 rounded-2xl bg-[var(--bg-tertiary)] px-3.5 py-2">
+              <span className="text-[12px] font-semibold text-[var(--text-secondary)]">
+                {lang === 'ko' ? '직접 입력' : 'Custom'}
+              </span>
+              <input
+                type="number"
+                min={1}
+                step={1}
+                value={customBudgetManWon}
+                onChange={(e) => onCustomBudgetManWonChange(e.target.value)}
+                placeholder={lang === 'ko' ? '예: 150' : 'e.g. 150'}
+                className="w-20 bg-transparent text-right text-[14px] font-bold tabular-nums text-[var(--text-primary)] placeholder:font-normal placeholder:text-[var(--text-muted)] focus:outline-none"
+              />
+              <span className="text-[13px] font-semibold text-[var(--text-primary)]">
+                {lang === 'ko' ? '만 원' : '× ₩10K'}
+              </span>
+              {hasCustomBudget && (
+                <button
+                  type="button"
+                  onClick={() => onCustomBudgetManWonChange('')}
+                  aria-label="Clear custom budget"
+                  className="rounded-full p-0.5 text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]"
+                >
+                  <X className="h-3.5 w-3.5" strokeWidth={1.5} />
+                </button>
+              )}
+            </div>
+            {hasCustomBudget && (
+              <span className="text-[12px] font-semibold tabular-nums text-[#6B1D2F] dark:text-[#E59BAE]">
+                {formatKrw(customBudgetNum * 10000, lang)}{' '}
+                {budgetScope === 'total'
+                  ? lang === 'ko'
+                    ? '(전체 합산 기준)'
+                    : '(Total)'
+                  : lang === 'ko'
+                    ? '(1병 기준)'
+                    : '(Per Bottle)'}
+              </span>
+            )}
           </div>
         </div>
 
@@ -749,6 +811,181 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
                   )}
                 </div>
               )}
+            </div>
+          )}
+        </div>
+
+        {/* 4. Optional BYOB / Corkage Bottle Context */}
+        <div className="somm-sub-surface rounded-2xl p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div className="text-[14px] font-bold text-[var(--text-primary)]">
+                {lang === 'ko'
+                  ? '가져오신 와인(콜키지)이 있으신가요?'
+                  : 'Bringing a Corkage Bottle (BYOB)?'}
+              </div>
+              <p className="mt-0.5 text-[12px] text-[var(--text-secondary)]">
+                {lang === 'ko'
+                  ? '지참하신 와인 라벨을 올리거나 입력하시면, 그 와인을 중심으로 나머지 바틀을 맞춰드립니다.'
+                  : 'Add or scan your corkage bottle so remaining cellar picks harmonize around it.'}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (corkageWine) {
+                  onCorkageWineChange(null);
+                } else {
+                  onCorkageWineChange({
+                    name: '',
+                    category: 'red',
+                    body: 4,
+                    slotPosition: 'late',
+                  });
+                }
+              }}
+              data-surface={corkageWine ? 'accent' : undefined}
+              className={`rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition-colors ${
+                corkageWine
+                  ? 'btn-accent'
+                  : 'bg-[var(--bg-secondary)] text-[var(--text-primary)] shadow-sm'
+              }`}
+            >
+              {corkageWine
+                ? lang === 'ko'
+                  ? '콜키지 사용 안 함'
+                  : 'Remove Corkage'
+                : lang === 'ko'
+                  ? '+ 콜키지 와인 추가'
+                  : '+ Add Corkage'}
+            </button>
+          </div>
+
+          {corkageWine && (
+            <div className="mt-3.5 space-y-3 border-t border-[var(--border-subtle)] pt-3.5">
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <input
+                  type="text"
+                  value={corkageWine.name}
+                  onChange={(e) =>
+                    onCorkageWineChange({ ...corkageWine, name: e.target.value })
+                  }
+                  placeholder={
+                    lang === 'ko'
+                      ? '가져오신 와인 이름 (예: 나파 카베르네 소비뇽)'
+                      : 'Bottle name (e.g., Napa Cabernet)'
+                  }
+                  className="flex-1 rounded-xl bg-[var(--bg-secondary)] px-3.5 py-2.5 text-[13px] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[#6B1D2F]"
+                />
+                <input
+                  ref={corkageFileRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = '';
+                    if (!file) return;
+                    setIsScanningCorkage(true);
+                    try {
+                      const scanned = await analyzeWineLabelImage(file);
+                      onCorkageWineChange({
+                        name: lang === 'ko' ? scanned.nameKo : scanned.nameEn,
+                        category: scanned.category,
+                        body: scanned.structure.body,
+                        slotPosition:
+                          scanned.category === 'sparkling'
+                            ? 'early'
+                            : scanned.category === 'white'
+                              ? 'middle'
+                              : 'late',
+                      });
+                    } finally {
+                      setIsScanningCorkage(false);
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  disabled={isScanningCorkage}
+                  onClick={() => corkageFileRef.current?.click()}
+                  className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-dashed border-[#6B1D2F]/50 bg-[#F5EBEF]/60 px-3.5 py-2.5 text-[13px] font-semibold text-[#6B1D2F] dark:bg-[#2E181F] dark:text-[#F4B8C6]"
+                >
+                  <Camera className="h-4 w-4" strokeWidth={1.5} />
+                  <span>
+                    {isScanningCorkage
+                      ? lang === 'ko'
+                        ? '라벨 읽는 중...'
+                        : 'Scanning...'
+                      : lang === 'ko'
+                        ? '콜키지 라벨 사진 올리기'
+                        : 'Scan Corkage Label'}
+                  </span>
+                </button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[12px] font-semibold text-[var(--text-secondary)]">
+                  {lang === 'ko' ? '주종:' : 'Style:'}
+                </span>
+                {SLOT_CATEGORIES.map((cat) => {
+                  const active = corkageWine.category === cat;
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() =>
+                        onCorkageWineChange({ ...corkageWine, category: cat })
+                      }
+                      data-surface={active ? 'accent' : undefined}
+                      className={`rounded-full px-3 py-1 text-[12px] font-semibold ${
+                        active
+                          ? 'btn-accent'
+                          : 'bg-[var(--bg-secondary)] text-[var(--text-primary)]'
+                      }`}
+                    >
+                      {CATEGORY_LABELS[cat][lang === 'ko' ? 'shortKo' : 'shortEn']}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[12px] font-semibold text-[var(--text-secondary)]">
+                  {lang === 'ko' ? '마실 순서:' : 'Course Timing:'}
+                </span>
+                {(
+                  [
+                    { id: 'early' as const, ko: '초반 (식전·전채)', en: 'Early / Starter' },
+                    { id: 'middle' as const, ko: '중간 (온요리)', en: 'Middle Course' },
+                    { id: 'late' as const, ko: '후반 (메인)', en: 'Main Course' },
+                  ]
+                ).map((pos) => {
+                  const active = corkageWine.slotPosition === pos.id;
+                  return (
+                    <button
+                      key={pos.id}
+                      type="button"
+                      onClick={() =>
+                        onCorkageWineChange({
+                          ...corkageWine,
+                          slotPosition: pos.id,
+                        })
+                      }
+                      data-surface={active ? 'accent' : undefined}
+                      className={`rounded-full px-3 py-1 text-[12px] font-semibold ${
+                        active
+                          ? 'btn-accent'
+                          : 'bg-[var(--bg-secondary)] text-[var(--text-primary)]'
+                      }`}
+                    >
+                      {pos[lang]}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>

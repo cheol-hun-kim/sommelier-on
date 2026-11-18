@@ -47,6 +47,7 @@ export const DEFAULT_STATS: PairingSessionStats = {
     too_heavy: 0,
     overshadowed: 0,
   },
+  personaStats: {},
 };
 
 function safeReadJson<T>(key: string, fallback: T): T {
@@ -113,7 +114,12 @@ export function resetTasteProfile(): UserTasteProfile {
 }
 
 export function loadStats(): PairingSessionStats {
-  return safeReadJson<PairingSessionStats>(STORAGE_KEYS.stats, DEFAULT_STATS);
+  const loaded = safeReadJson<PairingSessionStats>(STORAGE_KEYS.stats, DEFAULT_STATS);
+  return {
+    ...DEFAULT_STATS,
+    ...loaded,
+    personaStats: loaded.personaStats ?? {},
+  };
 }
 
 export function loadActiveMember(): GuestMember | null {
@@ -170,26 +176,57 @@ export function addJournalEntry(entry: TastingJournalEntry): TastingJournalEntry
   return next;
 }
 
-export function recordRecommendationStats(recommendedWineIds: string[]): PairingSessionStats {
+export function recordRecommendationStats(
+  recommendedWineIds: string[],
+  personaId?: string
+): PairingSessionStats {
   const current = loadStats();
   const nextCounts = { ...current.topRecommendedWineIds };
   for (const id of recommendedWineIds) {
     nextCounts[id] = (nextCounts[id] ?? 0) + 1;
   }
+  const personaStats = { ...current.personaStats };
+  if (personaId) {
+    const prev = personaStats[personaId] ?? {
+      recommendations: 0,
+      orderIntents: 0,
+      likes: 0,
+      dislikes: 0,
+    };
+    personaStats[personaId] = {
+      ...prev,
+      recommendations: prev.recommendations + 1,
+    };
+  }
   const updated: PairingSessionStats = {
     ...current,
     totalSessions: current.totalSessions + 1,
     topRecommendedWineIds: nextCounts,
+    personaStats,
   };
   safeWriteJson(STORAGE_KEYS.stats, updated);
   return updated;
 }
 
-export function recordOrderIntentStats(): PairingSessionStats {
+export function recordOrderIntentStats(personaId?: string): PairingSessionStats {
   const current = loadStats();
+  const personaStats = { ...current.personaStats };
+  if (personaId) {
+    const prev = personaStats[personaId] ?? {
+      recommendations: 0,
+      orderIntents: 0,
+      likes: 0,
+      dislikes: 0,
+    };
+    personaStats[personaId] = {
+      ...prev,
+      orderIntents: prev.orderIntents + 1,
+    };
+  }
   const updated: PairingSessionStats = {
     ...current,
     orderIntents: current.orderIntents + 1,
+    personaStats,
   };
   safeWriteJson(STORAGE_KEYS.stats, updated);
   return updated;
@@ -197,18 +234,34 @@ export function recordOrderIntentStats(): PairingSessionStats {
 
 export function recordFeedbackStats(
   type: 'like' | 'dislike',
-  reasons: DislikeReasonTag[] = []
+  reasons: DislikeReasonTag[] = [],
+  personaId?: string
 ): PairingSessionStats {
   const current = loadStats();
   const dislikeTagCounts = { ...current.dislikeTagCounts };
   for (const r of reasons) {
     dislikeTagCounts[r] = (dislikeTagCounts[r] ?? 0) + 1;
   }
+  const personaStats = { ...current.personaStats };
+  if (personaId) {
+    const prev = personaStats[personaId] ?? {
+      recommendations: 0,
+      orderIntents: 0,
+      likes: 0,
+      dislikes: 0,
+    };
+    personaStats[personaId] = {
+      ...prev,
+      likes: type === 'like' ? prev.likes + 1 : prev.likes,
+      dislikes: type === 'dislike' ? prev.dislikes + 1 : prev.dislikes,
+    };
+  }
   const updated: PairingSessionStats = {
     ...current,
     likes: type === 'like' ? current.likes + 1 : current.likes,
     dislikes: type === 'dislike' ? current.dislikes + 1 : current.dislikes,
     dislikeTagCounts,
+    personaStats,
   };
   safeWriteJson(STORAGE_KEYS.stats, updated);
   return updated;

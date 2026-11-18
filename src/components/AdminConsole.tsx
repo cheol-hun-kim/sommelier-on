@@ -16,10 +16,11 @@ import {
   ThumbsUp,
   X,
 } from 'lucide-react';
-import { VenueLogo } from './icons/WineVectors';
+import { SommelierAvatar, VenueLogo } from './icons/WineVectors';
 import type {
   Language,
   PairingSessionStats,
+  SommelierPersona,
   TastingJournalEntry,
   Venue,
   WineCategory,
@@ -39,6 +40,7 @@ interface AdminConsoleProps {
   lang: Language;
   venue: Venue;
   venueWines: WineItem[];
+  personas: SommelierPersona[];
   stats: PairingSessionStats;
   venueJournalEntries: TastingJournalEntry[];
   isUnlocked: boolean;
@@ -56,6 +58,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
   lang,
   venue,
   venueWines,
+  personas,
   stats,
   venueJournalEntries,
   isUnlocked,
@@ -762,6 +765,74 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
             <div className="text-[11px] text-[var(--text-secondary)]">
               {lang === 'ko' ? '아쉬움 피드백' : 'Sensitivity Flags'}
             </div>
+          </div>
+        </div>
+
+        {/* Sommelier Persona Recommendation Count & Satisfaction Score */}
+        <div className="mt-6 border-t border-[var(--border-subtle)] pt-5">
+          <h3 className="mb-3 text-[15px] font-bold text-[var(--text-primary)]">
+            {lang === 'ko'
+              ? '소믈리에별 추천 실적 · 만족도 점수'
+              : 'Sommelier Performance & Satisfaction'}
+          </h3>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {personas.map((p) => {
+              const ps = stats.personaStats?.[p.id] ?? {
+                recommendations: 0,
+                orderIntents: 0,
+                likes: 0,
+                dislikes: 0,
+              };
+              const totalRated = ps.likes + ps.dislikes;
+              const satScore =
+                totalRated > 0 ? Math.round((ps.likes / totalRated) * 100) : null;
+
+              return (
+                <div
+                  key={p.id}
+                  className="somm-sub-surface flex flex-col justify-between rounded-2xl p-4"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <SommelierAvatar personaId={p.id} size={36} />
+                    <div>
+                      <div className="text-[13px] font-bold text-[var(--text-primary)]">
+                        {lang === 'ko' ? p.nameKo : p.nameEn}
+                      </div>
+                      <div className="text-[11px] text-[var(--text-secondary)]">
+                        {lang === 'ko' ? p.genreKo : p.genreEn}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-3 gap-2 border-t border-[var(--border-subtle)] pt-3 text-center">
+                    <div>
+                      <div className="text-[15px] font-bold tabular-nums text-[var(--text-primary)]">
+                        {ps.recommendations}
+                      </div>
+                      <div className="text-[10px] text-[var(--text-secondary)]">
+                        {lang === 'ko' ? '추천 횟수' : 'Recs'}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[15px] font-bold tabular-nums text-[var(--text-primary)]">
+                        {ps.orderIntents}
+                      </div>
+                      <div className="text-[10px] text-[var(--text-secondary)]">
+                        {lang === 'ko' ? '선택' : 'Selected'}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[15px] font-bold tabular-nums text-[#6B1D2F] dark:text-[#F4B8C6]">
+                        {satScore !== null ? `${satScore}%` : '—'}
+                      </div>
+                      <div className="text-[10px] text-[var(--text-secondary)]">
+                        {lang === 'ko' ? '만족도' : 'Score'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 

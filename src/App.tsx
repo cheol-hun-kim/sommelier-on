@@ -43,6 +43,7 @@ import type {
   AppMode,
   BudgetScope,
   BudgetTier,
+  CorkageBottle,
   CourseBottleCount,
   CoursePairingMode,
   CourseServeFormat,
@@ -104,7 +105,9 @@ export function App() {
     useState<SommelierPersona | null>(null);
 
   const [budgetTier, setBudgetTier] = useState<BudgetTier>('50_100');
+  const [customBudgetManWon, setCustomBudgetManWon] = useState('');
   const [budgetScope, setBudgetScope] = useState<BudgetScope>('per_bottle');
+  const [corkageWine, setCorkageWine] = useState<CorkageBottle | null>(null);
 
   const [selectedRegisteredDishIds, setSelectedRegisteredDishIds] = useState<
     string[]
@@ -290,11 +293,20 @@ export function App() {
   ) => {
     const pId = overridePersonaId ?? selectedPersonaId;
     const persona = personas.find((p) => p.id === pId) ?? personas[0];
+    const parsedManWon = Number(customBudgetManWon);
+    const customBudgetWon =
+      !Number.isNaN(parsedManWon) && parsedManWon > 0
+        ? parsedManWon * 10000
+        : null;
+    const effectiveCorkage =
+      corkageWine && corkageWine.name.trim().length > 0 ? corkageWine : null;
+
     return {
       venue: activeVenue,
       wines,
       persona,
       budgetTier,
+      customBudgetWon,
       budgetScope,
       selectedDishes: collectedDishes,
       customDishText: customDishInput.trim(),
@@ -307,6 +319,7 @@ export function App() {
       coursePairingMode,
       customSlots,
       includeExtraGlass,
+      corkageWine: effectiveCorkage,
       excludedWineIds: overrideExcluded ?? swappedExcludedIds,
       tasteProfile: overrideProfile ?? tasteProfile,
     };
@@ -326,7 +339,12 @@ export function App() {
       bundle.kind === 'course_sequence'
         ? bundle.courseSequence?.map((s) => s.wine.id) ?? []
         : bundle.singleItems?.map((i) => i.wine.id) ?? [];
-    setStats(recordRecommendationStats(recIds));
+    setStats(
+      recordRecommendationStats(
+        recIds,
+        overridePersonaId ?? selectedPersonaId
+      )
+    );
     setRecommendationBundle(bundle);
     if (!keepStep) {
       setGuestStep(2);
@@ -351,7 +369,7 @@ export function App() {
   };
 
   const handleSelectWineForDrinking = (wine: WineItem) => {
-    setStats(recordOrderIntentStats());
+    setStats(recordOrderIntentStats(selectedPersonaId));
     setActiveDrinkingWine(wine);
     setGuestStep(3);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -394,7 +412,7 @@ export function App() {
     const nextProfile = applyLikeToTasteProfile(tasteProfile, wine);
     setTasteProfile(nextProfile);
     saveTasteProfile(nextProfile);
-    setStats(recordFeedbackStats('like'));
+    setStats(recordFeedbackStats('like', [], selectedPersonaId));
     logJournalFeedback(wine, 'like', undefined, memo);
   };
 
@@ -411,7 +429,7 @@ export function App() {
     );
     setTasteProfile(nextProfile);
     saveTasteProfile(nextProfile);
-    setStats(recordFeedbackStats('dislike', reasons));
+    setStats(recordFeedbackStats('dislike', reasons, selectedPersonaId));
     logJournalFeedback(wine, 'dislike', reasons, memo);
   };
 
@@ -528,8 +546,12 @@ export function App() {
             onInspectPersona={setInspectedPersona}
             budgetTier={budgetTier}
             onBudgetTierChange={setBudgetTier}
+            customBudgetManWon={customBudgetManWon}
+            onCustomBudgetManWonChange={setCustomBudgetManWon}
             budgetScope={budgetScope}
             onBudgetScopeChange={setBudgetScope}
+            corkageWine={corkageWine}
+            onCorkageWineChange={setCorkageWine}
             selectedRegisteredDishIds={selectedRegisteredDishIds}
             onToggleRegisteredDish={handleToggleRegisteredDish}
             customDishes={customDishes}
@@ -621,6 +643,7 @@ export function App() {
             lang={lang}
             venue={activeVenue}
             venueWines={venueWines}
+            personas={personas}
             stats={stats}
             venueJournalEntries={journalEntries.filter(
               (e) => e.venueId === activeVenue.id

@@ -3,6 +3,7 @@ import type {
   BodyPref,
   BudgetScope,
   BudgetTier,
+  CorkageBottle,
   CourseBottleCount,
   CourseBottleSlotRecommendation,
   CoursePairingMode,
@@ -29,6 +30,7 @@ export interface PairingQuery {
   wines: WineItem[];
   persona: SommelierPersona;
   budgetTier: BudgetTier;
+  customBudgetWon?: number | null;
   budgetScope: BudgetScope;
   selectedDishes: ParsedMenuDish[];
   customDishText?: string;
@@ -41,6 +43,7 @@ export interface PairingQuery {
   coursePairingMode: CoursePairingMode;
   customSlots: WineCategory[];
   includeExtraGlass?: boolean;
+  corkageWine?: CorkageBottle | null;
   excludedWineIds?: string[];
   tasteProfile: UserTasteProfile;
 }
@@ -77,7 +80,8 @@ export function extractTagsFromFreeText(text: string): { tags: string[]; intensi
 function getBudgetWindow(
   tier: BudgetTier,
   scope: BudgetScope,
-  bottleCount: number
+  bottleCount: number,
+  customBudgetWon?: number | null
 ): { min: number; max: number; ideal: number } {
   const baseMap: Record<BudgetTier, { min: number; max: number; ideal: number }> = {
     under_50: { min: 0, max: 55000, ideal: 45000 },
@@ -85,12 +89,19 @@ function getBudgetWindow(
     '100_150': { min: 98000, max: 155000, ideal: 128000 },
     over_150: { min: 145000, max: 450000, ideal: 185000 },
   };
-  const base = baseMap[tier];
+  const base =
+    customBudgetWon && customBudgetWon > 0
+      ? {
+          min: Math.round(customBudgetWon * 0.45),
+          max: Math.round(customBudgetWon * 1.05),
+          ideal: Math.round(customBudgetWon * 0.85),
+        }
+      : baseMap[tier];
+
   if (scope === 'total' && bottleCount > 1) {
-    // Distribute total budget gracefully across multi-bottle selections
-    const effectiveMax = Math.max(48000, Math.round(base.max / bottleCount));
+    const effectiveMax = Math.max(45000, Math.round(base.max / bottleCount));
     const effectiveMin = Math.round(base.min / bottleCount);
-    const effectiveIdeal = Math.max(42000, Math.round(base.ideal / bottleCount));
+    const effectiveIdeal = Math.max(40000, Math.round(base.ideal / bottleCount));
     return { min: effectiveMin, max: effectiveMax, ideal: effectiveIdeal };
   }
   return base;
@@ -413,6 +424,7 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
     wines,
     persona,
     budgetTier,
+    customBudgetWon,
     budgetScope,
     selectedDishes,
     customDishText,
@@ -425,6 +437,7 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
     coursePairingMode,
     customSlots,
     includeExtraGlass = false,
+    corkageWine = null,
     excludedWineIds = [],
     tasteProfile,
   } = query;
@@ -462,7 +475,15 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
     : isMultiBottleCourse
       ? courseBottleCount
       : 1;
-  const budgetWindow = getBudgetWindow(budgetTier, budgetScope, effectiveBottleCount);
+  // When a corkage bottle occupies 1 slot in a multi-bottle course, split total budget across the remaining restaurant bottles!
+  const restaurantBottleCount =
+    isMultiBottleCourse && corkageWine ? Math.max(1, effectiveBottleCount - 1) : effectiveBottleCount;
+  const budgetWindow = getBudgetWindow(
+    budgetTier,
+    budgetScope,
+    restaurantBottleCount,
+    customBudgetWon
+  );
 
   const pickExtraGlass = (excludedIds: Set<string>, usedCats: WineCategory[]): SingleWineRecommendation | undefined => {
     if (!includeExtraGlass || isGlassCourse) return undefined;
@@ -532,9 +553,8 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
   if (!isMultiBottleCourse) {
     const limit = Math.min(4, Math.max(1, venue.recommendationLimit || 3));
     const scored = eligiblePool
-      .map((wine) => ({
-        wine,
-        score: scoreWineForContext(wine, {
+      .map((wine) => {
+        let s = scoreWineForContext(wine, {
           persona,
           budgetWindow,
           flavorTags: allTags,
@@ -543,8 +563,14 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
           sweetnessPref,
           occasion,
           tasteProfile,
-        }),
-      }))
+        });
+        // If guest brought a corkage bottle, favor complementary contrasting styles!
+        if (corkageWine) {
+          if (wine.category === corkageWine.category) s -= 26;
+          else s += 20;
+        }
+        return { wine, score: s };
+      })
       .sort((a, b) => b.score - a.score)
       .slice(0, limit);
 
@@ -578,9 +604,11 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
     });
 
     const overallNoteKo =
-      menuMode === 'course'
-        ? `${persona.nameKo}의 시선으로 전채부터 메인까지 한 병으로 매끄럽게 관통할 수 있는 균형미 뛰어난 와인을 추렸습니다.`
-        : `${persona.nameKo}가 선택하신 요리들의 맛의 공통분모를 읽어, 현재 셀러에 재고가 있는 와인 중 최적의 3병을 골랐습니다.`;
+      corkageWine
+        ? `${persona.nameKo}가 가져오신 [${corkageWine.name}]과 자연스럽게 대비·조화를 이루는 업장 와인을 우선 선정했습니다.`
+        : menuMode === 'course'
+          ? `${persona.nameKo}의 시선으로 전채부터 메인까지 한 병으로 매끄럽게 이어지는 균형미 뛰어난 와인을 추렸습니다.`
+          : `${persona.nameKo}가 선택하신 요리들의 맛의 공통분모를 읽어, 현재 셀러에 재고가 있는 와인 중 최적의 바틀을 골랐습니다.`;
     const overallNoteEn =
       menuMode === 'course'
         ? `Curated by ${persona.nameEn}: versatile, in-stock selections capable of carrying the full tasting progression in a single bottle.`
@@ -651,13 +679,100 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
       categoryTotals[cat] = (categoryTotals[cat] ?? 0) + 1;
     });
 
+    const corkageSlotIdx = corkageWine
+      ? corkageWine.slotPosition === 'early'
+        ? 0
+        : corkageWine.slotPosition === 'middle'
+          ? Math.min(1, effectiveBottleCount - 1)
+          : effectiveBottleCount - 1
+      : -1;
+
     for (let i = 0; i < effectiveBottleCount; i++) {
+      const segDishes = segments[i] ?? workingDishes;
+      const segDishesKo = segDishes.map((d) => d.nameKo);
+      const segDishesEn = segDishes.map((d) => d.nameEn);
+      const segLabelsKo =
+        effectiveBottleCount === 2
+          ? ['전반부 코스 (전채 · 에피타이저)', '후반부 코스 (메인 · 마무리)']
+          : effectiveBottleCount === 4
+            ? ['1구간 (아뮤즈 · 전채)', '2구간 (해산물 · 온요리)', '3구간 (육류 메인)', '4구간 (디저트 · 마무리)']
+            : ['전반부 코스 (아뮤즈 · 전채)', '중반부 코스 (온요리 · 중간요리)', '후반부 코스 (메인 · 피날레)'];
+      const segLabelsEn =
+        effectiveBottleCount === 2
+          ? ['Opening Arc (Starters & Light Plates)', 'Closing Arc (Main & Finale)']
+          : effectiveBottleCount === 4
+            ? ['Act I (Amuse & Starter)', 'Act II (Seafood & Warm)', 'Act III (Main Course)', 'Act IV (Dessert & Finale)']
+            : ['Opening Arc (Amuse & Starter)', 'Middle Arc (Warm & Mid Course)', 'Climax Arc (Main & Finale)'];
+
+      if (corkageWine && i === corkageSlotIdx) {
+        const corkageVirtualWine: WineItem = {
+          id: 'corkage_byob',
+          venueId: venue.id,
+          nameKo: corkageWine.name,
+          nameEn: corkageWine.name,
+          producer: 'BYOB',
+          vintage: new Date().getFullYear(),
+          category: corkageWine.category,
+          varietalsKo: '지참 와인 (콜키지)',
+          varietalsEn: 'Guest Corkage Bottle',
+          regionKo: '고객 지참',
+          regionEn: 'Guest Cellar',
+          countryCode: 'FR',
+          venuePrice: 0,
+          marketPrice: 0,
+          stock: 1,
+          structure: { body: corkageWine.body, acidity: 3, tannin: corkageWine.category === 'red' ? 3 : 1, sweetness: 1, alcohol: 3 },
+          aromas: { primary: ['cherry', 'citrus'], secondary: ['oak_cedar'], tertiary: ['mineral_stone'] },
+          serving: {
+            glassType: corkageWine.category === 'sparkling' ? 'flute' : corkageWine.category === 'red' ? 'bordeaux' : 'white',
+            tempMin: corkageWine.category === 'red' ? 16 : 9,
+            tempMax: corkageWine.category === 'red' ? 18 : 11,
+            decantMinutes: corkageWine.category === 'red' ? 30 : 0,
+            drinkWindowStart: 2024,
+            drinkWindowEnd: 2030,
+            statusKo: '고객 지참 콜키지',
+            statusEn: 'Guest Corkage',
+          },
+          storytelling: {
+            terroirKo: '고객님이 직접 준비해 오신 소중한 와인입니다.',
+            terroirEn: 'Brought personally by the guest.',
+            vinificationKo: '코스의 흐름에 맞춰 서빙 온도만 확인해 주세요.',
+            vinificationEn: 'Confirm serving temperature with your host.',
+            heavenClimateKo: '고객님이 직접 지참하신 와인입니다.',
+            heavenClimateEn: 'Guest-provided corkage bottle.',
+            earthSoilKo: '지참하신 와인의 개성을 중심으로 앞뒤 코스를 연결했습니다.',
+            earthSoilEn: 'Remaining cellar bottles were curated around this corkage bottle.',
+            humanPhilosophyKo: '가져오신 와인과 업장 와인이 자연스럽게 이어지도록 배치했습니다.',
+            humanPhilosophyEn: 'Positioned to harmonize seamlessly with the restaurant cellar.',
+            wineryLocation: { lat: 47.0247, lng: 4.8386, placeLabelKo: '고객 지참 와인', placeLabelEn: 'Guest Corkage', earthQuery: corkageWine.name },
+          },
+          pairingAffinities: ['steak', 'umami'],
+        };
+        sequence.push({
+          slotIndex: i,
+          assignedCategory: corkageWine.category,
+          courseSegmentKo: segLabelsKo[i] ?? `코스 ${i + 1}구간`,
+          courseSegmentEn: segLabelsEn[i] ?? `Stage ${i + 1}`,
+          assignedDishesKo: segDishesKo,
+          assignedDishesEn: segDishesEn,
+          wine: corkageVirtualWine,
+          isCorkage: true,
+          valueTier: null,
+          bridgeReasonKo: `직접 가져오신 [${corkageWine.name}]을 이 구간에 배치하고, 앞뒤 코스에 맞는 나머지 바틀을 업장 셀러에서 골랐습니다.`,
+          bridgeReasonEn: `Your corkage bottle [${corkageWine.name}] anchors this course stage while remaining slots are paired from the cellar.`,
+          expertBridgeReasonKo: `지참하신 [${corkageWine.name}]의 바디와 주종(${CATEGORY_LABELS[corkageWine.category].shortKo})을 축으로 앞뒤 바틀의 산도와 질감을 맞췄습니다.`,
+          expertBridgeReasonEn: `Anchored around your [${corkageWine.name}] (${CATEGORY_LABELS[corkageWine.category].shortEn}) to balance acidity and weight across adjacent courses.`,
+          tastingTipKo: '지참하신 와인은 서빙 30분 전에 미리 오픈해 상태를 확인하시는 것을 권해드립니다.',
+          tastingTipEn: 'Consider opening your corkage bottle 30 minutes ahead to check its condition.',
+        });
+        continue;
+      }
+
       const requestedCat = targetCats[i] ?? 'white';
       const occIndex = categoryOccurrences[requestedCat] ?? 0;
       categoryOccurrences[requestedCat] = occIndex + 1;
       const totalInCat = categoryTotals[requestedCat] ?? 1;
 
-      const segDishes = segments[i] ?? workingDishes;
       const segTags = Array.from(new Set(segDishes.flatMap((d) => d.flavorTags)));
       const segAvgIntensity =
         segDishes.length > 0
@@ -727,21 +842,6 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
       if (!chosen) continue;
       usedIds.add(chosen.id);
 
-      const segLabelsKo =
-        effectiveBottleCount === 2
-          ? ['전반부 코스 (전채 · 에피타이저)', '후반부 코스 (메인 · 마무리)']
-          : effectiveBottleCount === 4
-            ? ['1구간 (아뮤즈 · 전채)', '2구간 (해산물 · 온요리)', '3구간 (육류 메인)', '4구간 (디저트 · 마무리)']
-            : ['전반부 코스 (아뮤즈 · 전채)', '중반부 코스 (온요리 · 중간요리)', '후반부 코스 (메인 · 피날레)'];
-      const segLabelsEn =
-        effectiveBottleCount === 2
-          ? ['Opening Arc (Starters & Light Plates)', 'Closing Arc (Main & Finale)']
-          : effectiveBottleCount === 4
-            ? ['Act I (Amuse & Starter)', 'Act II (Seafood & Warm)', 'Act III (Main Course)', 'Act IV (Dessert & Finale)']
-            : ['Opening Arc (Amuse & Starter)', 'Middle Arc (Warm & Mid Course)', 'Climax Arc (Main & Finale)'];
-
-      const segDishesKo = segDishes.map((d) => d.nameKo);
-      const segDishesEn = segDishes.map((d) => d.nameEn);
       const slotNote = buildPersonaCommentary(
         chosen,
         persona,

@@ -225,6 +225,7 @@ export interface CourseBottleSlotRecommendation {
   assignedDishesKo: string[];
   assignedDishesEn: string[];
   wine: WineItem;
+  isCorkage?: boolean;
   valueTier: ValueTier;
   bridgeReasonKo: string;
   bridgeReasonEn: string;
@@ -286,6 +287,20 @@ export interface TastingJournalEntry {
   createdAt: string;
 }
 
+export interface CorkageBottle {
+  name: string;
+  category: WineCategory;
+  body: number; // 1..5
+  slotPosition: 'early' | 'middle' | 'late';
+}
+
+export interface PersonaPerformanceStat {
+  recommendations: number;
+  orderIntents: number;
+  likes: number;
+  dislikes: number;
+}
+
 export interface PairingSessionStats {
   totalSessions: number;
   orderIntents: number;
@@ -293,4 +308,5 @@ export interface PairingSessionStats {
   dislikes: number;
   topRecommendedWineIds: Record<string, number>;
   dislikeTagCounts: Record<DislikeReasonTag, number>;
+  personaStats: Record<string, PersonaPerformanceStat>;
 }
