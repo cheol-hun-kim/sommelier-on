@@ -690,20 +690,20 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
       const labelKo =
         fSlot === null
           ? '균형 배분 구성'
-          : `${fSlot + 1}번 병(${focusedCatKo}) 퀄리티 집중`;
+          : `${fSlot + 1}번 병(${focusedCatKo}) 집중`;
       const labelEn =
         fSlot === null
           ? 'Balanced Allocation'
-          : `Bottle ${fSlot + 1} (${focusedCatEn}) Prestige`;
+          : `Bottle ${fSlot + 1} (${focusedCatEn}) Focus`;
 
       const descKo =
         fSlot === null
           ? '모든 병에 예산을 고르게 배분해 처음부터 끝까지 안정적인 만족감을 드리는 구성입니다.'
-          : `${fSlot + 1}번째 ${focusedCatKo}에 예산과 퀄리티 비중을 집중하고, 나머지 병은 음식과 조화로운 합리적 라인업으로 맞췄습니다.`;
+          : `${fSlot + 1}번째 ${focusedCatKo}에 예산과 비중을 집중하고, 나머지 병은 음식과 조화로운 합리적 라인업으로 맞췄습니다.`;
       const descEn =
         fSlot === null
           ? 'Balanced budget allocation across every bottle in the course.'
-          : `Invests flagship quality into Bottle ${fSlot + 1} (${focusedCatEn}) while pairing the remaining courses smartly.`;
+          : `Invests flagship focus into Bottle ${fSlot + 1} (${focusedCatEn}) while pairing the remaining courses smartly.`;
 
       courseScenarios.push({
         id: `focus_slot_${fSlot ?? 'balanced'}`,

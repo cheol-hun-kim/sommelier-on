@@ -31,8 +31,8 @@ interface GuestStep3Props {
   venueId: string;
   priceTransparencyOptIn: boolean;
   onBack: () => void;
-  onLikeWine: (wine: WineItem) => void;
-  onDislikeWine: (wine: WineItem, reasons: DislikeReasonTag[]) => void;
+  onLikeWine: (wine: WineItem, memo?: string) => void;
+  onDislikeWine: (wine: WineItem, reasons: DislikeReasonTag[], memo?: string) => void;
   onSwitchWine: (wine: WineItem) => void;
   onReRecommend: () => void;
 }
@@ -53,6 +53,7 @@ export const GuestStep3: React.FC<GuestStep3Props> = ({
     'idle' | 'liked' | 'disliking' | 'disliked_saved'
   >('idle');
   const [selectedReasons, setSelectedReasons] = useState<DislikeReasonTag[]>([]);
+  const [memoInput, setMemoInput] = useState('');
 
   const wineName = lang === 'ko' ? wine.nameKo : wine.nameEn;
   const varietal = lang === 'ko' ? wine.varietalsKo : wine.varietalsEn;
@@ -88,13 +89,13 @@ export const GuestStep3: React.FC<GuestStep3Props> = ({
   };
 
   const handleLikeClick = () => {
-    onLikeWine(wine);
+    onLikeWine(wine, memoInput.trim() || undefined);
     setFeedbackState('liked');
   };
 
   const handleDislikeSubmit = () => {
     if (selectedReasons.length === 0) return;
-    onDislikeWine(wine, selectedReasons);
+    onDislikeWine(wine, selectedReasons, memoInput.trim() || undefined);
     setFeedbackState('disliked_saved');
   };
 
@@ -257,6 +258,18 @@ export const GuestStep3: React.FC<GuestStep3Props> = ({
         <p className="prose-pretty mt-1 text-[14px] text-[var(--text-secondary)]">
           {t.feedbackSubtitle}
         </p>
+
+        <input
+          type="text"
+          value={memoInput}
+          onChange={(e) => setMemoInput(e.target.value)}
+          placeholder={
+            lang === 'ko'
+              ? '한 줄 시음 메모 남기기 (선택, 예: 전복 요리와 산미가 딱 맞았어요)'
+              : 'Optional 1-line tasting note...'
+          }
+          className="mt-4 w-full rounded-2xl bg-[var(--bg-tertiary)] px-4 py-3 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[#6B1D2F]"
+        />
 
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <button

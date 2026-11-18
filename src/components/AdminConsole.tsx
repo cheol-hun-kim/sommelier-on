@@ -12,17 +12,25 @@ import {
   QrCode,
   RotateCcw,
   Sparkles,
+  ThumbsDown,
+  ThumbsUp,
   X,
 } from 'lucide-react';
 import { VenueLogo } from './icons/WineVectors';
 import type {
   Language,
   PairingSessionStats,
+  TastingJournalEntry,
   Venue,
   WineCategory,
   WineItem,
 } from '../types/sommelier';
-import { CATEGORY_LABELS, TRANSLATIONS, formatKrw } from '../i18n/translations';
+import {
+  CATEGORY_LABELS,
+  DISLIKE_REASON_LABELS,
+  TRANSLATIONS,
+  formatKrw,
+} from '../i18n/translations';
 import { analyzeWineLabelImage, type ScannedWineLabelDraft } from '../services/aiService';
 import { getGeminiApiKey, saveGeminiApiKey } from '../services/storageService';
 import { SAMPLE_LABEL_SCAN_PRESET } from '../data/seedData';
@@ -32,6 +40,7 @@ interface AdminConsoleProps {
   venue: Venue;
   venueWines: WineItem[];
   stats: PairingSessionStats;
+  venueJournalEntries: TastingJournalEntry[];
   isUnlocked: boolean;
   onUnlock: () => void;
   onUpdateStock: (wineId: string, delta: number) => void;
@@ -48,6 +57,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
   venue,
   venueWines,
   stats,
+  venueJournalEntries,
   isUnlocked,
   onUnlock,
   onUpdateStock,
@@ -753,6 +763,88 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
               {lang === 'ko' ? '아쉬움 피드백' : 'Sensitivity Flags'}
             </div>
           </div>
+        </div>
+
+        {/* Shared Customer Tasting Experience Feed for this Venue */}
+        <div className="mt-6 border-t border-[var(--border-subtle)] pt-5">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h3 className="text-[15px] font-bold text-[var(--text-primary)]">
+              {lang === 'ko'
+                ? `방문 고객 시음 경험 · 취향 공유 (${venueJournalEntries.length}건)`
+                : `Guest Tasting Experience Feed (${venueJournalEntries.length})`}
+            </h3>
+          </div>
+
+          {venueJournalEntries.length === 0 ? (
+            <p className="somm-sub-surface rounded-2xl p-4 text-[13px] text-[var(--text-secondary)]">
+              {lang === 'ko'
+                ? '손님이 와인을 시음한 뒤 [마음에 들어요 / 조금 아쉬워요] 피드백을 남기면 이 업장 대시보드에 실시간으로 공유됩니다.'
+                : 'Guest tasting ratings and palate notes submitted at tables appear here in real time.'}
+            </p>
+          ) : (
+            <div className="space-y-2.5">
+              {venueJournalEntries.slice(0, 10).map((entry) => (
+                <div
+                  key={entry.id}
+                  className="somm-sub-surface rounded-2xl p-3.5 text-[13px]"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="font-bold text-[var(--text-primary)]">
+                      {entry.memberNickname} ·{' '}
+                      <span className="font-semibold text-[#6B1D2F] dark:text-[#E59BAE]">
+                        {lang === 'ko' ? entry.wineNameKo : entry.wineNameEn}{' '}
+                        {entry.vintage}
+                      </span>
+                    </div>
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
+                        entry.rating === 'like'
+                          ? 'bg-[#EDF5F0] text-[#1F5B3A] dark:bg-[#172B20] dark:text-[#9ED8B6]'
+                          : 'bg-[#FDF0F2] text-[#8A1E33] dark:bg-[#32161D] dark:text-[#F4A5B5]'
+                      }`}
+                    >
+                      {entry.rating === 'like' ? (
+                        <ThumbsUp className="h-3 w-3" strokeWidth={1.5} />
+                      ) : (
+                        <ThumbsDown className="h-3 w-3" strokeWidth={1.5} />
+                      )}
+                      <span>
+                        {entry.rating === 'like'
+                          ? lang === 'ko'
+                            ? '만족'
+                            : 'Liked'
+                          : lang === 'ko'
+                            ? '아쉬움'
+                            : 'Off'}
+                      </span>
+                    </span>
+                  </div>
+                  {(entry.dishesSummary || entry.memo || (entry.dislikeReasons && entry.dislikeReasons.length > 0)) && (
+                    <div className="mt-1.5 space-y-1 text-[12px] text-[var(--text-secondary)]">
+                      {entry.dishesSummary && <div>{entry.dishesSummary}</div>}
+                      {entry.dislikeReasons && entry.dislikeReasons.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {entry.dislikeReasons.map((r) => (
+                            <span
+                              key={r}
+                              className="rounded-full bg-[var(--bg-secondary)] px-2 py-0.5 text-[11px]"
+                            >
+                              {DISLIKE_REASON_LABELS[r][lang]}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {entry.memo && (
+                        <div className="text-[var(--text-primary)]">
+                          "{entry.memo}"
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

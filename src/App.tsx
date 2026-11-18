@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { AdminConsole } from './components/AdminConsole';
+import { GuestJournalModal } from './components/GuestJournalModal';
 import { GuestStep1 } from './components/GuestStep1';
 import { GuestStep2 } from './components/GuestStep2';
 import { GuestStep3 } from './components/GuestStep3';
@@ -15,7 +17,10 @@ import {
 import { CATEGORY_LABELS, formatKrw } from './i18n/translations';
 import { analyzeMenuImage } from './services/aiService';
 import {
+  addJournalEntry,
   getGeminiApiKey,
+  loadActiveMember,
+  loadJournalEntries,
   loadPersonas,
   loadStats,
   loadTasteProfile,
@@ -26,9 +31,11 @@ import {
   recordOrderIntentStats,
   recordRecommendationStats,
   resetTasteProfile,
+  saveActiveMember,
   saveTasteProfile,
   saveVenues,
   saveWines,
+  signInOrRegisterMember,
   updateUrlQrContext,
 } from './services/storageService';
 import type {
@@ -39,12 +46,14 @@ import type {
   CoursePairingMode,
   CourseServeFormat,
   DislikeReasonTag,
+  GuestMember,
   Language,
   MenuAnalysisResult,
   PairingRecommendationBundle,
   PairingSessionStats,
   ParsedMenuDish,
   SommelierPersona,
+  TastingJournalEntry,
   ThemeMode,
   UserTasteProfile,
   Venue,
@@ -133,6 +142,13 @@ export function App() {
   const [aiLiveConnected, setAiLiveConnected] = useState(
     () => getGeminiApiKey().length > 0
   );
+  const [activeMember, setActiveMember] = useState<GuestMember | null>(() =>
+    loadActiveMember()
+  );
+  const [journalEntries, setJournalEntries] = useState<TastingJournalEntry[]>(
+    () => loadJournalEntries()
+  );
+  const [journalModalOpen, setJournalModalOpen] = useState(false);
 
   // Sync HTML theme and lang attributes
   useEffect(() => {
@@ -304,14 +320,52 @@ export function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleLikeWine = (wine: WineItem) => {
+  const logJournalFeedback = (
+    wine: WineItem,
+    rating: 'like' | 'dislike',
+    reasons?: DislikeReasonTag[],
+    memo?: string
+  ) => {
+    const dishesText = collectedDishes
+      .slice(0, 3)
+      .map((d) => (lang === 'ko' ? d.nameKo : d.nameEn))
+      .join(', ');
+    const entry: TastingJournalEntry = {
+      id: `journal_${Date.now()}`,
+      memberId: activeMember?.id ?? 'guest_anonymous',
+      memberNickname:
+        activeMember?.nickname ??
+        (lang === 'ko' ? `테이블 ${tableNo} 손님` : `Table ${tableNo} Guest`),
+      venueId: activeVenue.id,
+      venueNameKo: activeVenue.nameKo,
+      venueNameEn: activeVenue.nameEn,
+      wineId: wine.id,
+      wineNameKo: wine.nameKo,
+      wineNameEn: wine.nameEn,
+      vintage: wine.vintage,
+      category: wine.category,
+      rating,
+      dislikeReasons: reasons,
+      memo,
+      dishesSummary: dishesText || undefined,
+      createdAt: new Date().toISOString(),
+    };
+    setJournalEntries(addJournalEntry(entry));
+  };
+
+  const handleLikeWine = (wine: WineItem, memo?: string) => {
     const nextProfile = applyLikeToTasteProfile(tasteProfile, wine);
     setTasteProfile(nextProfile);
     saveTasteProfile(nextProfile);
     setStats(recordFeedbackStats('like'));
+    logJournalFeedback(wine, 'like', undefined, memo);
   };
 
-  const handleDislikeWine = (wine: WineItem, reasons: DislikeReasonTag[]) => {
+  const handleDislikeWine = (
+    wine: WineItem,
+    reasons: DislikeReasonTag[],
+    memo?: string
+  ) => {
     const nextProfile = applyDislikeToTasteProfile(
       tasteProfile,
       wine,
@@ -321,6 +375,7 @@ export function App() {
     setTasteProfile(nextProfile);
     saveTasteProfile(nextProfile);
     setStats(recordFeedbackStats('dislike', reasons));
+    logJournalFeedback(wine, 'dislike', reasons, memo);
   };
 
   const handleUpdateStock = (wineId: string, delta: number) => {
@@ -387,7 +442,43 @@ export function App() {
         onTableChange={handleTableChange}
         availableCount={availableVenueWines.length}
         aiLiveConnected={aiLiveConnected}
+        activeMember={activeMember}
+        journalCount={journalEntries.length}
+        onOpenJournal={() => setJournalModalOpen(true)}
       />
+
+      {/* Tablet-First Side Edge Page Navigation Arrows */}
+      {appMode === 'guest' && (
+        <>
+          {guestStep > 1 && (
+            <button
+              type="button"
+              onClick={() => {
+                setGuestStep((prev) => (prev === 3 ? 2 : 1));
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              aria-label={lang === 'ko' ? '이전 페이지' : 'Previous step'}
+              className="no-print somm-card fixed left-2.5 top-1/2 z-20 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-[var(--text-primary)] shadow-md transition-transform hover:scale-105 active:scale-95 sm:left-4 sm:h-12 sm:w-12"
+            >
+              <ChevronLeft className="h-5 w-5" strokeWidth={1.75} />
+            </button>
+          )}
+          {((guestStep === 1 && recommendationBundle) ||
+            (guestStep === 2 && activeDrinkingWine)) && (
+            <button
+              type="button"
+              onClick={() => {
+                setGuestStep((prev) => (prev === 1 ? 2 : 3));
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              aria-label={lang === 'ko' ? '다음 페이지' : 'Next step'}
+              className="no-print somm-card fixed right-2.5 top-1/2 z-20 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-[var(--text-primary)] shadow-md transition-transform hover:scale-105 active:scale-95 sm:right-4 sm:h-12 sm:w-12"
+            >
+              <ChevronRight className="h-5 w-5" strokeWidth={1.75} />
+            </button>
+          )}
+        </>
+      )}
 
       <main className="no-print">
         {appMode === 'guest' && guestStep === 1 && (
@@ -486,6 +577,9 @@ export function App() {
             venue={activeVenue}
             venueWines={venueWines}
             stats={stats}
+            venueJournalEntries={journalEntries.filter(
+              (e) => e.venueId === activeVenue.id
+            )}
             isUnlocked={adminUnlocked}
             onUnlock={() => setAdminUnlocked(true)}
             onUpdateStock={handleUpdateStock}
@@ -571,6 +665,22 @@ export function App() {
         lang={lang}
         onClose={() => setInspectedPersona(null)}
         onSelect={(id) => setSelectedPersonaId(id)}
+      />
+
+      <GuestJournalModal
+        isOpen={journalModalOpen}
+        lang={lang}
+        activeMember={activeMember}
+        journalEntries={journalEntries}
+        onClose={() => setJournalModalOpen(false)}
+        onSignIn={(nick, contact) => {
+          const member = signInOrRegisterMember(nick, contact);
+          setActiveMember(member);
+        }}
+        onSignOut={() => {
+          saveActiveMember(null);
+          setActiveMember(null);
+        }}
       />
     </div>
   );

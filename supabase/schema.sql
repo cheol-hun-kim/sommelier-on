@@ -89,6 +89,32 @@ create table if not exists public.pairing_events (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.guest_members (
+  id text primary key,
+  nickname text not null,
+  contact text not null,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.tasting_journal_entries (
+  id text primary key,
+  member_id text not null references public.guest_members(id) on delete cascade,
+  member_nickname text not null,
+  venue_id text not null references public.venues(id) on delete cascade,
+  wine_id text not null,
+  wine_name_ko text not null,
+  wine_name_en text not null,
+  vintage integer not null,
+  category text not null,
+  rating text not null check (rating in ('like', 'dislike')),
+  dislike_reasons jsonb not null default '[]'::jsonb,
+  memo text,
+  dishes_summary text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_journal_venue on public.tasting_journal_entries (venue_id, created_at desc);
+
 -- Real-time stock safety view: strictly exposes only stock > 0 for guest queries
 create or replace view public.guest_available_wines as
 select * from public.wines

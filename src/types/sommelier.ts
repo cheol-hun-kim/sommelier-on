@@ -251,6 +251,32 @@ export interface PairingRecommendationBundle {
   extraGlass?: SingleWineRecommendation;
 }
 
+export interface GuestMember {
+  id: string;
+  nickname: string;
+  contact: string;
+  createdAt: string;
+}
+
+export interface TastingJournalEntry {
+  id: string;
+  memberId: string;
+  memberNickname: string;
+  venueId: string;
+  venueNameKo: string;
+  venueNameEn: string;
+  wineId: string;
+  wineNameKo: string;
+  wineNameEn: string;
+  vintage: number;
+  category: WineCategory;
+  rating: 'like' | 'dislike';
+  dislikeReasons?: DislikeReasonTag[];
+  memo?: string;
+  dishesSummary?: string;
+  createdAt: string;
+}
+
 export interface PairingSessionStats {
   totalSessions: number;
   orderIntents: number;

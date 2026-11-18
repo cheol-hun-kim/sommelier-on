@@ -1,6 +1,6 @@
 import React from 'react';
-import { Moon, Store, Sun, Utensils } from 'lucide-react';
-import type { AppMode, Language, ThemeMode, Venue } from '../types/sommelier';
+import { BookOpen, Moon, Store, Sun, Utensils } from 'lucide-react';
+import type { AppMode, GuestMember, Language, ThemeMode, Venue } from '../types/sommelier';
 import { TRANSLATIONS } from '../i18n/translations';
 import { SommelierBrandEmblem, VenueLogo } from './icons/WineVectors';
 
@@ -18,6 +18,9 @@ interface HeaderBarProps {
   onTableChange: (table: string) => void;
   availableCount: number;
   aiLiveConnected: boolean;
+  activeMember: GuestMember | null;
+  journalCount: number;
+  onOpenJournal: () => void;
 }
 
 export const HeaderBar: React.FC<HeaderBarProps> = ({
@@ -34,6 +37,9 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   onTableChange,
   availableCount,
   aiLiveConnected,
+  activeMember,
+  journalCount,
+  onOpenJournal,
 }) => {
   const t = TRANSLATIONS[lang];
   const venueName = lang === 'ko' ? activeVenue.nameKo : activeVenue.nameEn;
@@ -124,6 +130,22 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {/* My Tasting Journal / Member Login */}
+            <button
+              type="button"
+              onClick={onOpenJournal}
+              className="inline-flex items-center gap-1.5 rounded-full bg-[var(--bg-secondary)] px-3 py-1.5 text-[12px] font-semibold text-[var(--text-primary)] shadow-sm transition-colors hover:bg-[var(--bg-tertiary)]"
+            >
+              <BookOpen className="h-3.5 w-3.5 text-[#6B1D2F] dark:text-[#E59BAE]" strokeWidth={1.5} />
+              <span>
+                {activeMember
+                  ? `${activeMember.nickname} (${journalCount})`
+                  : lang === 'ko'
+                    ? '내 미식 기록'
+                    : 'Journal'}
+              </span>
+            </button>
+
             {/* Dark / Warm Ivory Mode Toggle */}
             <button
               type="button"

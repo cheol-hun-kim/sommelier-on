@@ -1,8 +1,10 @@
 import { INITIAL_VENUES, INITIAL_WINES, SOMMELIER_PERSONAS } from '../data/seedData';
 import type {
   DislikeReasonTag,
+  GuestMember,
   PairingSessionStats,
   SommelierPersona,
+  TastingJournalEntry,
   UserTasteProfile,
   Venue,
   WineItem,
@@ -14,6 +16,9 @@ const STORAGE_KEYS = {
   tasteProfile: 'sommon_taste_profile_v1',
   stats: 'sommon_stats_v1',
   geminiKey: 'sommon_gemini_api_key',
+  activeMember: 'sommon_active_member_v1',
+  members: 'sommon_members_v1',
+  journal: 'sommon_journal_v1',
 };
 
 export const DEFAULT_TASTE_PROFILE: UserTasteProfile = {
@@ -109,6 +114,60 @@ export function resetTasteProfile(): UserTasteProfile {
 
 export function loadStats(): PairingSessionStats {
   return safeReadJson<PairingSessionStats>(STORAGE_KEYS.stats, DEFAULT_STATS);
+}
+
+export function loadActiveMember(): GuestMember | null {
+  return safeReadJson<GuestMember | null>(STORAGE_KEYS.activeMember, null);
+}
+
+export function saveActiveMember(member: GuestMember | null): void {
+  if (!member) {
+    try {
+      window.localStorage.removeItem(STORAGE_KEYS.activeMember);
+    } catch {
+      // ignore
+    }
+    return;
+  }
+  safeWriteJson(STORAGE_KEYS.activeMember, member);
+  const existing = safeReadJson<GuestMember[]>(STORAGE_KEYS.members, []);
+  const next = [member, ...existing.filter((m) => m.id !== member.id)];
+  safeWriteJson(STORAGE_KEYS.members, next);
+}
+
+export function signInOrRegisterMember(
+  nickname: string,
+  contact: string
+): GuestMember {
+  const existing = safeReadJson<GuestMember[]>(STORAGE_KEYS.members, []);
+  const cleanContact = contact.trim().toLowerCase();
+  const found = existing.find(
+    (m) => m.contact.trim().toLowerCase() === cleanContact && cleanContact.length > 0
+  );
+  if (found) {
+    const updated = { ...found, nickname: nickname.trim() || found.nickname };
+    saveActiveMember(updated);
+    return updated;
+  }
+  const created: GuestMember = {
+    id: `member_${Date.now()}`,
+    nickname: nickname.trim(),
+    contact: contact.trim(),
+    createdAt: new Date().toISOString(),
+  };
+  saveActiveMember(created);
+  return created;
+}
+
+export function loadJournalEntries(): TastingJournalEntry[] {
+  return safeReadJson<TastingJournalEntry[]>(STORAGE_KEYS.journal, []);
+}
+
+export function addJournalEntry(entry: TastingJournalEntry): TastingJournalEntry[] {
+  const current = loadJournalEntries();
+  const next = [entry, ...current].slice(0, 100);
+  safeWriteJson(STORAGE_KEYS.journal, next);
+  return next;
 }
 
 export function recordRecommendationStats(recommendedWineIds: string[]): PairingSessionStats {
