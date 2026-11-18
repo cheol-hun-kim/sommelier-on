@@ -591,6 +591,10 @@ export function App() {
   const handleWineSourceModeChange = (nextMode: WineSourceMode) => {
     setWineSourceMode(nextMode);
     setCorkageOnly(nextMode === 'corkage_direct');
+    if (nextMode === 'my_cellar' || nextMode === 'wine_shop') {
+      setCourseServeFormat('bottle');
+      setIncludeExtraGlass(false);
+    }
     if (nextMode === 'corkage_direct' && !corkageWine) {
       setCorkageWine({
         name: '',

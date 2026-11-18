@@ -1171,61 +1171,63 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
                 </div>
               )}
 
-              {/* Serve Format: Glass vs Bottle (with 1-4 bottle dropdown + extra glass option) */}
-              <div>
-                <div className="mb-2 text-[13px] font-semibold text-[var(--text-primary)]">
-                  {t.courseServeFormatLabel}
-                </div>
-                <div className="grid grid-cols-2 gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => onCourseServeFormatChange('glass')}
-                    data-surface={courseServeFormat === 'glass' ? 'accent' : undefined}
-                    className={`rounded-2xl p-3.5 text-left transition-all ${
-                      courseServeFormat === 'glass'
-                        ? 'btn-accent shadow-sm'
-                        : 'bg-[var(--bg-secondary)] text-[var(--text-primary)]'
-                    }`}
-                  >
-                    <div className="text-[14px] font-bold">
-                      {t.courseFormatGlassTitle}
-                    </div>
-                    <div
-                      className={`mt-1 text-[11px] leading-snug ${
+              {/* Serve Format: Glass vs Bottle (Venue Cellar only; Home Cellar / Wine Shop are bottle-only) */}
+              {wineSourceMode === 'venue_cellar' && (
+                <div>
+                  <div className="mb-2 text-[13px] font-semibold text-[var(--text-primary)]">
+                    {t.courseServeFormatLabel}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => onCourseServeFormatChange('glass')}
+                      data-surface={courseServeFormat === 'glass' ? 'accent' : undefined}
+                      className={`rounded-2xl p-3.5 text-left transition-all ${
                         courseServeFormat === 'glass'
-                          ? 'text-white/90'
-                          : 'text-[var(--text-secondary)]'
+                          ? 'btn-accent shadow-sm'
+                          : 'bg-[var(--bg-secondary)] text-[var(--text-primary)]'
                       }`}
                     >
-                      {t.courseFormatGlassDesc}
-                    </div>
-                  </button>
+                      <div className="text-[14px] font-bold">
+                        {t.courseFormatGlassTitle}
+                      </div>
+                      <div
+                        className={`mt-1 text-[11px] leading-snug ${
+                          courseServeFormat === 'glass'
+                            ? 'text-white/90'
+                            : 'text-[var(--text-secondary)]'
+                        }`}
+                      >
+                        {t.courseFormatGlassDesc}
+                      </div>
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={() => onCourseServeFormatChange('bottle')}
-                    data-surface={courseServeFormat === 'bottle' ? 'accent' : undefined}
-                    className={`rounded-2xl p-3.5 text-left transition-all ${
-                      courseServeFormat === 'bottle'
-                        ? 'btn-accent shadow-sm'
-                        : 'bg-[var(--bg-secondary)] text-[var(--text-primary)]'
-                    }`}
-                  >
-                    <div className="text-[14px] font-bold">
-                      {t.courseFormatBottleTitle}
-                    </div>
-                    <div
-                      className={`mt-1 text-[11px] leading-snug ${
+                    <button
+                      type="button"
+                      onClick={() => onCourseServeFormatChange('bottle')}
+                      data-surface={courseServeFormat === 'bottle' ? 'accent' : undefined}
+                      className={`rounded-2xl p-3.5 text-left transition-all ${
                         courseServeFormat === 'bottle'
-                          ? 'text-white/90'
-                          : 'text-[var(--text-secondary)]'
+                          ? 'btn-accent shadow-sm'
+                          : 'bg-[var(--bg-secondary)] text-[var(--text-primary)]'
                       }`}
                     >
-                      {t.courseFormatBottleDesc}
-                    </div>
-                  </button>
+                      <div className="text-[14px] font-bold">
+                        {t.courseFormatBottleTitle}
+                      </div>
+                      <div
+                        className={`mt-1 text-[11px] leading-snug ${
+                          courseServeFormat === 'bottle'
+                            ? 'text-white/90'
+                            : 'text-[var(--text-secondary)]'
+                        }`}
+                      >
+                        {t.courseFormatBottleDesc}
+                      </div>
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Bottle Count Dropdown (1-4 bottles) + Optional Extra Glass */}
               {courseServeFormat === 'bottle' && (
@@ -1371,19 +1373,27 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
         )}
 
         {/* 4. Optional BYOB / Corkage Bottle Context (alongside venue wines) */}
-        {!corkageOnly && (
+        {wineSourceMode === 'venue_cellar' && (
         <div className="somm-sub-surface rounded-2xl p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <div className="text-[14px] font-bold text-[var(--text-primary)]">
-                {lang === 'ko'
-                  ? '가져오신 와인(콜키지)이 있으신가요?'
-                  : 'Bringing a Corkage Bottle (BYOB)?'}
+                {visitTiming === 'pre_visit'
+                  ? lang === 'ko'
+                    ? '함께 가져가실 콜키지 계획이 있으신가요?'
+                    : 'Planning to Bring a Corkage Bottle Too?'
+                  : lang === 'ko'
+                    ? '가져오신 와인(콜키지)이 있으신가요?'
+                    : 'Bringing a Corkage Bottle (BYOB)?'}
               </div>
               <p className="mt-0.5 text-[12px] text-[var(--text-secondary)]">
-                {lang === 'ko'
-                  ? '지참하신 와인 라벨을 올리거나 입력하시면, 그 와인을 중심으로 나머지 바틀을 맞춰드립니다.'
-                  : 'Add or scan your corkage bottle so remaining cellar picks harmonize around it.'}
+                {visitTiming === 'pre_visit'
+                  ? lang === 'ko'
+                    ? '미리 정해둔 콜키지 와인을 입력하시면, 그 와인을 중심으로 나머지 업장 바틀을 맞춰드립니다.'
+                    : 'Enter a bottle you plan to bring so remaining venue picks harmonize around it.'
+                  : lang === 'ko'
+                    ? '지참하신 와인 라벨을 올리거나 입력하시면, 그 와인을 중심으로 나머지 바틀을 맞춰드립니다.'
+                    : 'Add or scan your corkage bottle so remaining cellar picks harmonize around it.'}
               </p>
             </div>
 
