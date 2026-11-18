@@ -80,7 +80,7 @@ export const INITIAL_VENUES: Venue[] = [
     defaultPersonaId: 'french_classic',
     priceTransparencyOptIn: true,
     adminPin: '1234',
-    tables: ['1', '2', '3', '7', 'Private Salon'],
+    tables: ['1', '2', '3', '4'],
     registeredDishes: [
       {
         id: 'fr_1',
@@ -151,7 +151,7 @@ export const INITIAL_VENUES: Venue[] = [
     defaultPersonaId: 'natural_explorer',
     priceTransparencyOptIn: true,
     adminPin: '1234',
-    tables: ['Bar 1', 'Bar 2', 'Table 3', 'Table 7'],
+    tables: ['1', '2', '3', '4', 'Room'],
     registeredDishes: [
       {
         id: 'hv_1',

@@ -9,7 +9,7 @@ import type {
 } from '../types/sommelier';
 
 const STORAGE_KEYS = {
-  venues: 'sommon_venues_v2',
+  venues: 'sommon_venues_v3',
   wines: 'sommon_wines_v2',
   tasteProfile: 'sommon_taste_profile_v1',
   stats: 'sommon_stats_v1',
@@ -189,12 +189,10 @@ export function parseQrContextFromUrl(venues: Venue[]): {
     const tableNo =
       paramTable && paramTable.trim().length > 0
         ? paramTable.trim()
-        : validVenue.tables.includes('7')
-          ? '7'
-          : validVenue.tables[0] ?? '1';
+        : validVenue.tables[0] ?? '1';
     return { venueId: validVenue.id, tableNo };
   } catch {
-    return { venueId: venues[0]?.id ?? 'pilot_01', tableNo: '7' };
+    return { venueId: venues[0]?.id ?? 'pilot_01', tableNo: '1' };
   }
 }
 

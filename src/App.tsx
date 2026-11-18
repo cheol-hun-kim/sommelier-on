@@ -150,7 +150,7 @@ export function App() {
   useEffect(() => {
     const handleStorage = (e: StorageEvent) => {
       if (e.key === 'sommon_wines_v2') setWines(loadWines());
-      if (e.key === 'sommon_venues_v2') setVenues(loadVenues());
+      if (e.key === 'sommon_venues_v3') setVenues(loadVenues());
       if (e.key === 'sommon_taste_profile_v1')
         setTasteProfile(loadTasteProfile());
     };
@@ -162,9 +162,7 @@ export function App() {
     const target = venues.find((v) => v.id === newVenueId);
     if (!target) return;
     setActiveVenueId(target.id);
-    const nextTable = target.tables.includes('7')
-      ? '7'
-      : target.tables[0] ?? '1';
+    const nextTable = target.tables[0] ?? '1';
     setTableNo(nextTable);
     setSelectedPersonaId(target.defaultPersonaId);
     setSelectedRegisteredDishIds(
