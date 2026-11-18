@@ -2,6 +2,7 @@ import React from 'react';
 import { BookOpen, Moon, Store, Sun, Utensils } from 'lucide-react';
 import type { AppMode, GuestMember, Language, ThemeMode, Venue } from '../types/sommelier';
 import { TRANSLATIONS } from '../i18n/translations';
+import { SlidingSwitch } from './SlidingSwitch';
 import { SommelierBrandEmblem, VenueLogo } from './icons/WineVectors';
 
 interface HeaderBarProps {
@@ -164,35 +165,16 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
               </span>
             </button>
 
-            {/* [한국어 | EN] Segmented Toggle */}
-            <div
-              className="inline-flex rounded-full bg-[var(--bg-secondary)] p-0.5 shadow-sm"
-              role="group"
-              aria-label="Language switch"
-            >
-              <button
-                type="button"
-                onClick={() => onLangChange('ko')}
-                className={`rounded-full px-3 py-1 text-[12px] font-semibold transition-colors ${
-                  lang === 'ko'
-                    ? 'btn-accent'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                }`}
-              >
-                한국어
-              </button>
-              <button
-                type="button"
-                onClick={() => onLangChange('en')}
-                className={`rounded-full px-3 py-1 text-[12px] font-semibold transition-colors ${
-                  lang === 'en'
-                    ? 'btn-accent'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                }`}
-              >
-                EN
-              </button>
-            </div>
+            {/* [한국어 | EN] Equal-Width Sliding Toggle */}
+            <SlidingSwitch
+              size="sm"
+              value={lang}
+              options={[
+                { value: 'ko', label: '한국어' },
+                { value: 'en', label: 'EN' },
+              ]}
+              onChange={onLangChange}
+            />
 
             {/* [손님 화면 | 업장 관리] Segmented Switcher */}
             <div
