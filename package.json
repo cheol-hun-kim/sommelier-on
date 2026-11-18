@@ -1,0 +1,28 @@
+{
+  "name": "sommelier-on",
+  "version": "1.0.0",
+  "private": true,
+  "description": "소믈리에온 (Sommelier On / SommOn) — AI Sommelier B2B2C Web & Tablet Platform",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "qa": "node scripts/qa_matrix_8gates.mjs && node scripts/test_pairing_engine.mjs"
+  },
+  "dependencies": {
+    "lucide-react": "^0.469.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5"
+  }
+}

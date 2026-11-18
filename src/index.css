@@ -1,0 +1,193 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================================
+   SOMMELIER ON (소믈리에온) — GLOBAL DESIGN TOKENS & LUMINANCE-CONTRAST LAW
+   60% Warm Ivory (#FAF8F6) / Dining Dark (#121011)
+   30% Pure White (#FFFFFF) / Card Dark (#1C1819), Charcoal Ink (#1C191A)
+   10% Deep Bordeaux Burgundy (#6B1D2F), Velvet Rose (#F5EBEF), Muted Gold (#B8863B)
+   ============================================================================ */
+
+:root {
+  --bg-primary: #FAF8F6;
+  --bg-secondary: #FFFFFF;
+  --bg-tertiary: #F2EEEB;
+  --bg-card-tint: #F5EBEF;
+
+  --text-primary: #1C191A;
+  --text-secondary: #6E6568;
+  --text-muted: #8B8084;
+
+  --bg-accent: #6B1D2F;
+  --bg-accent-hover: #561524;
+  --text-on-accent: #FFFFFF;
+  --text-on-dark: #FFFFFF;
+  --text-on-light: #1C191A;
+
+  --gold-accent: #B8863B;
+  --gold-tint-bg: #FBF4E8;
+  --gold-tint-text: #7A541C;
+
+  --success-bg: #EDF5F0;
+  --success-text: #1F5B3A;
+  --danger-bg: #FDF0F2;
+  --danger-text: #8A1E33;
+
+  --border-subtle: rgba(28, 25, 26, 0.06);
+  --shadow-card: 0 2px 12px rgba(28, 25, 26, 0.04);
+  --shadow-card-hover: 0 8px 24px rgba(28, 25, 26, 0.08);
+  --shadow-sticky: 0 -6px 24px rgba(28, 25, 26, 0.06);
+}
+
+[data-theme='dark'] {
+  --bg-primary: #121011;
+  --bg-secondary: #1C1819;
+  --bg-tertiary: #262022;
+  --bg-card-tint: #2D1920;
+
+  --text-primary: #F5F1ED;
+  --text-secondary: #B7ACB0;
+  --text-muted: #8E8287;
+
+  --bg-accent: #6B1D2F;
+  --bg-accent-hover: #7F2439;
+  --text-on-accent: #FFFFFF;
+  --text-on-dark: #FFFFFF;
+  --text-on-light: #1C191A;
+
+  --gold-accent: #D1A054;
+  --gold-tint-bg: #2B2214;
+  --gold-tint-text: #ECC88D;
+
+  --success-bg: #172B20;
+  --success-text: #9ED8B6;
+  --danger-bg: #32161D;
+  --danger-text: #F4A5B5;
+
+  --border-subtle: rgba(255, 255, 255, 0.07);
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.36);
+  --shadow-card-hover: 0 8px 28px rgba(0, 0, 0, 0.48);
+  --shadow-sticky: 0 -8px 28px rgba(0, 0, 0, 0.48);
+}
+
+@layer base {
+  html {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Pretendard', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    margin: 0;
+    min-height: 100dvh;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    transition: background-color 220ms ease, color 220ms ease;
+  }
+
+  h1, h2, h3, h4, .headline-balance {
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    text-wrap: balance;
+  }
+
+  p, .prose-pretty {
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    text-wrap: pretty;
+  }
+}
+
+/* Universal Surface-Luminance Law: solid accent/dark buttons ALWAYS keep pure white ink */
+.btn-accent,
+[data-surface='accent'] {
+  background-color: var(--bg-accent);
+  color: var(--text-on-accent) !important;
+}
+
+.btn-accent:hover:not(:disabled),
+[data-surface='accent']:hover:not(:disabled) {
+  background-color: var(--bg-accent-hover);
+  color: var(--text-on-accent) !important;
+}
+
+.btn-accent svg,
+[data-surface='accent'] svg {
+  color: var(--text-on-accent);
+}
+
+/* Borderless Minimalist Card Surface */
+.somm-card {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--border-subtle);
+  transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+
+.somm-card-selected {
+  background-color: var(--bg-card-tint);
+  color: var(--text-primary);
+  box-shadow: 0 0 0 1.5px var(--bg-accent), var(--shadow-card);
+}
+
+.somm-sub-surface {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+/* 4-6-1 Rule for Brand Logo & Icon-Text Lockups */
+.brand-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28em;
+  line-height: 1;
+}
+
+.brand-lockup-icon {
+  height: 1.5em;
+  width: 1.5em;
+  flex-shrink: 0;
+}
+
+/* Numeric tabular alignment for prices, vintages, and temperatures */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-family: 'Plus Jakarta Sans', 'Pretendard', sans-serif;
+}
+
+/* Safe scroll padding beneath sticky tablet/mobile CTA bars */
+.safe-bottom-scroll {
+  padding-bottom: calc(128px + env(safe-area-inset-bottom));
+}
+
+/* Custom subtle scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(110, 101, 104, 0.25);
+  border-radius: 9999px;
+}
+
+/* Printable cellar wine list rules */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #1c191a !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+}
