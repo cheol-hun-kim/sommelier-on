@@ -1,4 +1,10 @@
-import { INITIAL_VENUES, INITIAL_WINES, SOMMELIER_PERSONAS } from '../data/seedData';
+import {
+  INITIAL_PERSONAL_CELLAR,
+  INITIAL_VENUES,
+  INITIAL_WINE_SHOPS,
+  INITIAL_WINES,
+  SOMMELIER_PERSONAS,
+} from '../data/seedData';
 import type {
   DislikeReasonTag,
   GuestMember,
@@ -8,6 +14,8 @@ import type {
   UserTasteProfile,
   Venue,
   WineItem,
+  WineReservation,
+  WineShop,
 } from '../types/sommelier';
 
 const STORAGE_KEYS = {
@@ -19,6 +27,9 @@ const STORAGE_KEYS = {
   activeMember: 'sommon_active_member_v1',
   members: 'sommon_members_v1',
   journal: 'sommon_journal_v1',
+  personalCellar: 'sommon_personal_cellar_v1',
+  wineShops: 'sommon_wine_shops_v1',
+  reservations: 'sommon_reservations_v1',
 };
 
 export const DEFAULT_TASTE_PROFILE: UserTasteProfile = {
@@ -173,6 +184,49 @@ export function addJournalEntry(entry: TastingJournalEntry): TastingJournalEntry
   const current = loadJournalEntries();
   const next = [entry, ...current].slice(0, 100);
   safeWriteJson(STORAGE_KEYS.journal, next);
+  return next;
+}
+
+export function loadPersonalCellar(): WineItem[] {
+  const stored = safeReadJson<WineItem[] | null>(STORAGE_KEYS.personalCellar, null);
+  if (!stored || !Array.isArray(stored) || stored.length === 0) {
+    safeWriteJson(STORAGE_KEYS.personalCellar, INITIAL_PERSONAL_CELLAR);
+    return INITIAL_PERSONAL_CELLAR;
+  }
+  return stored;
+}
+
+export function savePersonalCellar(wines: WineItem[]): void {
+  safeWriteJson(STORAGE_KEYS.personalCellar, wines);
+}
+
+export function loadWineShops(): WineShop[] {
+  const stored = safeReadJson<WineShop[] | null>(STORAGE_KEYS.wineShops, null);
+  if (!stored || !Array.isArray(stored) || stored.length === 0) {
+    safeWriteJson(STORAGE_KEYS.wineShops, INITIAL_WINE_SHOPS);
+    return INITIAL_WINE_SHOPS;
+  }
+  return stored;
+}
+
+export function loadReservations(): WineReservation[] {
+  return safeReadJson<WineReservation[]>(STORAGE_KEYS.reservations, []);
+}
+
+export function addReservation(res: WineReservation): WineReservation[] {
+  const current = loadReservations();
+  const next = [res, ...current].slice(0, 100);
+  safeWriteJson(STORAGE_KEYS.reservations, next);
+  return next;
+}
+
+export function updateReservationStatus(
+  id: string,
+  status: WineReservation['status']
+): WineReservation[] {
+  const current = loadReservations();
+  const next = current.map((r) => (r.id === id ? { ...r, status } : r));
+  safeWriteJson(STORAGE_KEYS.reservations, next);
   return next;
 }
 

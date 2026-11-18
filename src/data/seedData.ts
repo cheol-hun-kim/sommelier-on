@@ -3,6 +3,7 @@ import type {
   SommelierPersona,
   Venue,
   WineItem,
+  WineShop,
 } from '../types/sommelier';
 import { RICH_WINE_STORIES } from './wineStories';
 
@@ -1430,3 +1431,109 @@ export const SAMPLE_LABEL_SCAN_PRESET = {
     tertiary: ['leather_earth'] as const,
   },
 };
+
+const pickForPool = (
+  poolId: string,
+  indices: number[],
+  priceFactor = 0.72
+): WineItem[] =>
+  indices
+    .map((idx) => INITIAL_WINES[idx])
+    .filter((w): w is WineItem => Boolean(w))
+    .map((w) => ({
+      ...w,
+      id: `${poolId}_${w.id}`,
+      venueId: poolId,
+      stock: Math.max(2, w.stock || 3),
+      venuePrice: Math.round((w.marketPrice > 0 ? w.marketPrice : w.venuePrice * priceFactor) / 1000) * 1000,
+    }));
+
+export const INITIAL_PERSONAL_CELLAR: WineItem[] = [
+  {
+    id: 'mycellar_salon_1996',
+    venueId: 'my_cellar',
+    nameKo: '살롱 르 메닐 블랑 드 블랑 그랑 크뤼',
+    nameEn: 'Salon Le Mesnil Blanc de Blancs Grand Cru',
+    producer: 'Champagne Salon',
+    vintage: 1996,
+    category: 'sparkling',
+    varietalsKo: '샤르도네 100%',
+    varietalsEn: '100% Chardonnay',
+    regionKo: '프랑스 샹파뉴 르 메닐 쉬르 오제',
+    regionEn: 'Le Mesnil-sur-Oger, Champagne, France',
+    countryCode: 'FR',
+    venuePrice: 1450000,
+    marketPrice: 1450000,
+    stock: 1,
+    structure: { body: 4, acidity: 5, tannin: 1, sweetness: 1, alcohol: 3 },
+    aromas: {
+      primary: ['citrus', 'pear_apple', 'white_flower'],
+      secondary: ['butter_brioche', 'mineral_stone'],
+      tertiary: ['honey'],
+    },
+    serving: {
+      glassType: 'white',
+      tempMin: 10,
+      tempMax: 12,
+      decantMinutes: 0,
+      drinkWindowStart: 2012,
+      drinkWindowEnd: 2036,
+      statusKo: '완벽한 숙성 정점',
+      statusEn: 'Peak Maturity',
+    },
+    storytelling: {
+      terroirKo: '르 메닐 쉬르 오제 그랑 크뤼 단일 포도밭의 순수 백악질 토양',
+      terroirEn: 'Pure chalk terroir of Grand Cru Le Mesnil-sur-Oger',
+      vinificationKo: '말로락틱 발효를 배제하고 10년 이상 장기 병숙성',
+      vinificationEn: 'No malolactic fermentation with over 10 years sur lattes',
+      heavenClimateKo: '1996년은 높은 당도와 날카로운 산도가 공존한 샹파뉴 세기의 빈티지입니다.',
+      heavenClimateEn: '1996 delivered rare tension between ripe fruit and razor-sharp acidity.',
+      earthSoilKo: '순수한 백악질(Chalk) 토양이 와인에 압도적인 미네랄과 긴 여운을 부여합니다.',
+      earthSoilEn: 'Deep Belemnite chalk imbues crystalline salinity and decades of aging grace.',
+      humanPhilosophyKo: '1905년 유젠 에메 살롱이 오직 최상의 해에만 한 가지 퀴베를 빚기 시작했습니다.',
+      humanPhilosophyEn: 'Founded in 1905 by Eugène-Aimé Salon to craft a single Grand Cru vintage cuvée.',
+      wineryLocation: {
+        lat: 48.9475,
+        lng: 4.0218,
+        placeLabelKo: '르 메닐 쉬르 오제 (Le Mesnil-sur-Oger)',
+        placeLabelEn: 'Le Mesnil-sur-Oger, Champagne',
+        earthQuery: 'Champagne Salon Le Mesnil-sur-Oger',
+      },
+    },
+    pairingAffinities: ['seafood', 'cream', 'truffle', 'umami'],
+  },
+  ...pickForPool('my_cellar', [1, 3, 6, 8, 12], 0.7),
+];
+
+export const INITIAL_WINE_SHOPS: WineShop[] = [
+  {
+    id: 'shop_hannam',
+    nameKo: '한남 와인 그로브',
+    nameEn: 'Hannam Wine Grove',
+    neighborhoodKo: '서울 용산구 한남동',
+    neighborhoodEn: 'Hannam-dong, Seoul',
+    specialtyKo: '부르고뉴 · 샴페인 그랑 크뤼 셀렉션',
+    specialtyEn: 'Burgundy & Champagne Grand Cru Selection',
+    wines: pickForPool('shop_hannam', [0, 1, 2, 4, 6, 7, 10, 14], 0.72),
+  },
+  {
+    id: 'shop_cheongdam',
+    nameKo: '청담 셀러 88',
+    nameEn: 'Cheongdam Cellar 88',
+    neighborhoodKo: '서울 강남구 청담동',
+    neighborhoodEn: 'Cheongdam-dong, Seoul',
+    specialtyKo: '보르도 · 나파 밸리 · 파인다이닝 페어링 전문',
+    specialtyEn: 'Bordeaux, Napa Valley & Fine Dining Pairings',
+    wines: pickForPool('shop_cheongdam', [1, 3, 5, 7, 8, 9, 13, 15], 0.72),
+  },
+  {
+    id: 'shop_seongsu',
+    nameKo: '성수 내추럴 보틀샵',
+    nameEn: 'Seongsu Natural Bottle Shop',
+    neighborhoodKo: '서울 성동구 성수동',
+    neighborhoodEn: 'Seongsu-dong, Seoul',
+    specialtyKo: '내추럴 · 오렌지 · 미식가용 소량 생산 와인',
+    specialtyEn: 'Natural, Skin-Contact & Artisanal Producers',
+    wines: pickForPool('shop_seongsu', [0, 2, 4, 11, 12, 14, 16, 17], 0.72),
+  },
+];

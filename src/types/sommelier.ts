@@ -2,6 +2,8 @@ export type Language = 'ko' | 'en';
 export type ThemeMode = 'ivory' | 'dark';
 export type AppMode = 'guest' | 'admin';
 export type SpeechStyle = 'friendly' | 'expert';
+export type VisitTiming = 'pre_visit' | 'on_site';
+export type WineSourceMode = 'venue_cellar' | 'my_cellar' | 'wine_shop' | 'corkage_direct';
 
 export type WineCategory = 'sparkling' | 'white' | 'rose_orange' | 'red' | 'dessert';
 
@@ -136,6 +138,7 @@ export interface Venue {
   logoUrl?: string;
   defaultPersonaId: string;
   priceTransparencyOptIn: boolean;
+  allowPreVisitVenueList?: boolean;
   recommendationLimit: number; // 1..4
   adminPin: string;
   tables: string[];
@@ -247,6 +250,9 @@ export interface CourseScenario {
 
 export interface PairingRecommendationBundle {
   kind: 'single_or_alacarte' | 'course_sequence' | 'corkage_only';
+  sourceMode?: WineSourceMode;
+  sourceLabelKo?: string;
+  sourceLabelEn?: string;
   persona: SommelierPersona;
   menuMode: MenuMode;
   serveFormat?: CourseServeFormat;
@@ -336,4 +342,32 @@ export interface PairingSessionStats {
   topRecommendedWineIds: Record<string, number>;
   dislikeTagCounts: Record<DislikeReasonTag, number>;
   personaStats: Record<string, PersonaPerformanceStat>;
+}
+
+export interface WineShop {
+  id: string;
+  nameKo: string;
+  nameEn: string;
+  neighborhoodKo: string;
+  neighborhoodEn: string;
+  specialtyKo: string;
+  specialtyEn: string;
+  wines: WineItem[];
+}
+
+export interface WineReservation {
+  id: string;
+  venueId: string;
+  venueNameKo: string;
+  venueNameEn: string;
+  guestName: string;
+  guestContact: string;
+  visitDate: string;
+  wineIds: string[];
+  wineNamesKo: string[];
+  wineNamesEn: string[];
+  totalPrice: number;
+  note?: string;
+  status: 'pending' | 'confirmed' | 'cancelled';
+  createdAt: string;
 }

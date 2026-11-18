@@ -25,6 +25,7 @@ import type {
   Venue,
   WineCategory,
   WineItem,
+  WineReservation,
 } from '../types/sommelier';
 import {
   CATEGORY_LABELS,
@@ -48,6 +49,9 @@ interface AdminConsoleProps {
   onUpdateStock: (wineId: string, delta: number) => void;
   onAddWine: (newWine: WineItem) => void;
   onTogglePriceTransparency: (venueId: string, optIn: boolean) => void;
+  onTogglePreVisitVenueList: (venueId: string, allow: boolean) => void;
+  reservations: WineReservation[];
+  onUpdateReservationStatus: (id: string, status: WineReservation['status']) => void;
   onUpdateRecommendationLimit: (venueId: string, limit: number) => void;
   onUpdateVenueLogo: (venueId: string, logoUrl: string | undefined) => void;
   onOpenGuestTable: (venueId: string, table: string) => void;
@@ -66,6 +70,9 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
   onUpdateStock,
   onAddWine,
   onTogglePriceTransparency,
+  onTogglePreVisitVenueList,
+  reservations,
+  onUpdateReservationStatus,
   onUpdateRecommendationLimit,
   onUpdateVenueLogo,
   onOpenGuestTable,
@@ -365,6 +372,35 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
 
           <button
             type="button"
+            onClick={() =>
+              onTogglePreVisitVenueList(
+                venue.id,
+                venue.allowPreVisitVenueList === false
+              )
+            }
+            data-surface={
+              venue.allowPreVisitVenueList !== false ? 'accent' : undefined
+            }
+            className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[12px] font-semibold transition-colors ${
+              venue.allowPreVisitVenueList !== false
+                ? 'btn-accent'
+                : 'somm-sub-surface text-[var(--text-primary)]'
+            }`}
+          >
+            <Check className="h-3.5 w-3.5" strokeWidth={2} />
+            <span>
+              {venue.allowPreVisitVenueList !== false
+                ? lang === 'ko'
+                  ? '방문 전 추천 허용'
+                  : 'Pre-Visit Allowed'
+                : lang === 'ko'
+                  ? '방문 전 비공개'
+                  : 'Pre-Visit Hidden'}
+            </span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => window.print()}
             className="inline-flex items-center gap-1.5 rounded-full bg-[var(--bg-tertiary)] px-3.5 py-2 text-[12px] font-semibold text-[var(--text-primary)] hover:opacity-85"
           >
@@ -647,6 +683,94 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
           {addedToast ? 'OK · Cellar Updated' : t.adminAddWineBtn}
         </button>
       </form>
+
+      {/* 3B. Pre-Visit Wine Reservations (Hold Requests) */}
+      <section className="somm-card rounded-3xl p-5 sm:p-7">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="text-[17px] font-bold text-[var(--text-primary)]">
+              {lang === 'ko'
+                ? `방문 전 와인 예약 요청 (${reservations.length}건)`
+                : `Pre-Visit Wine Reservations (${reservations.length})`}
+            </h2>
+            <p className="mt-0.5 text-[12px] text-[var(--text-secondary)]">
+              {lang === 'ko'
+                ? '방문 전 고객이 미리 추천받고 홀딩을 요청한 업장 와인 내역입니다.'
+                : 'Bottles requested by guests ahead of their arrival.'}
+            </p>
+          </div>
+        </div>
+
+        {reservations.length === 0 ? (
+          <div className="somm-sub-surface rounded-2xl p-4 text-[13px] text-[var(--text-secondary)]">
+            {lang === 'ko'
+              ? '아직 접수된 방문 전 와인 예약 요청이 없습니다.'
+              : 'No pre-visit wine reservations yet.'}
+          </div>
+        ) : (
+          <div className="space-y-2.5">
+            {reservations.map((res) => (
+              <div
+                key={res.id}
+                className="somm-sub-surface flex flex-col justify-between gap-3 rounded-2xl p-4 sm:flex-row sm:items-center"
+              >
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[14px] font-bold text-[var(--text-primary)]">
+                      {res.guestName}
+                    </span>
+                    <span className="text-[12px] tabular-nums text-[var(--text-secondary)]">
+                      {res.guestContact}
+                    </span>
+                    <span className="rounded-full bg-[var(--bg-secondary)] px-2.5 py-0.5 text-[11px] font-semibold tabular-nums text-[#6B1D2F] dark:text-[#F4B8C6]">
+                      {res.visitDate}
+                    </span>
+                    <span className="rounded-full bg-[var(--bg-secondary)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--text-secondary)]">
+                      {res.status === 'confirmed'
+                        ? lang === 'ko'
+                          ? '확정됨'
+                          : 'Confirmed'
+                        : res.status === 'cancelled'
+                          ? lang === 'ko'
+                            ? '취소됨'
+                            : 'Cancelled'
+                          : lang === 'ko'
+                            ? '대기 중'
+                            : 'Pending'}
+                    </span>
+                  </div>
+                  <div className="mt-1 text-[13px] font-medium text-[var(--text-primary)]">
+                    {(lang === 'ko' ? res.wineNamesKo : res.wineNamesEn).join(' · ')}
+                  </div>
+                  {res.note && (
+                    <div className="mt-0.5 text-[12px] text-[var(--text-secondary)]">
+                      {res.note}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex shrink-0 items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onUpdateReservationStatus(res.id, 'confirmed')}
+                    data-surface="accent"
+                    className="btn-accent rounded-full px-3 py-1.5 text-[12px] font-semibold"
+                  >
+                    {lang === 'ko' ? '예약 확정' : 'Confirm'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onUpdateReservationStatus(res.id, 'cancelled')}
+                    className="rounded-full bg-[var(--bg-secondary)] px-3 py-1.5 text-[12px] font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                  >
+                    {lang === 'ko' ? '취소' : 'Cancel'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
       {/* 4. Real-Time Inventory List (matching Reference Image 4) */}
       <section className="somm-card rounded-3xl p-5 sm:p-7">

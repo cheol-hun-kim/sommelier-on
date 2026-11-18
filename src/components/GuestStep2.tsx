@@ -14,6 +14,8 @@ import type {
   SommelierPersona,
   SpeechStyle,
   ValueTier,
+  Venue,
+  VisitTiming,
   WineItem,
 } from '../types/sommelier';
 import { CATEGORY_LABELS, TRANSLATIONS, formatKrw } from '../i18n/translations';
@@ -31,6 +33,8 @@ import {
 
 interface GuestStep2Props {
   lang: Language;
+  venue: Venue;
+  visitTiming: VisitTiming;
   bundle: PairingRecommendationBundle;
   personas: SommelierPersona[];
   speechStyle: SpeechStyle;
@@ -39,10 +43,19 @@ interface GuestStep2Props {
   onSelectWineForDrinking: (wine: WineItem) => void;
   onSwitchPersona: (personaId: string) => void;
   onSwapWines: (activeScenarioIdx: number, wineIdsToSwap: string[]) => void;
+  onCreateReservation: (input: {
+    guestName: string;
+    guestContact: string;
+    visitDate: string;
+    note?: string;
+    selectedWines: WineItem[];
+  }) => void;
 }
 
 export const GuestStep2: React.FC<GuestStep2Props> = ({
   lang,
+  venue,
+  visitTiming,
   bundle,
   personas,
   speechStyle,
@@ -51,8 +64,15 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
   onSelectWineForDrinking,
   onSwitchPersona,
   onSwapWines,
+  onCreateReservation,
 }) => {
   const t = TRANSLATIONS[lang];
+  const [reserveOpen, setReserveOpen] = useState(false);
+  const [reserveName, setReserveName] = useState('');
+  const [reserveContact, setReserveContact] = useState('');
+  const [reserveDate, setReserveDate] = useState('');
+  const [reserveNote, setReserveNote] = useState('');
+  const [reserveSuccess, setReserveSuccess] = useState(false);
   const [activeScenarioIdx, setActiveScenarioIdx] = useState(0);
   const [swapMode, setSwapMode] = useState(false);
   const [selectedSwapIds, setSelectedSwapIds] = useState<string[]>([]);
@@ -115,8 +135,23 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
           <div className="flex items-start gap-3.5">
             <SommelierAvatar personaId={bundle.persona.id} size={48} />
             <div>
-              <div className="text-[12px] font-semibold text-[#6B1D2F] dark:text-[#E59BAE]">
-                {personaName}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[12px] font-semibold text-[#6B1D2F] dark:text-[#E59BAE]">
+                  {personaName}
+                </span>
+                {(visitTiming === 'pre_visit' ||
+                  (bundle.sourceMode && bundle.sourceMode !== 'venue_cellar')) && (
+                  <span className="rounded-full bg-[#F5EBEF] px-2.5 py-0.5 text-[11px] font-semibold text-[#6B1D2F] dark:bg-[#2E181F] dark:text-[#F4B8C6]">
+                    {visitTiming === 'pre_visit'
+                      ? lang === 'ko'
+                        ? '방문 전 준비'
+                        : 'Pre-Visit'
+                      : ''}
+                    {bundle.sourceLabelKo
+                      ? ` · ${lang === 'ko' ? bundle.sourceLabelKo : bundle.sourceLabelEn}`
+                      : ''}
+                  </span>
+                )}
               </div>
               <p className="prose-pretty mt-1 text-[15px] leading-[1.6] text-[var(--text-primary)]">
                 {activeScenario
@@ -231,6 +266,118 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
             </div>
           )}
         </div>
+
+        {/* Pre-Visit Venue Wine Reservation (Hold) Banner */}
+        {visitTiming === 'pre_visit' &&
+          bundle.sourceMode === 'venue_cellar' &&
+          venue.allowPreVisitVenueList !== false &&
+          !isEmpty && (
+            <div className="mt-4 rounded-2xl border border-[#6B1D2F]/20 bg-[#F5EBEF]/60 p-4 dark:border-[#E59BAE]/25 dark:bg-[#2E181F]/60">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div className="text-[14px] font-bold text-[var(--text-primary)]">
+                    {lang === 'ko'
+                      ? '방문 전 업장 와인 예약(홀딩) 신청'
+                      : 'Reserve Recommended Wines Before Visit'}
+                  </div>
+                  <div className="mt-0.5 text-[12px] text-[var(--text-secondary)]">
+                    {lang === 'ko'
+                      ? '추천받은 와인이 품절되지 않도록 방문 전 업장 셀러에 미리 예약을 걸어둘 수 있습니다.'
+                      : 'Place a pre-visit hold so your curated bottles are chilled and ready upon arrival.'}
+                  </div>
+                </div>
+                {!reserveSuccess && (
+                  <button
+                    type="button"
+                    onClick={() => setReserveOpen((prev) => !prev)}
+                    data-surface="accent"
+                    className="btn-accent rounded-full px-4 py-2 text-[12px] font-semibold shadow-sm"
+                  >
+                    {reserveOpen
+                      ? lang === 'ko'
+                        ? '입력 닫기'
+                        : 'Close'
+                      : lang === 'ko'
+                        ? '와인 예약 신청하기'
+                        : 'Request Wine Hold'}
+                  </button>
+                )}
+              </div>
+
+              {reserveSuccess && (
+                <div className="mt-3 flex items-center gap-2 rounded-xl bg-[var(--bg-secondary)] px-3.5 py-2.5 text-[13px] font-semibold text-[#6B1D2F] dark:text-[#F4B8C6]">
+                  <CheckCircle2 className="h-4 w-4 shrink-0" strokeWidth={2} />
+                  <span>
+                    {lang === 'ko'
+                      ? '방문 전 와인 예약 요청이 업장에 접수되었습니다. 방문 시 성함을 말씀해 주세요.'
+                      : 'Your pre-visit wine reservation has been submitted to the venue.'}
+                  </span>
+                </div>
+              )}
+
+              {reserveOpen && !reserveSuccess && (
+                <div className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+                  <input
+                    type="text"
+                    value={reserveName}
+                    onChange={(e) => setReserveName(e.target.value)}
+                    placeholder={lang === 'ko' ? '예약자 성함' : 'Guest Name'}
+                    className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3 py-2 text-[13px] text-[var(--text-primary)]"
+                  />
+                  <input
+                    type="text"
+                    value={reserveContact}
+                    onChange={(e) => setReserveContact(e.target.value)}
+                    placeholder={lang === 'ko' ? '연락처 (010-...)' : 'Phone / Contact'}
+                    className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3 py-2 text-[13px] text-[var(--text-primary)]"
+                  />
+                  <input
+                    type="text"
+                    value={reserveDate}
+                    onChange={(e) => setReserveDate(e.target.value)}
+                    placeholder={
+                      lang === 'ko' ? '방문 일시 (예: 11/22 19:00)' : 'Visit Date & Time'
+                    }
+                    className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3 py-2 text-[13px] text-[var(--text-primary)]"
+                  />
+                  <input
+                    type="text"
+                    value={reserveNote}
+                    onChange={(e) => setReserveNote(e.target.value)}
+                    placeholder={
+                      lang === 'ko'
+                        ? '요청 메모 (선택, 예: 칠링 부탁)'
+                        : 'Optional note (e.g., chill before arrival)'
+                    }
+                    className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3 py-2 text-[13px] text-[var(--text-primary)] sm:col-span-2"
+                  />
+                  <button
+                    type="button"
+                    disabled={!reserveName.trim() || !reserveContact.trim() || !reserveDate.trim()}
+                    onClick={() => {
+                      const winesToHold: WineItem[] =
+                        bundle.kind === 'course_sequence'
+                          ? activeSequence.map((s) => s.wine)
+                          : (bundle.singleItems ?? []).slice(0, 1).map((i) => i.wine);
+                      onCreateReservation({
+                        guestName: reserveName.trim(),
+                        guestContact: reserveContact.trim(),
+                        visitDate: reserveDate.trim(),
+                        note: reserveNote.trim() || undefined,
+                        selectedWines: winesToHold,
+                      });
+                      setReserveSuccess(true);
+                      setReserveOpen(false);
+                    }}
+                    data-surface="accent"
+                    className="btn-accent rounded-xl px-4 py-2 text-[13px] font-bold disabled:opacity-50"
+                  >
+                    {lang === 'ko' ? '예약 확정 요청' : 'Confirm Wine Hold'}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
         {/* Selective Swap Confirmation Bar */}
         {swapMode && (

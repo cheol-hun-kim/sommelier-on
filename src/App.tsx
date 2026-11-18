@@ -20,13 +20,17 @@ import { CATEGORY_LABELS, formatKrw } from './i18n/translations';
 import { analyzeMenuImage, enrichCorkageBottle } from './services/aiService';
 import {
   addJournalEntry,
+  addReservation,
   getGeminiApiKey,
   loadActiveMember,
   loadJournalEntries,
+  loadPersonalCellar,
   loadPersonas,
+  loadReservations,
   loadStats,
   loadTasteProfile,
   loadVenues,
+  loadWineShops,
   loadWines,
   parseQrContextFromUrl,
   recordFeedbackStats,
@@ -34,10 +38,12 @@ import {
   recordRecommendationStats,
   resetTasteProfile,
   saveActiveMember,
+  savePersonalCellar,
   saveTasteProfile,
   saveVenues,
   saveWines,
   signInOrRegisterMember,
+  updateReservationStatus,
   updateUrlQrContext,
 } from './services/storageService';
 import type {
@@ -61,8 +67,12 @@ import type {
   ThemeMode,
   UserTasteProfile,
   Venue,
+  VisitTiming,
   WineCategory,
   WineItem,
+  WineReservation,
+  WineShop,
+  WineSourceMode,
 } from './types/sommelier';
 
 export function App() {
@@ -108,6 +118,18 @@ export function App() {
   const [budgetTier, setBudgetTier] = useState<BudgetTier>('50_100');
   const [customBudgetManWon, setCustomBudgetManWon] = useState('');
   const [budgetScope, setBudgetScope] = useState<BudgetScope>('per_bottle');
+  const [visitTiming, setVisitTiming] = useState<VisitTiming>('on_site');
+  const [wineSourceMode, setWineSourceMode] = useState<WineSourceMode>('venue_cellar');
+  const [personalCellar, setPersonalCellar] = useState<WineItem[]>(() =>
+    loadPersonalCellar()
+  );
+  const [wineShops] = useState<WineShop[]>(() => loadWineShops());
+  const [selectedWineShopId, setSelectedWineShopId] = useState<string>(
+    () => loadWineShops()[0]?.id ?? 'shop_hannam'
+  );
+  const [reservations, setReservations] = useState<WineReservation[]>(() =>
+    loadReservations()
+  );
   const [corkageOnly, setCorkageOnly] = useState(false);
   const [corkageWine, setCorkageWine] = useState<CorkageBottle | null>(null);
 
@@ -288,6 +310,11 @@ export function App() {
   const hasAnyDishSelected =
     isCourseFlow || collectedDishes.length > 0 || customDishInput.trim().length > 0;
 
+  const selectedWineShop = useMemo(
+    () => wineShops.find((s) => s.id === selectedWineShopId) ?? wineShops[0],
+    [wineShops, selectedWineShopId]
+  );
+
   const buildPairingQuery = (
     overridePersonaId?: string,
     overrideProfile?: UserTasteProfile,
@@ -303,9 +330,33 @@ export function App() {
     const effectiveCorkage =
       corkageWine && corkageWine.name.trim().length > 0 ? corkageWine : null;
 
+    const sourceWines =
+      wineSourceMode === 'my_cellar'
+        ? personalCellar
+        : wineSourceMode === 'wine_shop'
+          ? selectedWineShop?.wines ?? []
+          : undefined;
+
+    const sourceLabelKo =
+      wineSourceMode === 'my_cellar'
+        ? '내 셀러 보유 와인'
+        : wineSourceMode === 'wine_shop'
+          ? selectedWineShop?.nameKo ?? '와인샵'
+          : undefined;
+    const sourceLabelEn =
+      wineSourceMode === 'my_cellar'
+        ? 'My Home Cellar'
+        : wineSourceMode === 'wine_shop'
+          ? selectedWineShop?.nameEn ?? 'Wine Shop'
+          : undefined;
+
     return {
       venue: activeVenue,
       wines,
+      sourceWines,
+      sourceMode: wineSourceMode,
+      sourceLabelKo,
+      sourceLabelEn,
       persona,
       budgetTier,
       customBudgetWon,
@@ -336,7 +387,11 @@ export function App() {
     const persona = personas.find((p) => p.id === pId) ?? personas[0];
 
     let bundle: PairingRecommendationBundle;
-    if (corkageOnly && corkageWine && corkageWine.name.trim().length > 0) {
+    if (
+      wineSourceMode === 'corkage_direct' &&
+      corkageWine &&
+      corkageWine.name.trim().length > 0
+    ) {
       const enriched = await enrichCorkageBottle(corkageWine);
       setCorkageWine(enriched);
       bundle = generateCorkageOnlyRecommendation({
@@ -498,6 +553,192 @@ export function App() {
     });
   };
 
+  const handleTogglePreVisitVenueList = (venueId: string, allow: boolean) => {
+    setVenues((prev) => {
+      const next = prev.map((v) =>
+        v.id === venueId ? { ...v, allowPreVisitVenueList: allow } : v
+      );
+      saveVenues(next);
+      return next;
+    });
+    if (!allow && visitTiming === 'pre_visit' && wineSourceMode === 'venue_cellar') {
+      setWineSourceMode('my_cellar');
+    }
+  };
+
+  const handleVisitTimingChange = (nextTiming: VisitTiming) => {
+    setVisitTiming(nextTiming);
+    if (nextTiming === 'pre_visit') {
+      if (wineSourceMode === 'corkage_direct') {
+        setWineSourceMode(
+          activeVenue.allowPreVisitVenueList === false ? 'my_cellar' : 'venue_cellar'
+        );
+      } else if (
+        wineSourceMode === 'venue_cellar' &&
+        activeVenue.allowPreVisitVenueList === false
+      ) {
+        setWineSourceMode('my_cellar');
+      }
+      setCorkageOnly(false);
+    } else {
+      if (wineSourceMode === 'my_cellar' || wineSourceMode === 'wine_shop') {
+        setWineSourceMode('venue_cellar');
+        setCorkageOnly(false);
+      }
+    }
+  };
+
+  const handleWineSourceModeChange = (nextMode: WineSourceMode) => {
+    setWineSourceMode(nextMode);
+    setCorkageOnly(nextMode === 'corkage_direct');
+    if (nextMode === 'corkage_direct' && !corkageWine) {
+      setCorkageWine({
+        name: '',
+        category: 'red',
+        body: 3,
+        slotPosition: 'late',
+      });
+    }
+  };
+
+  const handleAddPersonalWine = async (input: {
+    name: string;
+    category: WineCategory;
+    vintage: number;
+    price: number;
+  }) => {
+    const enriched = await enrichCorkageBottle({
+      name: input.name,
+      category: input.category,
+      vintage: input.vintage,
+      body: input.category === 'sparkling' ? 2 : input.category === 'red' ? 4 : 3,
+      slotPosition: 'late',
+    });
+    const newWine: WineItem = {
+      id: `mycellar_${Date.now()}`,
+      venueId: 'my_cellar',
+      nameKo: enriched.name || input.name,
+      nameEn: enriched.nameEn || enriched.name || input.name,
+      producer: enriched.producer || 'Personal Cellar',
+      vintage: enriched.vintage || input.vintage || new Date().getFullYear() - 3,
+      category: enriched.category,
+      varietalsKo: enriched.varietalsKo || '소장 와인',
+      varietalsEn: enriched.varietalsEn || 'Cellar Bottle',
+      regionKo: enriched.regionKo || '개인 셀러',
+      regionEn: enriched.regionEn || 'Private Cellar',
+      countryCode: enriched.countryCode || 'FR',
+      venuePrice: input.price > 0 ? input.price : 120000,
+      marketPrice: input.price > 0 ? input.price : 120000,
+      stock: 1,
+      structure: enriched.structure ?? {
+        body: enriched.body,
+        acidity: 3,
+        tannin: enriched.category === 'red' ? 3 : 1,
+        sweetness: enriched.category === 'dessert' ? 4 : 1,
+        alcohol: 3,
+      },
+      aromas: enriched.aromas ?? {
+        primary: ['cherry', 'citrus'],
+        secondary: ['oak_cedar'],
+        tertiary: ['leather_earth'],
+      },
+      serving: {
+        glassType:
+          enriched.category === 'sparkling'
+            ? 'flute'
+            : enriched.category === 'white'
+              ? 'white'
+              : 'bordeaux',
+        tempMin: enriched.category === 'red' ? 16 : 9,
+        tempMax: enriched.category === 'red' ? 18 : 11,
+        decantMinutes: enriched.category === 'red' ? 30 : 0,
+        drinkWindowStart: 2020,
+        drinkWindowEnd: 2035,
+        statusKo: '시음 적기',
+        statusEn: 'Ready to Drink',
+      },
+      storytelling: {
+        terroirKo: enriched.earthSoilKo || '개인 셀러 소장 빈티지',
+        terroirEn: enriched.earthSoilEn || 'Private cellar selection',
+        vinificationKo: enriched.humanPhilosophyKo || '셀러 보관 숙성',
+        vinificationEn: enriched.humanPhilosophyEn || 'Cellar aged',
+        heavenClimateKo:
+          enriched.heavenClimateKo || '해당 빈티지의 자연스러운 기후 결을 간직한 와인입니다.',
+        heavenClimateEn:
+          enriched.heavenClimateEn || 'Expresses the natural vintage character.',
+        earthSoilKo:
+          enriched.earthSoilKo || '산지 고유의 토양과 미네랄이 조화를 이룹니다.',
+        earthSoilEn:
+          enriched.earthSoilEn || 'Balanced terroir expression and mineral finish.',
+        humanPhilosophyKo:
+          enriched.humanPhilosophyKo || '소장하신 와인의 가치를 오늘 식탁의 요리와 연결해 드립니다.',
+        humanPhilosophyEn:
+          enriched.humanPhilosophyEn || 'Curated from your home cellar for tonight’s menu.',
+        wineryLocation: enriched.wineryLocation ?? {
+          lat: 47.0247,
+          lng: 4.8386,
+          placeLabelKo: enriched.regionKo || '프랑스 주요 산지',
+          placeLabelEn: enriched.regionEn || 'Classic Wine Region',
+          earthQuery: enriched.name || input.name,
+        },
+      },
+      pairingAffinities:
+        enriched.category === 'sparkling'
+          ? ['seafood', 'cream', 'delicate']
+          : enriched.category === 'white'
+            ? ['seafood', 'cream', 'truffle']
+            : enriched.category === 'red'
+              ? ['steak', 'poultry', 'umami']
+              : ['dessert', 'cheese', 'sweet'],
+    };
+    setPersonalCellar((prev) => {
+      const next = [newWine, ...prev];
+      savePersonalCellar(next);
+      return next;
+    });
+  };
+
+  const handleRemovePersonalWine = (id: string) => {
+    setPersonalCellar((prev) => {
+      const next = prev.filter((w) => w.id !== id);
+      savePersonalCellar(next);
+      return next;
+    });
+  };
+
+  const handleCreateReservation = (input: {
+    guestName: string;
+    guestContact: string;
+    visitDate: string;
+    note?: string;
+    selectedWines: WineItem[];
+  }) => {
+    const newRes: WineReservation = {
+      id: `res_${Date.now()}`,
+      venueId: activeVenue.id,
+      venueNameKo: activeVenue.nameKo,
+      venueNameEn: activeVenue.nameEn,
+      guestName: input.guestName,
+      guestContact: input.guestContact,
+      visitDate: input.visitDate,
+      wineIds: input.selectedWines.map((w) => w.id),
+      wineNamesKo: input.selectedWines.map((w) => `${w.nameKo} (${w.vintage})`),
+      wineNamesEn: input.selectedWines.map((w) => `${w.nameEn} (${w.vintage})`),
+      totalPrice: input.selectedWines.reduce((sum, w) => sum + w.venuePrice, 0),
+      note: input.note,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    };
+    setReservations(addReservation(newRes));
+  };
+
+  const handleUpdateReservationStatus = (
+    id: string,
+    status: WineReservation['status']
+  ) => {
+    setReservations(updateReservationStatus(id, status));
+  };
+
   return (
     <div className="min-h-dvh">
       <HeaderBar
@@ -568,7 +809,19 @@ export function App() {
             budgetScope={budgetScope}
             onBudgetScopeChange={setBudgetScope}
             corkageOnly={corkageOnly}
-            onCorkageOnlyChange={setCorkageOnly}
+            onCorkageOnlyChange={(v) =>
+              handleWineSourceModeChange(v ? 'corkage_direct' : 'venue_cellar')
+            }
+            visitTiming={visitTiming}
+            onVisitTimingChange={handleVisitTimingChange}
+            wineSourceMode={wineSourceMode}
+            onWineSourceModeChange={handleWineSourceModeChange}
+            personalCellar={personalCellar}
+            onAddPersonalWine={handleAddPersonalWine}
+            onRemovePersonalWine={handleRemovePersonalWine}
+            wineShops={wineShops}
+            selectedWineShopId={selectedWineShopId}
+            onSelectWineShopId={setSelectedWineShopId}
             corkageWine={corkageWine}
             onCorkageWineChange={setCorkageWine}
             selectedRegisteredDishIds={selectedRegisteredDishIds}
@@ -615,6 +868,8 @@ export function App() {
         {appMode === 'guest' && guestStep === 2 && recommendationBundle && (
           <GuestStep2
             lang={lang}
+            venue={activeVenue}
+            visitTiming={visitTiming}
             bundle={recommendationBundle}
             personas={personas}
             speechStyle={speechStyle}
@@ -629,6 +884,7 @@ export function App() {
               runRecommendation(undefined, nextPersonaId, true);
             }}
             onSwapWines={handleSwapWinesInStep2}
+            onCreateReservation={handleCreateReservation}
           />
         )}
 
@@ -672,6 +928,9 @@ export function App() {
             onUpdateStock={handleUpdateStock}
             onAddWine={handleAddWine}
             onTogglePriceTransparency={handleTogglePriceTransparency}
+            onTogglePreVisitVenueList={handleTogglePreVisitVenueList}
+            reservations={reservations.filter((r) => r.venueId === activeVenue.id)}
+            onUpdateReservationStatus={handleUpdateReservationStatus}
             onUpdateRecommendationLimit={handleUpdateRecommendationLimit}
             onUpdateVenueLogo={handleUpdateVenueLogo}
             onOpenGuestTable={(vId, tb) => {

@@ -23,7 +23,11 @@ import type {
   SommelierPersona,
   UserTasteProfile,
   Venue,
+  VisitTiming,
   WineCategory,
+  WineItem,
+  WineShop,
+  WineSourceMode,
 } from '../types/sommelier';
 import {
   BUDGET_LABELS,
@@ -49,6 +53,21 @@ interface GuestStep1Props {
   onBudgetScopeChange: (scope: BudgetScope) => void;
   corkageOnly: boolean;
   onCorkageOnlyChange: (val: boolean) => void;
+  visitTiming: VisitTiming;
+  onVisitTimingChange: (timing: VisitTiming) => void;
+  wineSourceMode: WineSourceMode;
+  onWineSourceModeChange: (mode: WineSourceMode) => void;
+  personalCellar: WineItem[];
+  onAddPersonalWine: (input: {
+    name: string;
+    category: WineCategory;
+    vintage: number;
+    price: number;
+  }) => Promise<void>;
+  onRemovePersonalWine: (id: string) => void;
+  wineShops: WineShop[];
+  selectedWineShopId: string;
+  onSelectWineShopId: (id: string) => void;
   corkageWine: CorkageBottle | null;
   onCorkageWineChange: (bottle: CorkageBottle | null) => void;
   selectedRegisteredDishIds: string[];
@@ -103,7 +122,16 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
   budgetScope,
   onBudgetScopeChange,
   corkageOnly,
-  onCorkageOnlyChange,
+  visitTiming,
+  onVisitTimingChange,
+  wineSourceMode,
+  onWineSourceModeChange,
+  personalCellar,
+  onAddPersonalWine,
+  onRemovePersonalWine,
+  wineShops,
+  selectedWineShopId,
+  onSelectWineShopId,
   corkageWine,
   onCorkageWineChange,
   selectedRegisteredDishIds,
@@ -140,6 +168,10 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
   const corkageFileRef = useRef<HTMLInputElement | null>(null);
   const [courseListExpanded, setCourseListExpanded] = useState(false);
   const [isScanningCorkage, setIsScanningCorkage] = useState(false);
+  const [newCellarName, setNewCellarName] = useState('');
+  const [newCellarCat, setNewCellarCat] = useState<WineCategory>('red');
+  const [newCellarVintage, setNewCellarVintage] = useState('2020');
+  const [isAddingCellar, setIsAddingCellar] = useState(false);
 
   const customBudgetNum = Number(customBudgetManWon);
   const hasCustomBudget = !Number.isNaN(customBudgetNum) && customBudgetNum > 0;
@@ -254,65 +286,369 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
           </div>
         </div>
 
-        {/* 1B. Service Mode: Venue Wine vs Corkage-Only */}
-        <div className="grid grid-cols-2 gap-2.5">
-          <button
-            type="button"
-            onClick={() => onCorkageOnlyChange(false)}
-            data-surface={!corkageOnly ? 'accent' : undefined}
-            className={`rounded-2xl p-3.5 text-left transition-all ${
-              !corkageOnly
-                ? 'btn-accent shadow-sm'
-                : 'somm-sub-surface text-[var(--text-primary)] hover:opacity-85'
-            }`}
-          >
-            <div className="text-[14px] font-bold">
-              {lang === 'ko' ? '업장 와인 추천받기' : 'Pair From Cellar'}
+        {/* 1B. Visit Timing (Pre-Visit vs On-Site) & Wine Source */}
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 className="text-[17px] font-semibold text-[var(--text-primary)]">
+                {lang === 'ko' ? '이용 시점 및 와인 선택 방식' : 'Visit Timing & Wine Source'}
+              </h2>
+              <p className="mt-0.5 text-[12px] text-[var(--text-secondary)]">
+                {lang === 'ko'
+                  ? '방문 전 미리 준비하시거나, 매장에서 바로 추천받으실 수 있습니다.'
+                  : 'Plan ahead before arriving or pair right from your table.'}
+              </p>
             </div>
-            <div
-              className={`mt-0.5 text-[11px] leading-snug ${
-                !corkageOnly ? 'text-white/90' : 'text-[var(--text-secondary)]'
-              }`}
-            >
-              {lang === 'ko'
-                ? '예산과 요리에 맞춰 업장 와인을 추천받습니다.'
-                : 'Curated bottles from this restaurant’s cellar.'}
+            <div className="inline-flex rounded-full bg-[var(--bg-tertiary)] p-1 text-[12px] font-semibold">
+              <button
+                type="button"
+                onClick={() => onVisitTimingChange('pre_visit')}
+                data-surface={visitTiming === 'pre_visit' ? 'accent' : undefined}
+                className={`rounded-full px-3.5 py-1.5 transition-all ${
+                  visitTiming === 'pre_visit'
+                    ? 'btn-accent shadow-sm'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                }`}
+              >
+                {lang === 'ko' ? '방문 전 미리 준비' : 'Before Visit'}
+              </button>
+              <button
+                type="button"
+                onClick={() => onVisitTimingChange('on_site')}
+                data-surface={visitTiming === 'on_site' ? 'accent' : undefined}
+                className={`rounded-full px-3.5 py-1.5 transition-all ${
+                  visitTiming === 'on_site'
+                    ? 'btn-accent shadow-sm'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                }`}
+              >
+                {lang === 'ko' ? '매장 방문 중' : 'At Restaurant'}
+              </button>
             </div>
-          </button>
+          </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              onCorkageOnlyChange(true);
-              if (!corkageWine) {
-                onCorkageWineChange({
-                  name: '',
-                  category: 'red',
-                  body: 3,
-                  slotPosition: 'late',
-                });
-              }
-            }}
-            data-surface={corkageOnly ? 'accent' : undefined}
-            className={`rounded-2xl p-3.5 text-left transition-all ${
-              corkageOnly
-                ? 'btn-accent shadow-sm'
-                : 'somm-sub-surface text-[var(--text-primary)] hover:opacity-85'
-            }`}
-          >
-            <div className="text-[14px] font-bold">
-              {lang === 'ko' ? '콜키지 와인만 즐길게요' : 'Corkage Wine Only'}
+          {visitTiming === 'pre_visit' ? (
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+                {/* Pre-Visit Option 1: Venue Cellar + Reservation */}
+                {(() => {
+                  const allowed = venue.allowPreVisitVenueList !== false;
+                  const active = allowed && wineSourceMode === 'venue_cellar';
+                  return (
+                    <button
+                      type="button"
+                      disabled={!allowed}
+                      onClick={() => allowed && onWineSourceModeChange('venue_cellar')}
+                      data-surface={active ? 'accent' : undefined}
+                      className={`rounded-2xl p-3.5 text-left transition-all ${
+                        !allowed
+                          ? 'somm-sub-surface cursor-not-allowed opacity-60'
+                          : active
+                            ? 'btn-accent shadow-sm'
+                            : 'somm-sub-surface text-[var(--text-primary)] hover:opacity-85'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[14px] font-bold">
+                          {lang === 'ko' ? '업장 와인 추천 · 예약' : 'Venue Wine & Hold'}
+                        </span>
+                        {!allowed && (
+                          <span className="rounded-full bg-[var(--bg-secondary)] px-2 py-0.5 text-[10px] font-semibold text-[var(--text-secondary)]">
+                            {lang === 'ko' ? '사전 비공개' : 'On-Site Only'}
+                          </span>
+                        )}
+                      </div>
+                      <div
+                        className={`mt-1 text-[11px] leading-snug ${
+                          active ? 'text-white/90' : 'text-[var(--text-secondary)]'
+                        }`}
+                      >
+                        {allowed
+                          ? lang === 'ko'
+                            ? '방문 전 업장 와인을 추천받고 미리 예약해 둡니다.'
+                            : 'Preview and reserve venue bottles before arrival.'
+                          : lang === 'ko'
+                            ? '이 업장은 방문 전 리스트 노출을 제한하고 있습니다.'
+                            : 'This venue restricts pre-visit list preview.'}
+                      </div>
+                    </button>
+                  );
+                })()}
+
+                {/* Pre-Visit Option 2: My Home Cellar */}
+                <button
+                  type="button"
+                  onClick={() => onWineSourceModeChange('my_cellar')}
+                  data-surface={wineSourceMode === 'my_cellar' ? 'accent' : undefined}
+                  className={`rounded-2xl p-3.5 text-left transition-all ${
+                    wineSourceMode === 'my_cellar'
+                      ? 'btn-accent shadow-sm'
+                      : 'somm-sub-surface text-[var(--text-primary)] hover:opacity-85'
+                  }`}
+                >
+                  <div className="text-[14px] font-bold">
+                    {lang === 'ko' ? '내 셀러에서 추천' : 'From My Cellar'}
+                  </div>
+                  <div
+                    className={`mt-1 text-[11px] leading-snug ${
+                      wineSourceMode === 'my_cellar'
+                        ? 'text-white/90'
+                        : 'text-[var(--text-secondary)]'
+                    }`}
+                  >
+                    {lang === 'ko'
+                      ? `집에 보관 중인 내 와인(${personalCellar.length}병) 중 최적의 콜키지 와인을 고릅니다.`
+                      : `Pick the best bottle from your home cellar (${personalCellar.length}).`}
+                  </div>
+                </button>
+
+                {/* Pre-Visit Option 3: Partner Wine Shop */}
+                <button
+                  type="button"
+                  onClick={() => onWineSourceModeChange('wine_shop')}
+                  data-surface={wineSourceMode === 'wine_shop' ? 'accent' : undefined}
+                  className={`rounded-2xl p-3.5 text-left transition-all ${
+                    wineSourceMode === 'wine_shop'
+                      ? 'btn-accent shadow-sm'
+                      : 'somm-sub-surface text-[var(--text-primary)] hover:opacity-85'
+                  }`}
+                >
+                  <div className="text-[14px] font-bold">
+                    {lang === 'ko' ? '방문 와인샵에서 추천' : 'From Partner Wine Shop'}
+                  </div>
+                  <div
+                    className={`mt-1 text-[11px] leading-snug ${
+                      wineSourceMode === 'wine_shop'
+                        ? 'text-white/90'
+                        : 'text-[var(--text-secondary)]'
+                    }`}
+                  >
+                    {lang === 'ko'
+                      ? '들르실 와인샵의 보유 리스트에서 업장 음식에 맞는 와인을 추천합니다.'
+                      : 'Match bottles in stock at your selected wine shop.'}
+                  </div>
+                </button>
+              </div>
+
+              {/* My Cellar Manager */}
+              {wineSourceMode === 'my_cellar' && (
+                <div className="somm-sub-surface space-y-3 rounded-2xl p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <div className="text-[14px] font-bold text-[var(--text-primary)]">
+                        {lang === 'ko'
+                          ? `내 셀러 보관 리스트 (${personalCellar.length}병)`
+                          : `My Cellar Inventory (${personalCellar.length})`}
+                      </div>
+                      <div className="text-[11px] text-[var(--text-secondary)]">
+                        {lang === 'ko'
+                          ? '소장 와인을 추가해 두면 업장 요리에 가장 잘 어울리는 병을 소믈리에가 골라드립니다.'
+                          : 'Add bottles you own at home to get tailored BYOB pairing picks.'}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    {personalCellar.map((w) => (
+                      <div
+                        key={w.id}
+                        className="inline-flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3 py-1.5 text-[12px]"
+                      >
+                        <span className="font-semibold text-[#6B1D2F] dark:text-[#E59BAE]">
+                          {CATEGORY_LABELS[w.category].shortKo}
+                        </span>
+                        <span className="font-medium text-[var(--text-primary)]">
+                          {lang === 'ko' ? w.nameKo : w.nameEn}
+                        </span>
+                        <span className="tabular-nums text-[var(--text-secondary)]">
+                          {w.vintage}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => onRemovePersonalWine(w.id)}
+                          className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                          aria-label="Remove cellar wine"
+                        >
+                          <X className="h-3.5 w-3.5" strokeWidth={1.5} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-2 pt-1 sm:grid-cols-12">
+                    <input
+                      type="text"
+                      value={newCellarName}
+                      onChange={(e) => setNewCellarName(e.target.value)}
+                      placeholder={
+                        lang === 'ko'
+                          ? '보유 와인 추가 (예: 크루그 그랑 퀴베)'
+                          : 'Add bottle name...'
+                      }
+                      className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3 py-2 text-[12px] text-[var(--text-primary)] sm:col-span-5"
+                    />
+                    <select
+                      value={newCellarCat}
+                      onChange={(e) => setNewCellarCat(e.target.value as WineCategory)}
+                      className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-2.5 py-2 text-[12px] text-[var(--text-primary)] sm:col-span-2"
+                    >
+                      {SLOT_CATEGORIES.map((c) => (
+                        <option key={c} value={c}>
+                          {CATEGORY_LABELS[c][lang]}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      value={newCellarVintage}
+                      onChange={(e) => setNewCellarVintage(e.target.value)}
+                      placeholder="2020"
+                      className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-2.5 py-2 text-[12px] tabular-nums text-[var(--text-primary)] sm:col-span-2"
+                    />
+                    <button
+                      type="button"
+                      disabled={isAddingCellar || !newCellarName.trim()}
+                      onClick={async () => {
+                        if (!newCellarName.trim()) return;
+                        setIsAddingCellar(true);
+                        try {
+                          await onAddPersonalWine({
+                            name: newCellarName.trim(),
+                            category: newCellarCat,
+                            vintage: Number(newCellarVintage) || 2020,
+                            price: 120000,
+                          });
+                          setNewCellarName('');
+                        } finally {
+                          setIsAddingCellar(false);
+                        }
+                      }}
+                      data-surface="accent"
+                      className="btn-accent inline-flex items-center justify-center gap-1 rounded-xl px-3 py-2 text-[12px] font-semibold disabled:opacity-50 sm:col-span-3"
+                    >
+                      <Plus className="h-3.5 w-3.5" strokeWidth={2} />
+                      <span>
+                        {isAddingCellar
+                          ? lang === 'ko'
+                            ? '추가 중...'
+                            : 'Adding...'
+                          : lang === 'ko'
+                            ? '셀러에 추가'
+                            : 'Add Bottle'}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Partner Wine Shop Selector */}
+              {wineSourceMode === 'wine_shop' && (
+                <div className="somm-sub-surface space-y-3 rounded-2xl p-4">
+                  <div className="text-[14px] font-bold text-[var(--text-primary)]">
+                    {lang === 'ko'
+                      ? '방문(예정) 와인샵 선택'
+                      : 'Select Partner Wine Shop'}
+                  </div>
+                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+                    {wineShops.map((shop) => {
+                      const active = shop.id === selectedWineShopId;
+                      return (
+                        <button
+                          key={shop.id}
+                          type="button"
+                          onClick={() => onSelectWineShopId(shop.id)}
+                          data-surface={active ? 'accent' : undefined}
+                          className={`rounded-xl p-3 text-left transition-all ${
+                            active
+                              ? 'btn-accent shadow-sm'
+                              : 'border border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-[var(--text-primary)] hover:opacity-90'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[13px] font-bold">
+                              {lang === 'ko' ? shop.nameKo : shop.nameEn}
+                            </span>
+                            <span
+                              className={`text-[11px] tabular-nums ${
+                                active ? 'text-white/90' : 'text-[var(--text-secondary)]'
+                              }`}
+                            >
+                              {shop.wines.length}
+                              {lang === 'ko' ? '병' : ''}
+                            </span>
+                          </div>
+                          <div
+                            className={`mt-0.5 text-[11px] ${
+                              active ? 'text-white/85' : 'text-[var(--text-secondary)]'
+                            }`}
+                          >
+                            {lang === 'ko' ? shop.neighborhoodKo : shop.neighborhoodEn}
+                          </div>
+                          <div
+                            className={`mt-1 text-[11px] ${
+                              active ? 'text-white/90' : 'text-[var(--text-secondary)]'
+                            }`}
+                          >
+                            {lang === 'ko' ? shop.specialtyKo : shop.specialtyEn}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
-            <div
-              className={`mt-0.5 text-[11px] leading-snug ${
-                corkageOnly ? 'text-white/90' : 'text-[var(--text-secondary)]'
-              }`}
-            >
-              {lang === 'ko'
-                ? '가져오신 와인의 테이스팅 노트와 어울리는 요리를 짚어드립니다.'
-                : 'Tasting notes & ideal dish pairings for your own bottle.'}
+          ) : (
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => onWineSourceModeChange('venue_cellar')}
+                data-surface={!corkageOnly ? 'accent' : undefined}
+                className={`rounded-2xl p-3.5 text-left transition-all ${
+                  !corkageOnly
+                    ? 'btn-accent shadow-sm'
+                    : 'somm-sub-surface text-[var(--text-primary)] hover:opacity-85'
+                }`}
+              >
+                <div className="text-[14px] font-bold">
+                  {lang === 'ko' ? '업장 와인 추천받기' : 'Pair From Cellar'}
+                </div>
+                <div
+                  className={`mt-0.5 text-[11px] leading-snug ${
+                    !corkageOnly ? 'text-white/90' : 'text-[var(--text-secondary)]'
+                  }`}
+                >
+                  {lang === 'ko'
+                    ? '예산과 요리에 맞춰 업장 와인을 추천받습니다.'
+                    : 'Curated bottles from this restaurant’s cellar.'}
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onWineSourceModeChange('corkage_direct')}
+                data-surface={corkageOnly ? 'accent' : undefined}
+                className={`rounded-2xl p-3.5 text-left transition-all ${
+                  corkageOnly
+                    ? 'btn-accent shadow-sm'
+                    : 'somm-sub-surface text-[var(--text-primary)] hover:opacity-85'
+                }`}
+              >
+                <div className="text-[14px] font-bold">
+                  {lang === 'ko' ? '콜키지 와인만 즐길게요' : 'Corkage Wine Only'}
+                </div>
+                <div
+                  className={`mt-0.5 text-[11px] leading-snug ${
+                    corkageOnly ? 'text-white/90' : 'text-[var(--text-secondary)]'
+                  }`}
+                >
+                  {lang === 'ko'
+                    ? '가져오신 와인의 테이스팅 노트와 어울리는 요리를 짚어드립니다.'
+                    : 'Tasting notes & ideal dish pairings for your own bottle.'}
+                </div>
+              </button>
             </div>
-          </button>
+          )}
         </div>
 
         {/* Corkage-Only Focused Input Card */}

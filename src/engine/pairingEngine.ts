@@ -23,12 +23,17 @@ import type {
   Venue,
   WineCategory,
   WineItem,
+  WineSourceMode,
 } from '../types/sommelier';
 import { AROMA_LABELS, CATEGORY_LABELS } from '../i18n/translations';
 
 export interface PairingQuery {
   venue: Venue;
   wines: WineItem[];
+  sourceWines?: WineItem[];
+  sourceMode?: WineSourceMode;
+  sourceLabelKo?: string;
+  sourceLabelEn?: string;
   persona: SommelierPersona;
   budgetTier: BudgetTier;
   customBudgetWon?: number | null;
@@ -445,8 +450,12 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
 
   // STRICT SYSTEMIC INVARIANT: Only wines in THIS venue with stock > 0 are eligible!
   const allInStockVenueWines = wines.filter((w) => w.venueId === venue.id && w.stock > 0);
-  const nonExcluded = allInStockVenueWines.filter((w) => !excludedWineIds.includes(w.id));
-  const eligiblePool = nonExcluded.length > 0 ? nonExcluded : allInStockVenueWines;
+  const activePool =
+    query.sourceWines && query.sourceWines.length > 0
+      ? query.sourceWines.filter((w) => w.stock > 0)
+      : allInStockVenueWines;
+  const nonExcluded = activePool.filter((w) => !excludedWineIds.includes(w.id));
+  const eligiblePool = nonExcluded.length > 0 ? nonExcluded : activePool;
 
   // Merge selected dishes + optional free text dish
   const workingDishes: ParsedMenuDish[] = [...selectedDishes];
@@ -617,6 +626,9 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
 
     return {
       kind: 'single_or_alacarte',
+      sourceMode: query.sourceMode ?? 'venue_cellar',
+      sourceLabelKo: query.sourceLabelKo,
+      sourceLabelEn: query.sourceLabelEn,
       persona,
       menuMode,
       serveFormat: courseServeFormat,
@@ -954,6 +966,9 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
 
   return {
     kind: 'course_sequence',
+    sourceMode: query.sourceMode ?? 'venue_cellar',
+    sourceLabelKo: query.sourceLabelKo,
+    sourceLabelEn: query.sourceLabelEn,
     persona,
     menuMode: 'course',
     serveFormat: courseServeFormat,
@@ -1296,7 +1311,11 @@ export function swapSpecificWinesInBundle(
   const { venue, wines, persona, budgetTier, budgetScope, occasion, tasteProfile } = query;
   const replaceSet = new Set(wineIdsToReplace);
   const allExcluded = new Set([...excludedHistoryIds, ...wineIdsToReplace]);
-  const inStockVenueWines = wines.filter((w) => w.venueId === venue.id && w.stock > 0);
+  const rawPool = wines.filter((w) => w.venueId === venue.id && w.stock > 0);
+  const inStockVenueWines =
+    query.sourceWines && query.sourceWines.length > 0
+      ? query.sourceWines.filter((w) => w.stock > 0)
+      : rawPool;
 
   if (bundle.kind === 'single_or_alacarte' && bundle.singleItems) {
     const keptIds = new Set(
