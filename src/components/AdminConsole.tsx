@@ -37,6 +37,7 @@ interface AdminConsoleProps {
   onUpdateStock: (wineId: string, delta: number) => void;
   onAddWine: (newWine: WineItem) => void;
   onTogglePriceTransparency: (venueId: string, optIn: boolean) => void;
+  onUpdateRecommendationLimit: (venueId: string, limit: number) => void;
   onUpdateVenueLogo: (venueId: string, logoUrl: string | undefined) => void;
   onOpenGuestTable: (venueId: string, table: string) => void;
   onAiKeyUpdated: () => void;
@@ -52,6 +53,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
   onUpdateStock,
   onAddWine,
   onTogglePriceTransparency,
+  onUpdateRecommendationLimit,
   onUpdateVenueLogo,
   onOpenGuestTable,
   onAiKeyUpdated,
@@ -298,6 +300,32 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Recommendation Count Per Request (1-4) */}
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-[var(--bg-tertiary)] px-3 py-1.5 text-[12px] font-semibold text-[var(--text-primary)]">
+            <label htmlFor="admin-rec-limit">
+              {lang === 'ko' ? '추천 수' : 'Picks'}
+            </label>
+            <select
+              id="admin-rec-limit"
+              value={venue.recommendationLimit ?? 3}
+              onChange={(e) =>
+                onUpdateRecommendationLimit(venue.id, Number(e.target.value))
+              }
+              className="bg-transparent font-bold tabular-nums text-[#6B1D2F] focus:outline-none dark:text-[#F4B8C6]"
+            >
+              {[1, 2, 3, 4].map((n) => (
+                <option
+                  key={n}
+                  value={n}
+                  className="bg-[var(--bg-secondary)] text-[var(--text-primary)]"
+                >
+                  {n}
+                  {lang === 'ko' ? '개' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <button
             type="button"
             onClick={() =>

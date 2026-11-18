@@ -82,6 +82,7 @@ export const INITIAL_VENUES: Venue[] = [
     logoUrl: '/logos/frere-logo.png',
     defaultPersonaId: 'french_classic',
     priceTransparencyOptIn: true,
+    recommendationLimit: 3,
     adminPin: '1234',
     tables: ['1', '2', '3', '4'],
     registeredDishes: [
@@ -247,6 +248,7 @@ export const INITIAL_VENUES: Venue[] = [
     logoUrl: '/logos/havre-logo.png',
     defaultPersonaId: 'natural_explorer',
     priceTransparencyOptIn: true,
+    recommendationLimit: 3,
     adminPin: '1234',
     tables: ['1', '2', '3', '4', 'Room'],
     registeredDishes: [

@@ -11,7 +11,6 @@ import {
   X,
 } from 'lucide-react';
 import type {
-  BodyPref,
   BudgetScope,
   BudgetTier,
   CourseBottleCount,
@@ -19,20 +18,15 @@ import type {
   CourseServeFormat,
   Language,
   MenuAnalysisResult,
-  OccasionType,
   ParsedMenuDish,
   SommelierPersona,
-  SweetnessPref,
   UserTasteProfile,
   Venue,
   WineCategory,
 } from '../types/sommelier';
 import {
-  BODY_LABELS,
   BUDGET_LABELS,
   CATEGORY_LABELS,
-  OCCASION_LABELS,
-  SWEETNESS_LABELS,
   TRANSLATIONS,
 } from '../i18n/translations';
 import { SommelierAvatar, VenueLogo } from './icons/WineVectors';
@@ -72,12 +66,6 @@ interface GuestStep1Props {
   onCoursePairingModeChange: (mode: CoursePairingMode) => void;
   customSlots: WineCategory[];
   onChangeCustomSlot: (slotIdx: number, cat: WineCategory) => void;
-  bodyPref: BodyPref;
-  onBodyPrefChange: (pref: BodyPref) => void;
-  sweetnessPref: SweetnessPref;
-  onSweetnessPrefChange: (pref: SweetnessPref) => void;
-  occasion: OccasionType;
-  onOccasionChange: (occ: OccasionType) => void;
   tasteProfile: UserTasteProfile;
   onResetTasteProfile: () => void;
   hasAnyDishSelected: boolean;
@@ -127,12 +115,6 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
   onCoursePairingModeChange,
   customSlots,
   onChangeCustomSlot,
-  bodyPref,
-  onBodyPrefChange,
-  sweetnessPref,
-  onSweetnessPrefChange,
-  occasion,
-  onOccasionChange,
   tasteProfile,
   onResetTasteProfile,
   hasAnyDishSelected,
@@ -769,94 +751,6 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
               )}
             </div>
           )}
-        </div>
-
-        {/* 4. Palate Preferences & Occasion */}
-        <div className="space-y-5">
-          <h2 className="text-[17px] font-semibold text-[var(--text-primary)]">
-            {t.tasteSectionTitle}
-          </h2>
-
-          {/* Body */}
-          <div>
-            <div className="mb-2 text-[13px] font-medium text-[var(--text-secondary)]">
-              {t.bodyLabel}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {(Object.keys(BODY_LABELS) as BodyPref[]).map((bp) => {
-                const active = bp === bodyPref;
-                return (
-                  <button
-                    key={bp}
-                    type="button"
-                    onClick={() => onBodyPrefChange(bp)}
-                    data-surface={active ? 'accent' : undefined}
-                    className={`rounded-full px-4 py-2 text-[13px] font-semibold transition-colors ${
-                      active
-                        ? 'btn-accent'
-                        : 'somm-sub-surface text-[var(--text-primary)]'
-                    }`}
-                  >
-                    {BODY_LABELS[bp][lang]}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Sweetness */}
-          <div>
-            <div className="mb-2 text-[13px] font-medium text-[var(--text-secondary)]">
-              {t.sweetnessLabel}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {(Object.keys(SWEETNESS_LABELS) as SweetnessPref[]).map((sw) => {
-                const active = sw === sweetnessPref;
-                return (
-                  <button
-                    key={sw}
-                    type="button"
-                    onClick={() => onSweetnessPrefChange(sw)}
-                    data-surface={active ? 'accent' : undefined}
-                    className={`rounded-full px-4 py-2 text-[13px] font-semibold transition-colors ${
-                      active
-                        ? 'btn-accent'
-                        : 'somm-sub-surface text-[var(--text-primary)]'
-                    }`}
-                  >
-                    {SWEETNESS_LABELS[sw][lang]}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Occasion */}
-          <div>
-            <div className="mb-2 text-[13px] font-medium text-[var(--text-secondary)]">
-              {t.occasionLabel}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {(Object.keys(OCCASION_LABELS) as OccasionType[]).map((occ) => {
-                const active = occ === occasion;
-                return (
-                  <button
-                    key={occ}
-                    type="button"
-                    onClick={() => onOccasionChange(occ)}
-                    data-surface={active ? 'accent' : undefined}
-                    className={`rounded-full px-4 py-2 text-[13px] font-semibold transition-colors ${
-                      active
-                        ? 'btn-accent'
-                        : 'somm-sub-surface text-[var(--text-primary)]'
-                    }`}
-                  >
-                    {OCCASION_LABELS[occ][lang]}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
         </div>
 
         {/* Single Authoritative Full-Width Burgundy CTA */}

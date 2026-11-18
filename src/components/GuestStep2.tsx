@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ArrowLeft, ArrowRight, CheckCircle2, Info, Sparkles } from 'lucide-react';
 import type {
   Language,
@@ -7,12 +7,15 @@ import type {
   WineItem,
 } from '../types/sommelier';
 import { CATEGORY_LABELS, TRANSLATIONS, formatKrw } from '../i18n/translations';
-import { SommelierAvatar, WineBottleIllustration } from './icons/WineVectors';
+import {
+  CountryFlagBadge,
+  SommelierAvatar,
+  WineBottleIllustration,
+} from './icons/WineVectors';
 import {
   AromaSpectrumCard,
   ServingGuideStrip,
   StructureBalanceChart,
-  WineStyleSpectrumStrip,
 } from './TastingInfographics';
 
 interface GuestStep2Props {
@@ -29,10 +32,20 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
   onSelectWineForDrinking,
 }) => {
   const t = TRANSLATIONS[lang];
+  const [activeScenarioIdx, setActiveScenarioIdx] = useState(0);
+
   const personaName = lang === 'ko' ? bundle.persona.nameKo : bundle.persona.nameEn;
+  const scenarios = bundle.courseScenarios ?? [];
+  const activeScenario = scenarios[activeScenarioIdx] ?? scenarios[0];
+  const activeSequence =
+    activeScenario?.sequence ?? bundle.courseSequence ?? [];
+  const activeTotalPrice =
+    activeScenario?.totalPrice ?? bundle.totalPrice;
+
   const isEmpty =
-    (bundle.kind === 'single_or_alacarte' && (!bundle.singleItems || bundle.singleItems.length === 0)) ||
-    (bundle.kind === 'course_sequence' && (!bundle.courseSequence || bundle.courseSequence.length === 0));
+    (bundle.kind === 'single_or_alacarte' &&
+      (!bundle.singleItems || bundle.singleItems.length === 0)) ||
+    (bundle.kind === 'course_sequence' && activeSequence.length === 0);
 
   return (
     <div className="mx-auto max-w-4xl space-y-5 px-4 py-6 safe-bottom-scroll sm:px-6">
@@ -48,11 +61,13 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
         </button>
 
         <h1 className="mt-4 text-[24px] font-bold tracking-tight text-[var(--text-primary)]">
-          {bundle.kind === 'course_sequence' ? t.step2TitleCourse : t.step2TitleSingle}
+          {bundle.kind === 'course_sequence'
+            ? t.step2TitleCourse
+            : t.step2TitleSingle}
         </h1>
       </div>
 
-      {/* Sommelier Persona Overall Rationale Banner */}
+      {/* Sommelier Persona Overall Rationale & Multi-Scenario Switcher */}
       <div className="somm-card rounded-3xl p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3.5">
@@ -62,38 +77,97 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
                 {personaName}
               </div>
               <p className="prose-pretty mt-1 text-[15px] leading-[1.6] text-[var(--text-primary)]">
-                {lang === 'ko' ? bundle.overallNoteKo : bundle.overallNoteEn}
+                {activeScenario
+                  ? lang === 'ko'
+                    ? activeScenario.focusDescKo
+                    : activeScenario.focusDescEn
+                  : lang === 'ko'
+                    ? bundle.overallNoteKo
+                    : bundle.overallNoteEn}
               </p>
             </div>
           </div>
 
-          {bundle.kind === 'course_sequence' && bundle.courseSequence && (
+          {bundle.kind === 'course_sequence' && activeSequence.length > 0 && (
             <div className="shrink-0 rounded-2xl bg-[#F5EBEF] px-4 py-3 text-right dark:bg-[#2E181F]">
               <div className="text-[11px] font-semibold text-[#6B1D2F] dark:text-[#F4B8C6]">
                 {t.step2TotalCoursePrice}
               </div>
               <div className="mt-0.5 text-[20px] font-bold tabular-nums text-[#6B1D2F] dark:text-[#FFFFFF]">
-                {formatKrw(bundle.totalPrice, lang)}
+                {formatKrw(activeTotalPrice, lang)}
               </div>
             </div>
           )}
         </div>
 
-        {/* Multi-Bottle Sequence Flow Strip */}
-        {bundle.kind === 'course_sequence' && bundle.courseSequence && (
+        {/* Multi-Scenario Tabs (e.g. Champagne-Led / White-Led / Red-Led) */}
+        {bundle.kind === 'course_sequence' && scenarios.length > 1 && (
+          <div className="mt-4 border-t border-[var(--border-subtle)] pt-4">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              {scenarios.map((sc, idx) => {
+                const isSelected = idx === activeScenarioIdx;
+                const comboText = sc.sequence
+                  .map(
+                    (s) =>
+                      CATEGORY_LABELS[s.assignedCategory][
+                        lang === 'ko' ? 'shortKo' : 'shortEn'
+                      ]
+                  )
+                  .join(' · ');
+
+                return (
+                  <button
+                    key={sc.id}
+                    type="button"
+                    onClick={() => setActiveScenarioIdx(idx)}
+                    data-surface={isSelected ? 'accent' : undefined}
+                    className={`rounded-2xl px-3.5 py-3 text-left transition-all ${
+                      isSelected
+                        ? 'btn-accent shadow-sm'
+                        : 'somm-sub-surface text-[var(--text-primary)] hover:opacity-85'
+                    }`}
+                  >
+                    <div className="text-[13px] font-bold">
+                      {lang === 'ko' ? sc.labelKo : sc.labelEn}
+                    </div>
+                    <div
+                      className={`mt-1 text-[11px] tabular-nums ${
+                        isSelected
+                          ? 'text-white/90'
+                          : 'text-[var(--text-secondary)]'
+                      }`}
+                    >
+                      {comboText} · {formatKrw(sc.totalPrice, lang)}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Active Scenario Bottle Flow Strip */}
+        {bundle.kind === 'course_sequence' && activeSequence.length > 0 && (
           <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[var(--border-subtle)] pt-3.5">
-            {bundle.courseSequence.map((slot, idx) => (
+            {activeSequence.map((slot, idx) => (
               <React.Fragment key={slot.wine.id + idx}>
                 <div className="inline-flex items-center gap-1.5 rounded-full bg-[var(--bg-tertiary)] px-3 py-1.5 text-[12px] font-semibold text-[var(--text-primary)]">
                   <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#6B1D2F] text-[10px] font-bold tabular-nums text-[#FFFFFF]">
                     {idx + 1}
                   </span>
                   <span>
-                    {CATEGORY_LABELS[slot.assignedCategory][lang === 'ko' ? 'shortKo' : 'shortEn']}
+                    {
+                      CATEGORY_LABELS[slot.assignedCategory][
+                        lang === 'ko' ? 'shortKo' : 'shortEn'
+                      ]
+                    }
                   </span>
                 </div>
-                {idx < bundle.courseSequence!.length - 1 && (
-                  <ArrowRight className="h-3.5 w-3.5 text-[var(--text-secondary)]" strokeWidth={1.5} />
+                {idx < activeSequence.length - 1 && (
+                  <ArrowRight
+                    className="h-3.5 w-3.5 text-[var(--text-secondary)]"
+                    strokeWidth={1.5}
+                  />
                 )}
               </React.Fragment>
             ))}
@@ -107,35 +181,46 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
           <h2 className="text-[17px] font-bold text-[var(--text-primary)]">
             {t.noStockTitle}
           </h2>
-          <p className="mt-2 text-[14px] text-[var(--text-secondary)]">{t.noStockDesc}</p>
+          <p className="mt-2 text-[14px] text-[var(--text-secondary)]">
+            {t.noStockDesc}
+          </p>
         </div>
       )}
 
-      {/* Single / À la carte Ranked Cards */}
+      {/* Single / À la carte Neutral Cards */}
       {bundle.kind === 'single_or_alacarte' &&
-        bundle.singleItems?.map((item) => (
+        bundle.singleItems?.map((item, idx) => (
           <WineDetailRecommendationCard
             key={item.wine.id}
             lang={lang}
             wine={item.wine}
             badgeLabel={
-              item.rank === 1
-                ? `${t.rankBest} · ${CATEGORY_LABELS[item.wine.category][lang === 'ko' ? 'shortKo' : 'shortEn']}`
-                : `${t.rankOption} ${item.rank} · ${CATEGORY_LABELS[item.wine.category][lang === 'ko' ? 'shortKo' : 'shortEn']}`
+              bundle.singleItems && bundle.singleItems.length > 1
+                ? `${t.rankOption} ${idx + 1} · ${
+                    CATEGORY_LABELS[item.wine.category][
+                      lang === 'ko' ? 'shortKo' : 'shortEn'
+                    ]
+                  }`
+                : `${t.rankOption} · ${
+                    CATEGORY_LABELS[item.wine.category][
+                      lang === 'ko' ? 'shortKo' : 'shortEn'
+                    ]
+                  }`
             }
-            isHighlighted={item.rank === 1}
             valueTier={item.valueTier}
             commentary={lang === 'ko' ? item.commentaryKo : item.commentaryEn}
-            highlights={lang === 'ko' ? item.pairingPointsKo : item.pairingPointsEn}
+            highlights={
+              lang === 'ko' ? item.pairingPointsKo : item.pairingPointsEn
+            }
             onChoose={() => onSelectWineForDrinking(item.wine)}
           />
         ))}
 
       {/* Multi-Bottle Course Sequence Cards */}
       {bundle.kind === 'course_sequence' &&
-        bundle.courseSequence?.map((slot) => (
+        activeSequence.map((slot) => (
           <WineDetailRecommendationCard
-            key={`${slot.slotIndex}-${slot.wine.id}`}
+            key={`${activeScenario?.id ?? 'sc'}-${slot.slotIndex}-${slot.wine.id}`}
             lang={lang}
             wine={slot.wine}
             badgeLabel={
@@ -150,10 +235,13 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
             courseSegmentTitle={
               lang === 'ko' ? slot.courseSegmentKo : slot.courseSegmentEn
             }
-            courseDishes={lang === 'ko' ? slot.assignedDishesKo : slot.assignedDishesEn}
-            isHighlighted={slot.slotIndex === 0}
+            courseDishes={
+              lang === 'ko' ? slot.assignedDishesKo : slot.assignedDishesEn
+            }
             valueTier={slot.valueTier}
-            commentary={lang === 'ko' ? slot.bridgeReasonKo : slot.bridgeReasonEn}
+            commentary={
+              lang === 'ko' ? slot.bridgeReasonKo : slot.bridgeReasonEn
+            }
             onChoose={() => onSelectWineForDrinking(slot.wine)}
           />
         ))}
@@ -198,7 +286,6 @@ interface WineCardProps {
   badgeLabel: string;
   courseSegmentTitle?: string;
   courseDishes?: string[];
-  isHighlighted?: boolean;
   valueTier: ValueTier;
   commentary: string;
   highlights?: string[];
@@ -211,7 +298,6 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
   badgeLabel,
   courseSegmentTitle,
   courseDishes,
-  isHighlighted = false,
   valueTier,
   commentary,
   highlights,
@@ -223,12 +309,8 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
   const region = lang === 'ko' ? wine.regionKo : wine.regionEn;
 
   return (
-    <article
-      className={`rounded-3xl p-5 sm:p-7 ${
-        isHighlighted ? 'somm-card ring-1 ring-[#6B1D2F]/25' : 'somm-card'
-      }`}
-    >
-      {/* Course Segment Banner when in Course Sequence mode */}
+    <article className="somm-card rounded-3xl p-5 sm:p-7">
+      {/* Course Segment Banner when in Course Mode */}
       {courseSegmentTitle && (
         <div className="mb-4 rounded-2xl bg-[#F5EBEF] px-4 py-2.5 dark:bg-[#2E181F]">
           <div className="text-[12px] font-bold text-[#6B1D2F] dark:text-[#F4B8C6]">
@@ -242,7 +324,7 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
         </div>
       )}
 
-      {/* Top Identity Row (Bottle Illustration + Name + Price + Badges) */}
+      {/* Top Identity Row */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-4">
           <div className="flex shrink-0 items-center justify-center rounded-2xl bg-[var(--bg-tertiary)] px-3 py-2.5">
@@ -284,7 +366,7 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
             </p>
 
             <div className="mt-2.5">
-              <WineStyleSpectrumStrip wine={wine} lang={lang} />
+              <CountryFlagBadge countryCode={wine.countryCode} lang={lang} />
             </div>
           </div>
         </div>

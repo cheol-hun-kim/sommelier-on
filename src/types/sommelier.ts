@@ -135,6 +135,7 @@ export interface Venue {
   logoUrl?: string;
   defaultPersonaId: string;
   priceTransparencyOptIn: boolean;
+  recommendationLimit: number; // 1..4
   adminPin: string;
   tables: string[];
   registeredDishes: RegisteredDish[];
@@ -224,6 +225,16 @@ export interface CourseBottleSlotRecommendation {
   bridgeReasonEn: string;
 }
 
+export interface CourseScenario {
+  id: string;
+  labelKo: string;
+  labelEn: string;
+  focusDescKo: string;
+  focusDescEn: string;
+  totalPrice: number;
+  sequence: CourseBottleSlotRecommendation[];
+}
+
 export interface PairingRecommendationBundle {
   kind: 'single_or_alacarte' | 'course_sequence';
   persona: SommelierPersona;
@@ -236,6 +247,7 @@ export interface PairingRecommendationBundle {
   overallNoteEn: string;
   singleItems?: SingleWineRecommendation[];
   courseSequence?: CourseBottleSlotRecommendation[];
+  courseScenarios?: CourseScenario[];
   extraGlass?: SingleWineRecommendation;
 }
 

@@ -1,5 +1,91 @@
 import React from 'react';
-import type { AromaKey, GlassType, WineCategory } from '../../types/sommelier';
+import type { AromaKey, GlassType, Language, WineCategory } from '../../types/sommelier';
+
+const COUNTRY_NAMES: Record<string, { ko: string; en: string }> = {
+  FR: { ko: '프랑스', en: 'France' },
+  IT: { ko: '이탈리아', en: 'Italy' },
+  US: { ko: '미국', en: 'USA' },
+  NZ: { ko: '뉴질랜드', en: 'New Zealand' },
+  ES: { ko: '스페인', en: 'Spain' },
+  DE: { ko: '독일', en: 'Germany' },
+  AU: { ko: '호주', en: 'Australia' },
+  CL: { ko: '칠레', en: 'Chile' },
+};
+
+export const CountryFlagBadge: React.FC<{
+  countryCode: string;
+  lang: Language;
+}> = ({ countryCode, lang }) => {
+  const code = (countryCode || 'FR').toUpperCase();
+  const label = COUNTRY_NAMES[code]?.[lang] ?? code;
+
+  return (
+    <span className="somm-sub-surface inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold text-[var(--text-primary)]">
+      <svg
+        width="18"
+        height="13"
+        viewBox="0 0 18 13"
+        className="shrink-0 rounded-[2px] border border-black/10"
+        aria-hidden="true"
+      >
+        {code === 'FR' && (
+          <>
+            <rect width="6" height="13" x="0" fill="#1F3B73" />
+            <rect width="6" height="13" x="6" fill="#FFFFFF" />
+            <rect width="6" height="13" x="12" fill="#B82937" />
+          </>
+        )}
+        {code === 'IT' && (
+          <>
+            <rect width="6" height="13" x="0" fill="#2A7B4C" />
+            <rect width="6" height="13" x="6" fill="#FFFFFF" />
+            <rect width="6" height="13" x="12" fill="#C2323A" />
+          </>
+        )}
+        {code === 'DE' && (
+          <>
+            <rect width="18" height="4.33" y="0" fill="#1C191A" />
+            <rect width="18" height="4.33" y="4.33" fill="#C42B34" />
+            <rect width="18" height="4.34" y="8.66" fill="#D9A338" />
+          </>
+        )}
+        {code === 'ES' && (
+          <>
+            <rect width="18" height="3.2" y="0" fill="#B82937" />
+            <rect width="18" height="6.6" y="3.2" fill="#E3B23C" />
+            <rect width="18" height="3.2" y="9.8" fill="#B82937" />
+          </>
+        )}
+        {code === 'US' && (
+          <>
+            <rect width="18" height="13" fill="#FFFFFF" />
+            <rect width="18" height="2" y="0" fill="#B82937" />
+            <rect width="18" height="2" y="4" fill="#B82937" />
+            <rect width="18" height="2" y="8" fill="#B82937" />
+            <rect width="18" height="1.5" y="11.5" fill="#B82937" />
+            <rect width="8.5" height="7" x="0" y="0" fill="#233B6E" />
+          </>
+        )}
+        {code === 'NZ' && (
+          <>
+            <rect width="18" height="13" fill="#1F356E" />
+            <path d="M0 0L7 5M7 0L0 5" stroke="#FFFFFF" strokeWidth="1" />
+            <rect width="2" height="5" x="2.5" fill="#FFFFFF" />
+            <rect width="7" height="1.6" y="1.7" fill="#FFFFFF" />
+            <circle cx="13.5" cy="3.5" r="1" fill="#D13B47" />
+            <circle cx="15" cy="6.5" r="1" fill="#D13B47" />
+            <circle cx="12" cy="7.5" r="1" fill="#D13B47" />
+            <circle cx="13.5" cy="10.2" r="1.1" fill="#D13B47" />
+          </>
+        )}
+        {!['FR', 'IT', 'DE', 'ES', 'US', 'NZ'].includes(code) && (
+          <rect width="18" height="13" fill="#6B1D2F" />
+        )}
+      </svg>
+      <span>{label}</span>
+    </span>
+  );
+};
 
 export const VenueLogo: React.FC<{
   venueId: string;

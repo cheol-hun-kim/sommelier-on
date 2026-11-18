@@ -33,7 +33,6 @@ import {
 } from './services/storageService';
 import type {
   AppMode,
-  BodyPref,
   BudgetScope,
   BudgetTier,
   CourseBottleCount,
@@ -42,12 +41,10 @@ import type {
   DislikeReasonTag,
   Language,
   MenuAnalysisResult,
-  OccasionType,
   PairingRecommendationBundle,
   PairingSessionStats,
   ParsedMenuDish,
   SommelierPersona,
-  SweetnessPref,
   ThemeMode,
   UserTasteProfile,
   Venue,
@@ -127,10 +124,6 @@ export function App() {
     'dessert',
   ]);
 
-  const [bodyPref, setBodyPref] = useState<BodyPref>('any');
-  const [sweetnessPref, setSweetnessPref] = useState<SweetnessPref>('any');
-  const [occasion, setOccasion] = useState<OccasionType>('date');
-
   const [recommendationBundle, setRecommendationBundle] =
     useState<PairingRecommendationBundle | null>(null);
   const [activeDrinkingWine, setActiveDrinkingWine] =
@@ -158,7 +151,7 @@ export function App() {
   useEffect(() => {
     const handleStorage = (e: StorageEvent) => {
       if (e.key === 'sommon_wines_v3') setWines(loadWines());
-      if (e.key === 'sommon_venues_v5') setVenues(loadVenues());
+      if (e.key === 'sommon_venues_v6') setVenues(loadVenues());
       if (e.key === 'sommon_taste_profile_v1')
         setTasteProfile(loadTasteProfile());
     };
@@ -282,9 +275,9 @@ export function App() {
       budgetScope,
       selectedDishes: collectedDishes,
       customDishText: customDishInput.trim(),
-      bodyPref,
-      sweetnessPref,
-      occasion,
+      bodyPref: 'any',
+      sweetnessPref: 'any',
+      occasion: 'date',
       menuMode: isCourseFlow ? 'course' : 'alacarte',
       courseServeFormat,
       courseBottleCount,
@@ -352,6 +345,16 @@ export function App() {
     setVenues((prev) => {
       const next = prev.map((v) =>
         v.id === venueId ? { ...v, priceTransparencyOptIn: optIn } : v
+      );
+      saveVenues(next);
+      return next;
+    });
+  };
+
+  const handleUpdateRecommendationLimit = (venueId: string, limit: number) => {
+    setVenues((prev) => {
+      const next = prev.map((v) =>
+        v.id === venueId ? { ...v, recommendationLimit: limit } : v
       );
       saveVenues(next);
       return next;
@@ -433,12 +436,6 @@ export function App() {
                 return copy;
               })
             }
-            bodyPref={bodyPref}
-            onBodyPrefChange={setBodyPref}
-            sweetnessPref={sweetnessPref}
-            onSweetnessPrefChange={setSweetnessPref}
-            occasion={occasion}
-            onOccasionChange={setOccasion}
             tasteProfile={tasteProfile}
             onResetTasteProfile={() => setTasteProfile(resetTasteProfile())}
             hasAnyDishSelected={hasAnyDishSelected}
@@ -494,6 +491,7 @@ export function App() {
             onUpdateStock={handleUpdateStock}
             onAddWine={handleAddWine}
             onTogglePriceTransparency={handleTogglePriceTransparency}
+            onUpdateRecommendationLimit={handleUpdateRecommendationLimit}
             onUpdateVenueLogo={handleUpdateVenueLogo}
             onOpenGuestTable={(vId, tb) => {
               handleVenueChange(vId);

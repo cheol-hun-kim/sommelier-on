@@ -6,6 +6,7 @@ import type {
   CourseBottleCount,
   CourseBottleSlotRecommendation,
   CoursePairingMode,
+  CourseScenario,
   CourseServeFormat,
   DislikeReasonTag,
   MenuMode,
@@ -296,34 +297,6 @@ function buildPersonaCommentary(
   return { ko, en, pointsKo, pointsEn };
 }
 
-function chooseAutoCourseSequence(
-  bottleCount: CourseBottleCount,
-  segments: ParsedMenuDish[][]
-): WineCategory[] {
-  if (bottleCount === 1) return ['white'];
-  const segHas = (segIdx: number, tag: string) =>
-    segments[segIdx]?.some((d) => d.flavorTags.includes(tag)) ?? false;
-
-  if (bottleCount === 2) {
-    const firstIsSeafood = segHas(0, 'seafood') || segHas(0, 'delicate');
-    const secondIsMeat = segHas(1, 'steak') || segHas(1, 'rich');
-    if (firstIsSeafood && secondIsMeat) return ['sparkling', 'red'];
-    if (secondIsMeat) return ['white', 'red'];
-    return ['sparkling', 'white'];
-  }
-
-  if (bottleCount === 4) {
-    return ['sparkling', 'white', 'red', 'dessert'];
-  }
-
-  // 3 bottles
-  const finaleIsDessert = segHas(2, 'dessert') && !segHas(2, 'steak');
-  if (finaleIsDessert) {
-    return ['sparkling', 'red', 'dessert'];
-  }
-  return ['sparkling', 'white', 'red'];
-}
-
 function partitionDishesIntoSegments(
   dishes: ParsedMenuDish[],
   count: CourseBottleCount
@@ -448,6 +421,7 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
   };
 
   if (!isMultiBottleCourse) {
+    const limit = Math.min(4, Math.max(1, venue.recommendationLimit || 3));
     const scored = eligiblePool
       .map((wine) => ({
         wine,
@@ -463,7 +437,7 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
         }),
       }))
       .sort((a, b) => b.score - a.score)
-      .slice(0, 3);
+      .slice(0, limit);
 
     const dishNamesKo = workingDishes.map((d) => d.nameKo);
     const dishNamesEn = workingDishes.map((d) => d.nameEn);
@@ -515,145 +489,248 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
     };
   }
 
-  // MULTI-BOTTLE (OR 3-GLASS) COURSE MODE
+  // MULTI-BOTTLE (OR 3-GLASS) COURSE MODE WITH MULTIPLE WEIGHT-FOCUSED SCENARIOS
   const segments = partitionDishesIntoSegments(workingDishes, effectiveBottleCount);
-  const targetCategories: WineCategory[] = isGlassCourse
-    ? ['sparkling', 'white', 'red']
-    : coursePairingMode === 'custom_slots'
-      ? customSlots.slice(0, effectiveBottleCount)
-      : chooseAutoCourseSequence(effectiveBottleCount, segments);
 
-  const usedIds = new Set<string>();
-  const sequence: CourseBottleSlotRecommendation[] = [];
-  let usedFallbackCategory = false;
+  const buildSequenceForCategories = (
+    targetCats: WineCategory[],
+    preferBias: 'balanced' | 'fresh' | 'rich' = 'balanced'
+  ): { sequence: CourseBottleSlotRecommendation[]; usedFallbackCategory: boolean } => {
+    const usedIds = new Set<string>();
+    const sequence: CourseBottleSlotRecommendation[] = [];
+    let usedFallbackCategory = false;
 
-  // Track category occurrence counts so repeated categories (e.g. 화화화, 샴샴샴) ascend in weight!
-  const categoryOccurrences: Record<string, number> = {};
-  const categoryTotals: Record<string, number> = {};
-  targetCategories.forEach((cat) => {
-    categoryTotals[cat] = (categoryTotals[cat] ?? 0) + 1;
-  });
-
-  for (let i = 0; i < effectiveBottleCount; i++) {
-    const requestedCat = targetCategories[i] ?? 'white';
-    const occIndex = categoryOccurrences[requestedCat] ?? 0;
-    categoryOccurrences[requestedCat] = occIndex + 1;
-    const totalInCat = categoryTotals[requestedCat] ?? 1;
-
-    const segDishes = segments[i] ?? workingDishes;
-    const segTags = Array.from(new Set(segDishes.flatMap((d) => d.flavorTags)));
-    const segAvgIntensity =
-      segDishes.length > 0
-        ? segDishes.reduce((s, d) => s + d.intensity, 0) / segDishes.length
-        : i === 0
-          ? 2
-          : i === 1
-            ? 3
-            : 4;
-
-    // Candidate pool in exact requested category not yet used
-    let candidates = eligiblePool.filter(
-      (w) => w.category === requestedCat && !usedIds.has(w.id)
-    );
-    if (candidates.length === 0) {
-      // Allow fallback across distinct in-stock wines if cellar is out of that exact category
-      usedFallbackCategory = true;
-      candidates = eligiblePool.filter((w) => !usedIds.has(w.id));
-    }
-    if (candidates.length === 0) {
-      candidates = eligiblePool;
-    }
-
-    // For repeated categories (e.g. 화화화 / 샴샴샴 / 화레레), explicitly sort ascending by body weight
-    // while reserving enough heavier bottles for subsequent slots of the same category.
-    let chosen: WineItem | undefined;
-    const remainingSlotsInCat = totalInCat - occIndex;
-    if (totalInCat > 1 && candidates.length > 1) {
-      const byWeight = [...candidates].sort(
-        (a, b) =>
-          a.structure.body * 10 + a.venuePrice / 50000 -
-          (b.structure.body * 10 + b.venuePrice / 50000)
-      );
-      const maxValidIdx = Math.max(0, byWeight.length - remainingSlotsInCat);
-      const ratio = totalInCat <= 1 ? 0 : occIndex / (totalInCat - 1);
-      const targetPos =
-        remainingSlotsInCat === 1
-          ? byWeight.length - 1
-          : Math.min(maxValidIdx, Math.round(ratio * maxValidIdx));
-      chosen = byWeight[targetPos];
-    } else {
-      const scoredSlot = candidates
-        .map((wine) => ({
-          wine,
-          score: scoreWineForContext(wine, {
-            persona,
-            budgetWindow,
-            flavorTags: segTags,
-            avgIntensity: segAvgIntensity,
-            bodyPref,
-            sweetnessPref,
-            occasion,
-            tasteProfile,
-            forcedCategory: requestedCat,
-          }),
-        }))
-        .sort((a, b) => b.score - a.score);
-      chosen = scoredSlot[0]?.wine;
-    }
-
-    if (!chosen) continue;
-    usedIds.add(chosen.id);
-
-    const segLabelsKo =
-      effectiveBottleCount === 2
-        ? ['전반부 코스 (전채 · 에피타이저)', '후반부 코스 (메인 · 마무리)']
-        : effectiveBottleCount === 4
-          ? ['1구간 (아뮤즈 · 전채)', '2구간 (해산물 · 온요리)', '3구간 (육류 메인)', '4구간 (디저트 · 마무리)']
-          : ['전반부 코스 (아뮤즈 · 전채)', '중반부 코스 (온요리 · 중간요리)', '후반부 코스 (메인 · 피날레)'];
-    const segLabelsEn =
-      effectiveBottleCount === 2
-        ? ['Opening Arc (Starters & Light Plates)', 'Closing Arc (Main & Finale)']
-        : effectiveBottleCount === 4
-          ? ['Act I (Amuse & Starter)', 'Act II (Seafood & Warm)', 'Act III (Main Course)', 'Act IV (Dessert & Finale)']
-          : ['Opening Arc (Amuse & Starter)', 'Middle Arc (Warm & Mid Course)', 'Climax Arc (Main & Finale)'];
-
-    const segDishesKo = segDishes.map((d) => d.nameKo);
-    const segDishesEn = segDishes.map((d) => d.nameEn);
-    const slotNote = buildPersonaCommentary(
-      chosen,
-      persona,
-      segDishesKo,
-      segDishesEn,
-      occasion,
-      tasteProfile
-    );
-
-    const slotPrefixKo =
-      coursePairingMode === 'custom_slots'
-        ? `지정하신 [${CATEGORY_LABELS[requestedCat].shortKo}] 슬롯에 맞춰 `
-        : '코스 강도 변화에 맞춰 ';
-    const slotPrefixEn =
-      coursePairingMode === 'custom_slots'
-        ? `Matched to your chosen [${CATEGORY_LABELS[requestedCat].shortEn}] slot: `
-        : 'Paced to the course arc: ';
-
-    sequence.push({
-      slotIndex: i,
-      assignedCategory: chosen.category,
-      courseSegmentKo: segLabelsKo[i] ?? `코스 ${i + 1}구간`,
-      courseSegmentEn: segLabelsEn[i] ?? `Stage ${i + 1}`,
-      assignedDishesKo: segDishesKo,
-      assignedDishesEn: segDishesEn,
-      wine: chosen,
-      valueTier: computeValueTier(chosen, venue.priceTransparencyOptIn),
-      bridgeReasonKo: `${slotPrefixKo}${slotNote.ko}`,
-      bridgeReasonEn: `${slotPrefixEn}${slotNote.en}`,
+    const categoryOccurrences: Record<string, number> = {};
+    const categoryTotals: Record<string, number> = {};
+    targetCats.forEach((cat) => {
+      categoryTotals[cat] = (categoryTotals[cat] ?? 0) + 1;
     });
+
+    for (let i = 0; i < effectiveBottleCount; i++) {
+      const requestedCat = targetCats[i] ?? 'white';
+      const occIndex = categoryOccurrences[requestedCat] ?? 0;
+      categoryOccurrences[requestedCat] = occIndex + 1;
+      const totalInCat = categoryTotals[requestedCat] ?? 1;
+
+      const segDishes = segments[i] ?? workingDishes;
+      const segTags = Array.from(new Set(segDishes.flatMap((d) => d.flavorTags)));
+      const segAvgIntensity =
+        segDishes.length > 0
+          ? segDishes.reduce((s, d) => s + d.intensity, 0) / segDishes.length
+          : i === 0
+            ? 2
+            : i === 1
+              ? 3
+              : 4;
+
+      let candidates = eligiblePool.filter(
+        (w) => w.category === requestedCat && !usedIds.has(w.id)
+      );
+      if (candidates.length === 0) {
+        usedFallbackCategory = true;
+        candidates = eligiblePool.filter((w) => !usedIds.has(w.id));
+      }
+      if (candidates.length === 0) {
+        candidates = eligiblePool;
+      }
+
+      let chosen: WineItem | undefined;
+      const remainingSlotsInCat = totalInCat - occIndex;
+      if (totalInCat > 1 && candidates.length > 1) {
+        const byWeight = [...candidates].sort(
+          (a, b) =>
+            a.structure.body * 10 + a.venuePrice / 50000 -
+            (b.structure.body * 10 + b.venuePrice / 50000)
+        );
+        const maxValidIdx = Math.max(0, byWeight.length - remainingSlotsInCat);
+        const ratio = totalInCat <= 1 ? 0 : occIndex / (totalInCat - 1);
+        const targetPos =
+          remainingSlotsInCat === 1
+            ? byWeight.length - 1
+            : Math.min(maxValidIdx, Math.round(ratio * maxValidIdx));
+        chosen = byWeight[targetPos];
+      } else {
+        const scoredSlot = candidates
+          .map((wine) => {
+            let s = scoreWineForContext(wine, {
+              persona,
+              budgetWindow,
+              flavorTags: segTags,
+              avgIntensity: segAvgIntensity,
+              bodyPref,
+              sweetnessPref,
+              occasion,
+              tasteProfile,
+              forcedCategory: requestedCat,
+            });
+            if (preferBias === 'fresh') s += (5 - wine.structure.body) * 4 + wine.structure.acidity * 3;
+            if (preferBias === 'rich') s += wine.structure.body * 4 + wine.venuePrice / 40000;
+            return { wine, score: s };
+          })
+          .sort((a, b) => b.score - a.score);
+        chosen = scoredSlot[0]?.wine;
+      }
+
+      if (!chosen) continue;
+      usedIds.add(chosen.id);
+
+      const segLabelsKo =
+        effectiveBottleCount === 2
+          ? ['전반부 코스 (전채 · 에피타이저)', '후반부 코스 (메인 · 마무리)']
+          : effectiveBottleCount === 4
+            ? ['1구간 (아뮤즈 · 전채)', '2구간 (해산물 · 온요리)', '3구간 (육류 메인)', '4구간 (디저트 · 마무리)']
+            : ['전반부 코스 (아뮤즈 · 전채)', '중반부 코스 (온요리 · 중간요리)', '후반부 코스 (메인 · 피날레)'];
+      const segLabelsEn =
+        effectiveBottleCount === 2
+          ? ['Opening Arc (Starters & Light Plates)', 'Closing Arc (Main & Finale)']
+          : effectiveBottleCount === 4
+            ? ['Act I (Amuse & Starter)', 'Act II (Seafood & Warm)', 'Act III (Main Course)', 'Act IV (Dessert & Finale)']
+            : ['Opening Arc (Amuse & Starter)', 'Middle Arc (Warm & Mid Course)', 'Climax Arc (Main & Finale)'];
+
+      const segDishesKo = segDishes.map((d) => d.nameKo);
+      const segDishesEn = segDishes.map((d) => d.nameEn);
+      const slotNote = buildPersonaCommentary(
+        chosen,
+        persona,
+        segDishesKo,
+        segDishesEn,
+        occasion,
+        tasteProfile
+      );
+
+      const slotPrefixKo =
+        coursePairingMode === 'custom_slots'
+          ? `지정하신 [${CATEGORY_LABELS[requestedCat].shortKo}] 슬롯에 맞춰 `
+          : '코스 강도 변화에 맞춰 ';
+      const slotPrefixEn =
+        coursePairingMode === 'custom_slots'
+          ? `Matched to your chosen [${CATEGORY_LABELS[requestedCat].shortEn}] slot: `
+          : 'Paced to the course arc: ';
+
+      sequence.push({
+        slotIndex: i,
+        assignedCategory: chosen.category,
+        courseSegmentKo: segLabelsKo[i] ?? `코스 ${i + 1}구간`,
+        courseSegmentEn: segLabelsEn[i] ?? `Stage ${i + 1}`,
+        assignedDishesKo: segDishesKo,
+        assignedDishesEn: segDishesEn,
+        wine: chosen,
+        valueTier: computeValueTier(chosen, venue.priceTransparencyOptIn),
+        bridgeReasonKo: `${slotPrefixKo}${slotNote.ko}`,
+        bridgeReasonEn: `${slotPrefixEn}${slotNote.en}`,
+      });
+    }
+
+    return { sequence, usedFallbackCategory };
+  };
+
+  const scenarioLimit = Math.min(3, Math.max(1, venue.recommendationLimit || 3));
+  const courseScenarios: CourseScenario[] = [];
+
+  if (isGlassCourse) {
+    const { sequence } = buildSequenceForCategories(['sparkling', 'white', 'red'], 'balanced');
+    courseScenarios.push({
+      id: 'glass_flow',
+      labelKo: '코스 글라스 흐름',
+      labelEn: 'Course Glass Flow',
+      focusDescKo: '스파클링 · 화이트 · 레드 3잔으로 가볍게 이어집니다.',
+      focusDescEn: 'Three light pours across sparkling, white, and red.',
+      totalPrice: sequence.reduce((s, x) => s + (x.wine.glassPrice ?? Math.round(x.wine.venuePrice / 5)), 0),
+      sequence,
+    });
+  } else if (coursePairingMode === 'custom_slots') {
+    const slots = customSlots.slice(0, effectiveBottleCount);
+    const biases: Array<{ id: string; bias: 'balanced' | 'fresh' | 'rich'; ko: string; en: string; descKo: string; descEn: string }> = [
+      { id: 'custom_balanced', bias: 'balanced', ko: '밸런스 추천', en: 'Balanced Selection', descKo: '지정하신 주종 안에서 요리와 가장 매끄럽게 어울리는 구성입니다.', descEn: 'Best overall harmony within your chosen styles.' },
+      { id: 'custom_fresh', bias: 'fresh', ko: '산뜻 · 미네랄 중심', en: 'Crisp & Mineral', descKo: '산뜻한 산도와 미네랄이 돋보이는 경쾌한 구성입니다.', descEn: 'Brighter acidity and mineral-driven lift.' },
+      { id: 'custom_rich', bias: 'rich', ko: '깊고 풍성한 중심', en: 'Rich & Expressive', descKo: '질감과 여운이 깊게 남는 풍성한 구성입니다.', descEn: 'Fuller texture and deeper cellar expression.' },
+    ];
+    for (const b of biases.slice(0, scenarioLimit)) {
+      const { sequence } = buildSequenceForCategories(slots, b.bias);
+      courseScenarios.push({
+        id: b.id,
+        labelKo: b.ko,
+        labelEn: b.en,
+        focusDescKo: b.descKo,
+        focusDescEn: b.descEn,
+        totalPrice: sequence.reduce((s, x) => s + x.wine.venuePrice, 0),
+        sequence,
+      });
+    }
+  } else {
+    // AI Auto Course: Generate weight-focused scenarios (Sparkling Focus, White Focus, Red Focus)
+    const scenarioTemplates: Array<{
+      id: string;
+      cats2: WineCategory[];
+      cats3: WineCategory[];
+      cats4: WineCategory[];
+      ko: string;
+      en: string;
+      descKo: string;
+      descEn: string;
+      bias: 'balanced' | 'fresh' | 'rich';
+    }> = [
+      {
+        id: 'focus_sparkling',
+        cats2: ['sparkling', 'red'],
+        cats3: ['sparkling', 'white', 'red'],
+        cats4: ['sparkling', 'white', 'red', 'dessert'],
+        ko: '샴페인 · 기포 중심',
+        en: 'Sparkling-Led Flow',
+        descKo: '화사한 기포로 코스를 열어 산뜻하게 이어지는 구성입니다.',
+        descEn: 'Opens with vibrant sparkling energy before transitioning smoothly.',
+        bias: 'balanced',
+      },
+      {
+        id: 'focus_white',
+        cats2: ['white', 'red'],
+        cats3: ['white', 'white', 'red'],
+        cats4: ['sparkling', 'white', 'white', 'red'],
+        ko: '화이트 와인 중심',
+        en: 'White-Led Flow',
+        descKo: '해산물과 섬세한 소스에 무게를 두고 화이트의 변화를 즐기는 구성입니다.',
+        descEn: 'Highlights white wine depth across seafood and creamy courses.',
+        bias: 'fresh',
+      },
+      {
+        id: 'focus_red',
+        cats2: ['white', 'red'],
+        cats3: ['sparkling', 'red', 'red'],
+        cats4: ['white', 'red', 'red', 'dessert'],
+        ko: '레드 와인 중심',
+        en: 'Red-Led Flow',
+        descKo: '육류 메인과 깊은 풍미에 무게를 두어 실키한 레드부터 묵직한 레드까지 즐깁니다.',
+        descEn: 'Centers on red structure from silky Pinot Noir to rich Grand Cru.',
+        bias: 'rich',
+      },
+    ];
+
+    for (const tpl of scenarioTemplates.slice(0, scenarioLimit)) {
+      const cats =
+        effectiveBottleCount === 2
+          ? tpl.cats2
+          : effectiveBottleCount === 4
+            ? tpl.cats4
+            : tpl.cats3;
+      const { sequence } = buildSequenceForCategories(cats, tpl.bias);
+      courseScenarios.push({
+        id: tpl.id,
+        labelKo: tpl.ko,
+        labelEn: tpl.en,
+        focusDescKo: tpl.descKo,
+        focusDescEn: tpl.descEn,
+        totalPrice: sequence.reduce((s, x) => s + x.wine.venuePrice, 0),
+        sequence,
+      });
+    }
   }
 
-  const totalPrice = sequence.reduce((sum, s) => sum + s.wine.venuePrice, 0);
-  const comboNamesKo = sequence.map((s) => CATEGORY_LABELS[s.assignedCategory].shortKo).join(' → ');
-  const comboNamesEn = sequence.map((s) => CATEGORY_LABELS[s.assignedCategory].shortEn).join(' → ');
+  const primarySequence = courseScenarios[0]?.sequence ?? [];
+  const totalPrice = courseScenarios[0]?.totalPrice ?? 0;
+  const comboNamesKo = primarySequence.map((s) => CATEGORY_LABELS[s.assignedCategory].shortKo).join(' → ');
+  const comboNamesEn = primarySequence.map((s) => CATEGORY_LABELS[s.assignedCategory].shortEn).join(' → ');
+
+  const usedIds = new Set(primarySequence.map((s) => s.wine.id));
 
   return {
     kind: 'course_sequence',
@@ -664,19 +741,16 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
     coursePairingMode,
     totalPrice,
     overallNoteKo: isGlassCourse
-      ? `${persona.nameKo}가 코스 흐름에 맞춰 1잔씩 부담 없이 즐기실 수 있도록 [${comboNamesKo}] 3잔 페어링을 구성했습니다.`
-      : usedFallbackCategory
-        ? `[${comboNamesKo}] 흐름으로 구성했습니다. 선택하신 주종 중 일부 재고가 소진되어 인접 주종으로 매끄럽게 보완했습니다.`
-        : `${persona.nameKo}가 코스의 강도 곡선을 따라 [${comboNamesKo}] 흐름으로 한 병씩 자연스럽게 이어지도록 설계했습니다.`,
+      ? `${persona.nameKo}가 코스 흐름에 맞춰 1잔씩 부담 없이 즐기실 수 있도록 [${comboNamesKo}] 3잔 구성을 마련했습니다.`
+      : `${persona.nameKo}가 코스의 강도 곡선을 따라 취향 비중별로 선택하실 수 있는 맞춤 페어링 구성입니다.`,
     overallNoteEn: isGlassCourse
       ? `Curated by ${persona.nameEn}: a 3-glass [${comboNamesEn}] progression paced to every course.`
-      : usedFallbackCategory
-        ? `Built as [${comboNamesEn}]. Where a requested cellar style was out of stock, the closest in-stock style maintains course harmony.`
-        : `Structured by ${persona.nameEn} along a [${comboNamesEn}] arc so texture and intensity rise alongside every plate.`,
-    courseSequence: sequence,
+      : `Curated by ${persona.nameEn}: compare weight-focused bottle lineups tailored to tonight’s course.`,
+    courseSequence: primarySequence,
+    courseScenarios,
     extraGlass: pickExtraGlass(
       usedIds,
-      sequence.map((s) => s.assignedCategory)
+      primarySequence.map((s) => s.assignedCategory)
     ),
   };
 }

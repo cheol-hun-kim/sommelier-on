@@ -15,6 +15,7 @@ create table if not exists public.venues (
   logo_url text,
   default_persona_id text not null,
   price_transparency_opt_in boolean not null default true,
+  recommendation_limit integer not null default 3,
   admin_pin text not null default '1234',
   tables jsonb not null default '["1", "2", "3", "7", "VIP 1"]'::jsonb,
   registered_dishes jsonb not null default '[]'::jsonb,
