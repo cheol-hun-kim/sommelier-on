@@ -5,6 +5,7 @@ import { GuestStep2 } from './components/GuestStep2';
 import { GuestStep3 } from './components/GuestStep3';
 import { HeaderBar } from './components/HeaderBar';
 import { PersonaModal } from './components/PersonaModal';
+import { VenueLogo } from './components/icons/WineVectors';
 import { SAMPLE_MENU_ALACARTE, SAMPLE_MENU_COURSE } from './data/seedData';
 import {
   applyDislikeToTasteProfile,
@@ -353,6 +354,16 @@ export function App() {
     });
   };
 
+  const handleUpdateVenueLogo = (venueId: string, logoUrl: string | undefined) => {
+    setVenues((prev) => {
+      const next = prev.map((v) =>
+        v.id === venueId ? { ...v, logoUrl } : v
+      );
+      saveVenues(next);
+      return next;
+    });
+  };
+
   return (
     <div className="min-h-dvh">
       <HeaderBar
@@ -484,6 +495,7 @@ export function App() {
             onUpdateStock={handleUpdateStock}
             onAddWine={handleAddWine}
             onTogglePriceTransparency={handleTogglePriceTransparency}
+            onUpdateVenueLogo={handleUpdateVenueLogo}
             onOpenGuestTable={(vId, tb) => {
               handleVenueChange(vId);
               handleTableChange(tb);
@@ -499,13 +511,21 @@ export function App() {
 
       {/* Clean Printable Cellar Wine List (Triggered by Admin "인쇄용 주류 리스트") */}
       <section className="hidden print-only p-8 text-[#1C191A]">
-        <div className="border-b-2 border-[#6B1D2F] pb-3">
-          <h1 className="text-2xl font-bold">
-            {lang === 'ko' ? activeVenue.nameKo : activeVenue.nameEn} · Wine Cellar List
-          </h1>
-          <p className="mt-1 text-sm text-[#6E6568]">
-            Curated by Sommelier On · Active In-Stock Bottles Only ({availableVenueWines.length})
-          </p>
+        <div className="flex items-center justify-between border-b-2 border-[#6B1D2F] pb-3">
+          <div>
+            <h1 className="text-2xl font-bold">
+              {lang === 'ko' ? activeVenue.nameKo : activeVenue.nameEn} · Wine Cellar List
+            </h1>
+            <p className="mt-1 text-sm text-[#6E6568]">
+              Curated by Sommelier On · Active In-Stock Bottles Only ({availableVenueWines.length})
+            </p>
+          </div>
+          <VenueLogo
+            venueId={activeVenue.id}
+            logoUrl={activeVenue.logoUrl}
+            venueName={lang === 'ko' ? activeVenue.nameKo : activeVenue.nameEn}
+            size="md"
+          />
         </div>
 
         <div className="mt-6 space-y-6">

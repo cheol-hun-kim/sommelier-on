@@ -44,7 +44,12 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
         {/* Top Meta Bar: Venue QR Context + Live In-Stock Counter + Controls */}
         <div className="flex flex-wrap items-center justify-between gap-2 text-[12px] text-[var(--text-secondary)]">
           <div className="flex flex-wrap items-center gap-2.5">
-            <VenueLogo venueId={activeVenue.id} size="sm" />
+            <VenueLogo
+              venueId={activeVenue.id}
+              logoUrl={activeVenue.logoUrl}
+              venueName={venueName}
+              size="sm"
+            />
             <span className="inline-flex items-center gap-1.5 font-medium text-[var(--text-primary)]">
               <span aria-hidden="true">·</span>
               <span>{venueName}</span>

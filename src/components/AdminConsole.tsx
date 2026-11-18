@@ -3,15 +3,18 @@ import {
   BarChart3,
   Camera,
   Check,
+  ImagePlus,
   KeyRound,
   Lock,
   Minus,
   Plus,
   Printer,
   QrCode,
+  RotateCcw,
   Sparkles,
   X,
 } from 'lucide-react';
+import { VenueLogo } from './icons/WineVectors';
 import type {
   Language,
   PairingSessionStats,
@@ -34,6 +37,7 @@ interface AdminConsoleProps {
   onUpdateStock: (wineId: string, delta: number) => void;
   onAddWine: (newWine: WineItem) => void;
   onTogglePriceTransparency: (venueId: string, optIn: boolean) => void;
+  onUpdateVenueLogo: (venueId: string, logoUrl: string | undefined) => void;
   onOpenGuestTable: (venueId: string, table: string) => void;
   onAiKeyUpdated: () => void;
 }
@@ -48,11 +52,13 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
   onUpdateStock,
   onAddWine,
   onTogglePriceTransparency,
+  onUpdateVenueLogo,
   onOpenGuestTable,
   onAiKeyUpdated,
 }) => {
   const t = TRANSLATIONS[lang];
   const labelFileRef = useRef<HTMLInputElement | null>(null);
+  const logoFileRef = useRef<HTMLInputElement | null>(null);
 
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState(false);
@@ -321,6 +327,67 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
             <KeyRound className="h-3.5 w-3.5" strokeWidth={1.5} />
             <span>{t.adminAiKeyBtn}</span>
           </button>
+        </div>
+      </div>
+
+      {/* 2B. Venue Brand Logo Upload & Live Preview */}
+      <div className="no-print somm-card flex flex-col gap-4 rounded-3xl p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-4">
+          <VenueLogo
+            venueId={venue.id}
+            logoUrl={venue.logoUrl}
+            venueName={lang === 'ko' ? venue.nameKo : venue.nameEn}
+            size="md"
+          />
+          <div>
+            <div className="text-[14px] font-bold text-[var(--text-primary)]">
+              {lang === 'ko' ? '업장 공식 로고 이미지 설정' : 'Venue Brand Logo Image'}
+            </div>
+            <p className="mt-0.5 text-[12px] text-[var(--text-secondary)]">
+              {lang === 'ko'
+                ? '업장의 실제 로고(PNG·JPG·SVG)를 등록하면 손님 화면 헤더와 인쇄용 주류 리스트에 즉시 반영됩니다.'
+                : 'Upload your restaurant logo to display across the Guest header and printable wine list.'}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            ref={logoFileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const reader = new FileReader();
+              reader.onload = () => {
+                const dataUrl = String(reader.result ?? '');
+                if (dataUrl) onUpdateVenueLogo(venue.id, dataUrl);
+              };
+              reader.readAsDataURL(file);
+              e.target.value = '';
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => logoFileRef.current?.click()}
+            className="inline-flex items-center gap-1.5 rounded-full bg-[#6B1D2F] px-4 py-2 text-[12px] font-semibold text-[#FFFFFF] hover:bg-[#561524]"
+          >
+            <ImagePlus className="h-3.5 w-3.5" strokeWidth={1.5} />
+            <span>{lang === 'ko' ? '로고 이미지 업로드' : 'Upload Logo'}</span>
+          </button>
+
+          {venue.logoUrl && (
+            <button
+              type="button"
+              onClick={() => onUpdateVenueLogo(venue.id, undefined)}
+              className="inline-flex items-center gap-1 rounded-full bg-[var(--bg-tertiary)] px-3.5 py-2 text-[12px] font-semibold text-[var(--text-primary)] hover:opacity-85"
+            >
+              <RotateCcw className="h-3.5 w-3.5" strokeWidth={1.5} />
+              <span>{lang === 'ko' ? '기본 크레스트 사용' : 'Use Default Crest'}</span>
+            </button>
+          )}
         </div>
       </div>
 

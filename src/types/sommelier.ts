@@ -116,6 +116,7 @@ export interface Venue {
   cuisineEn: string;
   locationKo: string;
   locationEn: string;
+  logoUrl?: string;
   defaultPersonaId: string;
   priceTransparencyOptIn: boolean;
   adminPin: string;

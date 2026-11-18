@@ -12,6 +12,7 @@ create table if not exists public.venues (
   cuisine_type_en text not null,
   location_ko text not null,
   location_en text not null,
+  logo_url text,
   default_persona_id text not null,
   price_transparency_opt_in boolean not null default true,
   admin_pin text not null default '1234',

@@ -181,8 +181,13 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
             {t.step1Subtitle}
           </p>
         </div>
-        <div className="somm-card rounded-2xl px-4 py-2.5">
-          <VenueLogo venueId={venue.id} size="md" />
+        <div className="somm-card rounded-2xl px-3.5 py-2">
+          <VenueLogo
+            venueId={venue.id}
+            logoUrl={venue.logoUrl}
+            venueName={lang === 'ko' ? venue.nameKo : venue.nameEn}
+            size="md"
+          />
         </div>
       </div>
 

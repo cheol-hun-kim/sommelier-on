@@ -3,10 +3,26 @@ import type { AromaKey, GlassType, WineCategory } from '../../types/sommelier';
 
 export const VenueLogo: React.FC<{
   venueId: string;
+  logoUrl?: string;
+  venueName?: string;
   size?: 'sm' | 'md';
-}> = ({ venueId, size = 'md' }) => {
+}> = ({ venueId, logoUrl, venueName, size = 'md' }) => {
   const isFrere = venueId === 'pilot_01';
-  const heightClass = size === 'sm' ? 'h-7' : 'h-10';
+  const heightClass = size === 'sm' ? 'h-7' : 'h-11';
+
+  if (logoUrl) {
+    return (
+      <div
+        className={`inline-flex items-center overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[#FFFFFF] px-1.5 py-0.5 shadow-xs ${heightClass}`}
+      >
+        <img
+          src={logoUrl}
+          alt={venueName ?? (isFrere ? 'FRÈRE Seoul' : 'HAVRE Jeju')}
+          className="h-full w-auto max-w-[140px] object-contain"
+        />
+      </div>
+    );
+  }
 
   if (isFrere) {
     return (
