@@ -1,8 +1,17 @@
 import React, { useState } from 'react';
-import { ArrowLeft, ArrowRight, CheckCircle2, Info, Sparkles } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  CheckCircle2,
+  Info,
+  RefreshCw,
+  Sparkles,
+} from 'lucide-react';
 import type {
   Language,
   PairingRecommendationBundle,
+  SommelierPersona,
   ValueTier,
   WineItem,
 } from '../types/sommelier';
@@ -21,18 +30,39 @@ import {
 interface GuestStep2Props {
   lang: Language;
   bundle: PairingRecommendationBundle;
+  personas: SommelierPersona[];
   onBack: () => void;
   onSelectWineForDrinking: (wine: WineItem) => void;
+  onSwitchPersona: (personaId: string) => void;
+  onSwapWines: (activeScenarioIdx: number, wineIdsToSwap: string[]) => void;
 }
 
 export const GuestStep2: React.FC<GuestStep2Props> = ({
   lang,
   bundle,
+  personas,
   onBack,
   onSelectWineForDrinking,
+  onSwitchPersona,
+  onSwapWines,
 }) => {
   const t = TRANSLATIONS[lang];
   const [activeScenarioIdx, setActiveScenarioIdx] = useState(0);
+  const [swapMode, setSwapMode] = useState(false);
+  const [selectedSwapIds, setSelectedSwapIds] = useState<string[]>([]);
+
+  const toggleSwapSelection = (wineId: string) => {
+    setSelectedSwapIds((prev) =>
+      prev.includes(wineId) ? prev.filter((id) => id !== wineId) : [...prev, wineId]
+    );
+  };
+
+  const handleConfirmSwap = () => {
+    if (selectedSwapIds.length === 0) return;
+    onSwapWines(activeScenarioIdx, selectedSwapIds);
+    setSelectedSwapIds([]);
+    setSwapMode(false);
+  };
 
   const personaName = lang === 'ko' ? bundle.persona.nameKo : bundle.persona.nameEn;
   const scenarios = bundle.courseScenarios ?? [];
@@ -100,7 +130,92 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
           )}
         </div>
 
-        {/* Multi-Scenario Tabs (e.g. Champagne-Led / White-Led / Red-Led) */}
+        {/* In-Place Sommelier Switcher + Selective Bottle Swap Trigger */}
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border-subtle)] pt-4">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="mr-1 text-[11px] font-semibold text-[var(--text-secondary)]">
+              {lang === 'ko' ? '다른 소믈리에:' : 'Switch Sommelier:'}
+            </span>
+            {personas.map((p) => {
+              const isCurrent = p.id === bundle.persona.id;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => {
+                    if (!isCurrent) {
+                      setSwapMode(false);
+                      setSelectedSwapIds([]);
+                      onSwitchPersona(p.id);
+                    }
+                  }}
+                  data-surface={isCurrent ? 'accent' : undefined}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-semibold transition-colors ${
+                    isCurrent
+                      ? 'btn-accent'
+                      : 'somm-sub-surface text-[var(--text-primary)] hover:opacity-85'
+                  }`}
+                >
+                  <SommelierAvatar personaId={p.id} size={18} />
+                  <span>{lang === 'ko' ? p.nameKo : p.nameEn}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {!isEmpty && (
+            <button
+              type="button"
+              onClick={() => {
+                setSwapMode((prev) => !prev);
+                setSelectedSwapIds([]);
+              }}
+              className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition-colors ${
+                swapMode
+                  ? 'bg-[#2B1C22] text-[#FFFFFF]'
+                  : 'bg-[#F5EBEF] text-[#6B1D2F] hover:opacity-90 dark:bg-[#2E181F] dark:text-[#F4B8C6]'
+              }`}
+            >
+              <RefreshCw className="h-3.5 w-3.5" strokeWidth={1.5} />
+              <span>
+                {swapMode
+                  ? lang === 'ko'
+                    ? '바틀 교체 취소'
+                    : 'Cancel Swap'
+                  : lang === 'ko'
+                    ? '특정 바틀만 바꿔서 재추천'
+                    : 'Swap Specific Bottles'}
+              </span>
+            </button>
+          )}
+        </div>
+
+        {/* Selective Swap Confirmation Bar */}
+        {swapMode && (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-[#F5EBEF] px-4 py-3 dark:bg-[#2E181F]">
+            <span className="text-[13px] font-medium text-[#6B1D2F] dark:text-[#F4B8C6]">
+              {lang === 'ko'
+                ? '이미 드셨거나 다른 스타일을 원하시는 와인만 체크한 뒤 재추천 버튼을 눌러주세요.'
+                : 'Check the bottles you wish to replace, then confirm to get fresh selections.'}
+            </span>
+            <button
+              type="button"
+              onClick={handleConfirmSwap}
+              disabled={selectedSwapIds.length === 0}
+              data-surface="accent"
+              className="btn-accent inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-[13px] font-bold disabled:cursor-not-allowed disabled:opacity-45"
+            >
+              <RefreshCw className="h-3.5 w-3.5" strokeWidth={1.5} />
+              <span>
+                {lang === 'ko'
+                  ? `선택한 ${selectedSwapIds.length}병 새로 추천받기`
+                  : `Swap ${selectedSwapIds.length} Selected`}
+              </span>
+            </button>
+          </div>
+        )}
+
+        {/* Multi-Scenario Tabs (e.g. Champagne Focus / White Focus / Red Focus) */}
         {bundle.kind === 'course_sequence' && scenarios.length > 1 && (
           <div className="mt-4 border-t border-[var(--border-subtle)] pt-4">
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -208,6 +323,9 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
                   }`
             }
             valueTier={item.valueTier}
+            swapMode={swapMode}
+            isSwapChecked={selectedSwapIds.includes(item.wine.id)}
+            onToggleSwap={() => toggleSwapSelection(item.wine.id)}
             commentary={lang === 'ko' ? item.commentaryKo : item.commentaryEn}
             highlights={
               lang === 'ko' ? item.pairingPointsKo : item.pairingPointsEn
@@ -239,6 +357,9 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
               lang === 'ko' ? slot.assignedDishesKo : slot.assignedDishesEn
             }
             valueTier={slot.valueTier}
+            swapMode={swapMode}
+            isSwapChecked={selectedSwapIds.includes(slot.wine.id)}
+            onToggleSwap={() => toggleSwapSelection(slot.wine.id)}
             commentary={
               lang === 'ko' ? slot.bridgeReasonKo : slot.bridgeReasonEn
             }
@@ -287,6 +408,9 @@ interface WineCardProps {
   courseSegmentTitle?: string;
   courseDishes?: string[];
   valueTier: ValueTier;
+  swapMode?: boolean;
+  isSwapChecked?: boolean;
+  onToggleSwap?: () => void;
   commentary: string;
   highlights?: string[];
   onChoose: () => void;
@@ -299,6 +423,9 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
   courseSegmentTitle,
   courseDishes,
   valueTier,
+  swapMode = false,
+  isSwapChecked = false,
+  onToggleSwap,
   commentary,
   highlights,
   onChoose,
@@ -309,7 +436,45 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
   const region = lang === 'ko' ? wine.regionKo : wine.regionEn;
 
   return (
-    <article className="somm-card rounded-3xl p-5 sm:p-7">
+    <article
+      className={`rounded-3xl p-5 sm:p-7 transition-all ${
+        isSwapChecked ? 'somm-card-selected' : 'somm-card'
+      }`}
+    >
+      {/* Selective Swap Checkbox Strip */}
+      {swapMode && onToggleSwap && (
+        <button
+          type="button"
+          onClick={onToggleSwap}
+          className={`mb-4 flex w-full items-center justify-between rounded-2xl px-4 py-2.5 text-[13px] font-semibold transition-colors ${
+            isSwapChecked
+              ? 'bg-[#6B1D2F] text-[#FFFFFF]'
+              : 'somm-sub-surface text-[var(--text-primary)] hover:opacity-85'
+          }`}
+        >
+          <div className="flex items-center gap-2.5">
+            <span
+              className={`flex h-4 w-4 items-center justify-center rounded ${
+                isSwapChecked
+                  ? 'bg-[#FFFFFF] text-[#6B1D2F]'
+                  : 'border border-[var(--text-muted)]'
+              }`}
+            >
+              {isSwapChecked && <Check className="h-3 w-3" strokeWidth={2.5} />}
+            </span>
+            <span>
+              {lang === 'ko'
+                ? isSwapChecked
+                  ? '이 바틀을 새로운 와인으로 교체합니다'
+                  : '이 바틀을 다른 와인으로 바꾸기'
+                : isSwapChecked
+                  ? 'Selected for replacement'
+                  : 'Check to swap this bottle'}
+            </span>
+          </div>
+        </button>
+      )}
+
       {/* Course Segment Banner when in Course Mode */}
       {courseSegmentTitle && (
         <div className="mb-4 rounded-2xl bg-[#F5EBEF] px-4 py-2.5 dark:bg-[#2E181F]">

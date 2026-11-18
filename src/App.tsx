@@ -13,6 +13,7 @@ import {
   applyLikeToTasteProfile,
   extractTagsFromFreeText,
   generatePairingRecommendation,
+  swapSpecificWinesInBundle,
 } from './engine/pairingEngine';
 import { CATEGORY_LABELS, formatKrw } from './i18n/translations';
 import { analyzeMenuImage } from './services/aiService';
@@ -135,6 +136,7 @@ export function App() {
 
   const [recommendationBundle, setRecommendationBundle] =
     useState<PairingRecommendationBundle | null>(null);
+  const [swappedExcludedIds, setSwappedExcludedIds] = useState<string[]>([]);
   const [activeDrinkingWine, setActiveDrinkingWine] =
     useState<WineItem | null>(null);
 
@@ -279,11 +281,14 @@ export function App() {
   const hasAnyDishSelected =
     isCourseFlow || collectedDishes.length > 0 || customDishInput.trim().length > 0;
 
-  const runRecommendation = (overrideProfile?: UserTasteProfile) => {
-    const persona =
-      personas.find((p) => p.id === selectedPersonaId) ?? personas[0];
-    const effectiveProfile = overrideProfile ?? tasteProfile;
-    const bundle = generatePairingRecommendation({
+  const buildPairingQuery = (
+    overridePersonaId?: string,
+    overrideProfile?: UserTasteProfile,
+    overrideExcluded?: string[]
+  ) => {
+    const pId = overridePersonaId ?? selectedPersonaId;
+    const persona = personas.find((p) => p.id === pId) ?? personas[0];
+    return {
       venue: activeVenue,
       wines,
       persona,
@@ -291,17 +296,29 @@ export function App() {
       budgetScope,
       selectedDishes: collectedDishes,
       customDishText: customDishInput.trim(),
-      bodyPref: 'any',
-      sweetnessPref: 'any',
-      occasion: 'date',
-      menuMode: isCourseFlow ? 'course' : 'alacarte',
+      bodyPref: 'any' as const,
+      sweetnessPref: 'any' as const,
+      occasion: 'date' as const,
+      menuMode: isCourseFlow ? ('course' as const) : ('alacarte' as const),
       courseServeFormat,
       courseBottleCount,
       coursePairingMode,
       customSlots,
       includeExtraGlass,
-      tasteProfile: effectiveProfile,
-    });
+      excludedWineIds: overrideExcluded ?? swappedExcludedIds,
+      tasteProfile: overrideProfile ?? tasteProfile,
+    };
+  };
+
+  const runRecommendation = (
+    overrideProfile?: UserTasteProfile,
+    overridePersonaId?: string,
+    keepStep = false
+  ) => {
+    const bundle = generatePairingRecommendation(
+      buildPairingQuery(overridePersonaId, overrideProfile, [])
+    );
+    setSwappedExcludedIds([]);
 
     const recIds =
       bundle.kind === 'course_sequence'
@@ -309,8 +326,26 @@ export function App() {
         : bundle.singleItems?.map((i) => i.wine.id) ?? [];
     setStats(recordRecommendationStats(recIds));
     setRecommendationBundle(bundle);
-    setGuestStep(2);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (!keepStep) {
+      setGuestStep(2);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handleSwapWinesInStep2 = (
+    activeScenarioIdx: number,
+    wineIdsToSwap: string[]
+  ) => {
+    if (!recommendationBundle || wineIdsToSwap.length === 0) return;
+    const nextBundle = swapSpecificWinesInBundle(
+      recommendationBundle,
+      activeScenarioIdx,
+      wineIdsToSwap,
+      swappedExcludedIds,
+      buildPairingQuery()
+    );
+    setSwappedExcludedIds((prev) => Array.from(new Set([...prev, ...wineIdsToSwap])));
+    setRecommendationBundle(nextBundle);
   };
 
   const handleSelectWineForDrinking = (wine: WineItem) => {
@@ -538,11 +573,17 @@ export function App() {
           <GuestStep2
             lang={lang}
             bundle={recommendationBundle}
+            personas={personas}
             onBack={() => {
               setGuestStep(1);
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             onSelectWineForDrinking={handleSelectWineForDrinking}
+            onSwitchPersona={(nextPersonaId) => {
+              setSelectedPersonaId(nextPersonaId);
+              runRecommendation(undefined, nextPersonaId, true);
+            }}
+            onSwapWines={handleSwapWinesInStep2}
           />
         )}
 

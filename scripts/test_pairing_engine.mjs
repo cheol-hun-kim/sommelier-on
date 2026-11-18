@@ -11,6 +11,7 @@ const testSource = `
 import { INITIAL_VENUES, INITIAL_WINES, SOMMELIER_PERSONAS, SAMPLE_MENU_COURSE } from './src/data/seedData.ts';
 import {
   generatePairingRecommendation,
+  swapSpecificWinesInBundle,
   applyLikeToTasteProfile,
   applyDislikeToTasteProfile,
   getNextRecommendedWines,
@@ -182,6 +183,37 @@ if (reRec.singleItems[0].wine.id === heavyRed.id) {
 }
 if (reRec.singleItems[0].wine.category !== 'red' || reRec.singleItems[0].wine.structure.tannin > 3) {
   throw new Error('Expected top steak recommendation after too_tannic to pivot to silky low-tannin red');
+}
+
+// 7. Selective Bottle Swap preserves unchecked bottles and replaces checked bottle
+const swappedCourse = swapSpecificWinesInBundle(
+  courseAuto,
+  0,
+  [courseAuto.courseSequence[1].wine.id],
+  [],
+  {
+    venue: v1,
+    wines: INITIAL_WINES,
+    persona: p1,
+    budgetTier: '100_150',
+    budgetScope: 'per_bottle',
+    selectedDishes: SAMPLE_MENU_COURSE.dishes,
+    bodyPref: 'any',
+    sweetnessPref: 'any',
+    occasion: 'celebration',
+    menuMode: 'course',
+    courseBottleCount: 3,
+    coursePairingMode: 'ai_auto',
+    customSlots: ['sparkling', 'white', 'red'],
+    tasteProfile: DEFAULT_TASTE_PROFILE,
+  }
+);
+if (
+  swappedCourse.courseSequence[0].wine.id !== courseAuto.courseSequence[0].wine.id ||
+  swappedCourse.courseSequence[2].wine.id !== courseAuto.courseSequence[2].wine.id ||
+  swappedCourse.courseSequence[1].wine.id === courseAuto.courseSequence[1].wine.id
+) {
+  throw new Error('Selective swap must keep unchecked bottles and replace checked bottle');
 }
 
 export const testSummary = {

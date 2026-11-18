@@ -41,6 +41,7 @@ export interface PairingQuery {
   coursePairingMode: CoursePairingMode;
   customSlots: WineCategory[];
   includeExtraGlass?: boolean;
+  excludedWineIds?: string[];
   tasteProfile: UserTasteProfile;
 }
 
@@ -335,11 +336,14 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
     coursePairingMode,
     customSlots,
     includeExtraGlass = false,
+    excludedWineIds = [],
     tasteProfile,
   } = query;
 
   // STRICT SYSTEMIC INVARIANT: Only wines in THIS venue with stock > 0 are eligible!
-  const eligiblePool = wines.filter((w) => w.venueId === venue.id && w.stock > 0);
+  const allInStockVenueWines = wines.filter((w) => w.venueId === venue.id && w.stock > 0);
+  const nonExcluded = allInStockVenueWines.filter((w) => !excludedWineIds.includes(w.id));
+  const eligiblePool = nonExcluded.length > 0 ? nonExcluded : allInStockVenueWines;
 
   // Merge selected dishes + optional free text dish
   const workingDishes: ParsedMenuDish[] = [...selectedDishes];
@@ -839,3 +843,178 @@ export function getNextRecommendedWines(
     .slice(0, 2)
     .map((x) => x.candidate);
 }
+
+export function swapSpecificWinesInBundle(
+  bundle: PairingRecommendationBundle,
+  activeScenarioIdx: number,
+  wineIdsToReplace: string[],
+  excludedHistoryIds: string[],
+  query: PairingQuery
+): PairingRecommendationBundle {
+  const { venue, wines, persona, budgetTier, budgetScope, occasion, tasteProfile } = query;
+  const replaceSet = new Set(wineIdsToReplace);
+  const allExcluded = new Set([...excludedHistoryIds, ...wineIdsToReplace]);
+  const inStockVenueWines = wines.filter((w) => w.venueId === venue.id && w.stock > 0);
+
+  if (bundle.kind === 'single_or_alacarte' && bundle.singleItems) {
+    const keptIds = new Set(
+      bundle.singleItems
+        .filter((item) => !replaceSet.has(item.wine.id))
+        .map((item) => item.wine.id)
+    );
+    const budgetWindow = getBudgetWindow(budgetTier, budgetScope, 1);
+    const allTags = Array.from(new Set(query.selectedDishes.flatMap((d) => d.flavorTags)));
+    const avgIntensity =
+      query.selectedDishes.length > 0
+        ? query.selectedDishes.reduce((s, d) => s + d.intensity, 0) / query.selectedDishes.length
+        : 3;
+
+    const updatedItems = bundle.singleItems.map((item) => {
+      if (!replaceSet.has(item.wine.id)) return item;
+
+      let pool = inStockVenueWines.filter((w) => !keptIds.has(w.id) && !allExcluded.has(w.id));
+      if (pool.length === 0) {
+        pool = inStockVenueWines.filter((w) => !keptIds.has(w.id) && w.id !== item.wine.id);
+      }
+      if (pool.length === 0) return item;
+
+      const scored = pool
+        .map((wine) => ({
+          wine,
+          score: scoreWineForContext(wine, {
+            persona,
+            budgetWindow,
+            flavorTags: allTags,
+            avgIntensity,
+            bodyPref: query.bodyPref,
+            sweetnessPref: query.sweetnessPref,
+            occasion,
+            tasteProfile,
+          }),
+        }))
+        .sort((a, b) => b.score - a.score);
+
+      const replacement = scored[0]?.wine;
+      if (!replacement) return item;
+      keptIds.add(replacement.id);
+
+      const commentary = buildPersonaCommentary(
+        replacement,
+        persona,
+        query.selectedDishes.map((d) => d.nameKo),
+        query.selectedDishes.map((d) => d.nameEn),
+        occasion,
+        tasteProfile
+      );
+
+      return {
+        ...item,
+        wine: replacement,
+        valueTier: computeValueTier(replacement, venue.priceTransparencyOptIn),
+        commentaryKo: commentary.ko,
+        commentaryEn: commentary.en,
+        pairingPointsKo: commentary.pointsKo,
+        pairingPointsEn: commentary.pointsEn,
+      };
+    });
+
+    return {
+      ...bundle,
+      singleItems: updatedItems,
+      totalPrice: updatedItems[0]?.wine.venuePrice ?? bundle.totalPrice,
+    };
+  }
+
+  // Course Multi-Bottle Scenario Swap (locks unchecked bottles, replaces only checked slots)
+  if (bundle.kind === 'course_sequence' && bundle.courseScenarios) {
+    const budgetWindow = getBudgetWindow(budgetTier, budgetScope, bundle.bottleCount);
+    const updatedScenarios = bundle.courseScenarios.map((sc, sIdx) => {
+      if (sIdx !== activeScenarioIdx) return sc;
+
+      const keptIds = new Set(
+        sc.sequence
+          .filter((slot) => !replaceSet.has(slot.wine.id))
+          .map((slot) => slot.wine.id)
+      );
+
+      const updatedSeq = sc.sequence.map((slot) => {
+        if (!replaceSet.has(slot.wine.id)) return slot;
+
+        // Prefer same category not yet kept or excluded; fallback to any distinct in-stock bottle
+        let pool = inStockVenueWines.filter(
+          (w) =>
+            w.category === slot.assignedCategory &&
+            !keptIds.has(w.id) &&
+            !allExcluded.has(w.id)
+        );
+        if (pool.length === 0) {
+          pool = inStockVenueWines.filter(
+            (w) => !keptIds.has(w.id) && !allExcluded.has(w.id)
+          );
+        }
+        if (pool.length === 0) {
+          pool = inStockVenueWines.filter(
+            (w) => !keptIds.has(w.id) && w.id !== slot.wine.id
+          );
+        }
+        if (pool.length === 0) return slot;
+
+        const scored = pool
+          .map((wine) => ({
+            wine,
+            score: scoreWineForContext(wine, {
+              persona,
+              budgetWindow,
+              flavorTags: ['umami'],
+              avgIntensity: 3,
+              bodyPref: query.bodyPref,
+              sweetnessPref: query.sweetnessPref,
+              occasion,
+              tasteProfile,
+              forcedCategory: slot.assignedCategory,
+            }),
+          }))
+          .sort((a, b) => b.score - a.score);
+
+        const replacement = scored[0]?.wine;
+        if (!replacement) return slot;
+        keptIds.add(replacement.id);
+
+        const note = buildPersonaCommentary(
+          replacement,
+          persona,
+          slot.assignedDishesKo,
+          slot.assignedDishesEn,
+          occasion,
+          tasteProfile
+        );
+
+        return {
+          ...slot,
+          assignedCategory: replacement.category,
+          wine: replacement,
+          valueTier: computeValueTier(replacement, venue.priceTransparencyOptIn),
+          bridgeReasonKo: `새롭게 교체 추천드리는 바틀입니다. ${note.ko}`,
+          bridgeReasonEn: `Fresh replacement selection: ${note.en}`,
+        };
+      });
+
+      return {
+        ...sc,
+        sequence: updatedSeq,
+        totalPrice: updatedSeq.reduce((sum, x) => sum + x.wine.venuePrice, 0),
+      };
+    });
+
+    const activeSc = updatedScenarios[activeScenarioIdx] ?? updatedScenarios[0];
+    return {
+      ...bundle,
+      courseScenarios: updatedScenarios,
+      courseSequence: activeSc?.sequence ?? bundle.courseSequence,
+      totalPrice: activeSc?.totalPrice ?? bundle.totalPrice,
+    };
+  }
+
+  return bundle;
+}
+
