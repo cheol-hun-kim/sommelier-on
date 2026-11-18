@@ -47,11 +47,26 @@ export interface ServingGuide {
   statusEn: string;
 }
 
+export interface WineryLocation {
+  lat: number;
+  lng: number;
+  placeLabelKo: string;
+  placeLabelEn: string;
+  earthQuery: string;
+}
+
 export interface WineStorytelling {
   terroirKo: string;
   terroirEn: string;
   vinificationKo: string;
   vinificationEn: string;
+  heavenClimateKo: string;
+  heavenClimateEn: string;
+  earthSoilKo: string;
+  earthSoilEn: string;
+  humanPhilosophyKo: string;
+  humanPhilosophyEn: string;
+  wineryLocation: WineryLocation;
 }
 
 export interface WineItem {

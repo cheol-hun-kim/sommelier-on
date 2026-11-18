@@ -667,7 +667,7 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
       ? `${persona.nameKo}가 코스 흐름에 맞춰 1잔씩 부담 없이 즐기실 수 있도록 [${comboNamesKo}] 3잔 페어링을 구성했습니다.`
       : usedFallbackCategory
         ? `[${comboNamesKo}] 흐름으로 구성했습니다. 선택하신 주종 중 일부 재고가 소진되어 인접 주종으로 매끄럽게 보완했습니다.`
-        : `${persona.nameKo}가 코스의 강도 곡선을 따라 [${comboNamesKo}] 시퀀스로 한 병씩 자연스럽게 이어지도록 설계했습니다.`,
+        : `${persona.nameKo}가 코스의 강도 곡선을 따라 [${comboNamesKo}] 흐름으로 한 병씩 자연스럽게 이어지도록 설계했습니다.`,
     overallNoteEn: isGlassCourse
       ? `Curated by ${persona.nameEn}: a 3-glass [${comboNamesEn}] progression paced to every course.`
       : usedFallbackCategory

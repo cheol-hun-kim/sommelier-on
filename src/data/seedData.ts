@@ -4,6 +4,7 @@ import type {
   Venue,
   WineItem,
 } from '../types/sommelier';
+import { RICH_WINE_STORIES } from './wineStories';
 
 export const SOMMELIER_PERSONAS: SommelierPersona[] = [
   {
@@ -309,7 +310,7 @@ export const INITIAL_VENUES: Venue[] = [
   },
 ];
 
-export const INITIAL_WINES: WineItem[] = [
+const RAW_INITIAL_WINES = [
   // =========================================================================
   // PILOT 01: 비스트로 르 셀리에 (Bistro Le Cellier) — 15 Bottles (13 In Stock, 2 Sold Out)
   // =========================================================================
@@ -1210,6 +1211,29 @@ export const INITIAL_WINES: WineItem[] = [
     pairingAffinities: ['steak', 'rich'],
   },
 ];
+
+export const INITIAL_WINES: WineItem[] = RAW_INITIAL_WINES.map((w) => {
+  const rich = RICH_WINE_STORIES[w.id];
+  return {
+    ...w,
+    storytelling: {
+      ...w.storytelling,
+      heavenClimateKo: rich?.heavenClimateKo ?? w.storytelling.terroirKo,
+      heavenClimateEn: rich?.heavenClimateEn ?? w.storytelling.terroirEn,
+      earthSoilKo: rich?.earthSoilKo ?? w.storytelling.terroirKo,
+      earthSoilEn: rich?.earthSoilEn ?? w.storytelling.terroirEn,
+      humanPhilosophyKo: rich?.humanPhilosophyKo ?? w.storytelling.vinificationKo,
+      humanPhilosophyEn: rich?.humanPhilosophyEn ?? w.storytelling.vinificationEn,
+      wineryLocation: rich?.wineryLocation ?? {
+        lat: 47.0247,
+        lng: 4.8386,
+        placeLabelKo: w.regionKo,
+        placeLabelEn: w.regionEn,
+        earthQuery: `${w.producer} ${w.regionEn}`,
+      },
+    },
+  };
+}) as WineItem[];
 
 export const SAMPLE_MENU_ALACARTE: MenuAnalysisResult = {
   sourceLabel: 'havre_jeju_alacarte.jpg',

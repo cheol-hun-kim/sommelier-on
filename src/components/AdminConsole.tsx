@@ -174,6 +174,19 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
         terroirEn: `Expressive cuvée highlighting the limestone and microclimate of ${draft.regionEn || 'its appellation'}.`,
         vinificationKo: '전통적인 온도 제어 발효와 정제된 숙성 과정을 거쳐 요리와 편안히 어우러집니다.',
         vinificationEn: 'Temperature-controlled fermentation and poised maturation for seamless table pairing.',
+        heavenClimateKo: `${Number(draft.vintage) || 2022}년 빈티지의 균형 잡힌 일조량과 수확기 일교차 덕분에 과실의 순수함과 산도가 깔끔하게 살아있습니다.`,
+        heavenClimateEn: `Balanced sunshine and cool harvest nights in ${Number(draft.vintage) || 2022} preserved bright fruit purity and acidity.`,
+        earthSoilKo: `${draft.regionKo || '산지'} 특유의 배수 좋은 암석·석회질 토양이 미네랄의 여운과 입체적인 구조를 만들어냅니다.`,
+        earthSoilEn: `Well-drained mineral soils of ${draft.regionEn || 'its region'} lend clarity and savory structure.`,
+        humanPhilosophyKo: `${draft.producer || '하우스'} 생산자가 밭의 개성을 해치지 않는 최소 개입 양조 철학으로 정성껏 빚어낸 와인입니다.`,
+        humanPhilosophyEn: `Crafted by ${draft.producer || 'the estate'} with gentle, terroir-focused winemaking.`,
+        wineryLocation: {
+          lat: 47.0247,
+          lng: 4.8386,
+          placeLabelKo: draft.regionKo || '프랑스',
+          placeLabelEn: draft.regionEn || 'France',
+          earthQuery: `${draft.producer || draft.nameEn || draft.nameKo} ${draft.regionEn || ''}`.trim(),
+        },
       },
       pairingAffinities:
         draft.category === 'red'

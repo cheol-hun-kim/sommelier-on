@@ -31,7 +31,7 @@ function recordGate(num, name, passed, detail) {
 
 // GATE 1: Zero Emoji Characters & Zero Technical/Developer Jargon in UI
 const emojiRegex = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
-const jargonRegex = /\b(OCR|Vision AI|LLM|JSON|5-AXIS|Opt-In|MVP)\b/;
+const jargonRegex = /\b(OCR|Vision AI|LLM|JSON|5-AXIS|Opt-In|MVP)\b|시퀀스/;
 const emojiHits = [];
 const jargonHits = [];
 const uiScanFiles = tsFiles.filter(

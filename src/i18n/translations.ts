@@ -116,8 +116,12 @@ export interface Translations {
   step3BackBtn: string;
   step3HeaderBadge: string;
   step3StoryTitle: string;
-  terroirTitle: string;
-  vinificationTitle: string;
+  heavenTitle: string;
+  earthTitle: string;
+  humanTitle: string;
+  wineryMapTitle: string;
+  openGoogleEarthBtn: string;
+  openGoogleMapsBtn: string;
   feedbackTitle: string;
   feedbackSubtitle: string;
   likeBtn: string;
@@ -239,7 +243,7 @@ export const TRANSLATIONS: Record<Language, Translations> = {
     courseBottleUnit: '병',
     courseExtraGlassToggle: '+ 추가 글라스 1잔 함께 추천',
     courseModeAutoTitle: '소믈리에 추천 조합',
-    courseModeAutoDesc: '코스 강도 곡선에 맞춰 가장 이상적인 주종 시퀀스를 자동 설계합니다.',
+    courseModeAutoDesc: '코스 강도 곡선에 맞춰 가장 이상적인 주종 흐름을 자동으로 설계합니다.',
     courseModeCustomTitle: '원하는 조합 직접 선택',
     courseModeCustomDesc: '원하시는 병 수와 주종 조합을 슬롯별로 직접 지정합니다.',
     courseSlotPrefix: '병',
@@ -256,7 +260,7 @@ export const TRANSLATIONS: Record<Language, Translations> = {
 
     step2BackBtn: '조건 다시 설정',
     step2TitleSingle: '오늘 테이블에 올릴 최적의 추천',
-    step2TitleCourse: '코스 흐름을 완성하는 다병 페어링 시퀀스',
+    step2TitleCourse: '코스 흐름을 완성하는 다병 페어링 구성',
     step2TotalCoursePrice: '코스 구성 총합',
     step2StaffRespectNote: '소믈리에의 안목을 담은 추천 가이드입니다. 현장 서버·셰프의 실시간 컨디션 조언과 함께하실 때 가장 정확합니다.',
     rankBest: '1순위 추천',
@@ -290,10 +294,14 @@ export const TRANSLATIONS: Record<Language, Translations> = {
     chooseWineCta: '이 와인 마시면서 가이드 보기',
 
     step3BackBtn: '추천 목록으로 돌아가기',
-    step3HeaderBadge: '시음 중 인터랙티브 가이드',
-    step3StoryTitle: '이 병에 담긴 테루아와 양조 이야기',
-    terroirTitle: '어디서 자랐는가 · 산지와 기후',
-    vinificationTitle: '어떻게 빚었는가 · 양조와 숙성',
+    step3HeaderBadge: '시음 중 깊이 읽기',
+    step3StoryTitle: '이 와인을 빚은 하늘·땅·사람 이야기',
+    heavenTitle: '天 · 빈티지의 해와 기후',
+    earthTitle: '地 · 산지의 토양과 지형',
+    humanTitle: '人 · 생산자의 철학과 계승',
+    wineryMapTitle: '와이너리 & 포도밭 위성 위치',
+    openGoogleEarthBtn: 'Google Earth로 포도밭 보기',
+    openGoogleMapsBtn: 'Google 지도에서 크게 열기',
     feedbackTitle: '지금 드시는 와인, 어떠신가요?',
     feedbackSubtitle: '남겨주신 감각은 손님 취향노트에 저장되어 다음 추천을 한층 정교하게 만듭니다.',
     likeBtn: '마음에 들어요',
@@ -462,10 +470,14 @@ export const TRANSLATIONS: Record<Language, Translations> = {
     chooseWineCta: 'Enjoy This Bottle & Open Guide',
 
     step3BackBtn: 'Back to Recommendations',
-    step3HeaderBadge: 'In-Drinking Interactive Guide',
-    step3StoryTitle: 'Terroir & Craft Inside the Glass',
-    terroirTitle: 'Where It Grows · Region & Climate',
-    vinificationTitle: 'How It Is Made · Winemaking & Aging',
+    step3HeaderBadge: 'In-Drinking Story & Origin',
+    step3StoryTitle: 'Sky, Earth & Maker Behind This Bottle',
+    heavenTitle: 'Sky · Vintage Climate',
+    earthTitle: 'Earth · Soil & Geography',
+    humanTitle: 'Maker · Legacy & Philosophy',
+    wineryMapTitle: 'Winery & Vineyard Satellite Map',
+    openGoogleEarthBtn: 'Explore in Google Earth',
+    openGoogleMapsBtn: 'Open in Google Maps',
     feedbackTitle: 'How is this bottle tasting tonight?',
     feedbackSubtitle: 'Your palate note persists across visits to refine every future recommendation.',
     likeBtn: 'Love This Style',

@@ -10,7 +10,7 @@ import type {
 
 const STORAGE_KEYS = {
   venues: 'sommon_venues_v5',
-  wines: 'sommon_wines_v2',
+  wines: 'sommon_wines_v3',
   tasteProfile: 'sommon_taste_profile_v1',
   stats: 'sommon_stats_v1',
   geminiKey: 'sommon_gemini_api_key',

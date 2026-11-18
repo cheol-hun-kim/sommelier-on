@@ -2,12 +2,16 @@ import React, { useState } from 'react';
 import {
   ArrowLeft,
   Check,
-  Compass,
+  ExternalLink,
+  Globe,
   MapPin,
+  Mountain,
   RefreshCw,
   Sparkles,
+  Sun,
   ThumbsDown,
   ThumbsUp,
+  UserCheck,
   Wine,
 } from 'lucide-react';
 import type { DislikeReasonTag, Language, WineItem } from '../types/sommelier';
@@ -18,8 +22,7 @@ import {
   formatKrw,
 } from '../i18n/translations';
 import { WineBottleIllustration } from './icons/WineVectors';
-import { AromaSpectrumCard, ServingGuideStrip } from './TastingInfographics';
-import { computeValueTier, getNextRecommendedWines } from '../engine/pairingEngine';
+import { getNextRecommendedWines } from '../engine/pairingEngine';
 
 interface GuestStep3Props {
   lang: Language;
@@ -39,7 +42,6 @@ export const GuestStep3: React.FC<GuestStep3Props> = ({
   wine,
   allWines,
   venueId,
-  priceTransparencyOptIn,
   onBack,
   onLikeWine,
   onDislikeWine,
@@ -47,19 +49,37 @@ export const GuestStep3: React.FC<GuestStep3Props> = ({
   onReRecommend,
 }) => {
   const t = TRANSLATIONS[lang];
-  const [feedbackState, setFeedbackState] = useState<'idle' | 'liked' | 'disliking' | 'disliked_saved'>('idle');
+  const [feedbackState, setFeedbackState] = useState<
+    'idle' | 'liked' | 'disliking' | 'disliked_saved'
+  >('idle');
   const [selectedReasons, setSelectedReasons] = useState<DislikeReasonTag[]>([]);
 
   const wineName = lang === 'ko' ? wine.nameKo : wine.nameEn;
   const varietal = lang === 'ko' ? wine.varietalsKo : wine.varietalsEn;
   const region = lang === 'ko' ? wine.regionKo : wine.regionEn;
-  const terroir = lang === 'ko' ? wine.storytelling.terroirKo : wine.storytelling.terroirEn;
-  const vinification =
-    lang === 'ko' ? wine.storytelling.vinificationKo : wine.storytelling.vinificationEn;
 
-  const valueTier = computeValueTier(wine, priceTransparencyOptIn);
+  const heavenText =
+    lang === 'ko'
+      ? wine.storytelling.heavenClimateKo
+      : wine.storytelling.heavenClimateEn;
+  const earthText =
+    lang === 'ko' ? wine.storytelling.earthSoilKo : wine.storytelling.earthSoilEn;
+  const humanText =
+    lang === 'ko'
+      ? wine.storytelling.humanPhilosophyKo
+      : wine.storytelling.humanPhilosophyEn;
+
+  const loc = wine.storytelling.wineryLocation;
+  const mapEmbedUrl = `https://maps.google.com/maps?q=${loc.lat},${loc.lng}&z=13&t=k&output=embed`;
+  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}`;
+  const googleEarthUrl = `https://earth.google.com/web/search/${encodeURIComponent(
+    loc.earthQuery
+  )}`;
+
   const nextSuggestions =
-    feedbackState === 'liked' ? getNextRecommendedWines(wine, allWines, venueId) : [];
+    feedbackState === 'liked'
+      ? getNextRecommendedWines(wine, allWines, venueId)
+      : [];
 
   const handleToggleReason = (tag: DislikeReasonTag) => {
     setSelectedReasons((prev) =>
@@ -96,7 +116,7 @@ export const GuestStep3: React.FC<GuestStep3Props> = ({
         </span>
       </div>
 
-      {/* Selected Bottle Summary Header */}
+      {/* Selected Bottle Summary + Sky · Earth · Maker Storytelling */}
       <section className="somm-card rounded-3xl p-5 sm:p-7">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
@@ -134,37 +154,98 @@ export const GuestStep3: React.FC<GuestStep3Props> = ({
           </div>
         </div>
 
-        {/* Terroir & Winemaking Storytelling Cards */}
+        {/* 天 · 地 · 人 3-Pillar Storytelling Cards */}
         <div className="mt-6">
-          <h2 className="mb-3 text-[17px] font-semibold text-[var(--text-primary)]">
+          <h2 className="mb-3.5 text-[17px] font-semibold text-[var(--text-primary)]">
             {t.step3StoryTitle}
           </h2>
-          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3.5 md:grid-cols-3">
+            {/* 天: Vintage Climate */}
             <div className="somm-sub-surface rounded-2xl p-4">
               <div className="flex items-center gap-2 text-[13px] font-bold text-[#6B1D2F] dark:text-[#E59BAE]">
-                <MapPin className="h-4 w-4" strokeWidth={1.5} />
-                <span>{t.terroirTitle}</span>
+                <Sun className="h-4 w-4 shrink-0" strokeWidth={1.5} />
+                <span>{t.heavenTitle}</span>
               </div>
-              <p className="prose-pretty mt-2 text-[14px] leading-[1.6] text-[var(--text-primary)]">
-                {terroir}
+              <p className="prose-pretty mt-2 text-[14px] leading-[1.65] text-[var(--text-primary)]">
+                {heavenText}
               </p>
             </div>
 
+            {/* 地: Soil & Geography */}
             <div className="somm-sub-surface rounded-2xl p-4">
               <div className="flex items-center gap-2 text-[13px] font-bold text-[#6B1D2F] dark:text-[#E59BAE]">
-                <Compass className="h-4 w-4" strokeWidth={1.5} />
-                <span>{t.vinificationTitle}</span>
+                <Mountain className="h-4 w-4 shrink-0" strokeWidth={1.5} />
+                <span>{t.earthTitle}</span>
               </div>
-              <p className="prose-pretty mt-2 text-[14px] leading-[1.6] text-[var(--text-primary)]">
-                {vinification}
+              <p className="prose-pretty mt-2 text-[14px] leading-[1.65] text-[var(--text-primary)]">
+                {earthText}
+              </p>
+            </div>
+
+            {/* 人: Maker Philosophy & Heritage */}
+            <div className="somm-sub-surface rounded-2xl p-4">
+              <div className="flex items-center gap-2 text-[13px] font-bold text-[#6B1D2F] dark:text-[#E59BAE]">
+                <UserCheck className="h-4 w-4 shrink-0" strokeWidth={1.5} />
+                <span>{t.humanTitle}</span>
+              </div>
+              <p className="prose-pretty mt-2 text-[14px] leading-[1.65] text-[var(--text-primary)]">
+                {humanText}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <AromaSpectrumCard wine={wine} lang={lang} />
-          <ServingGuideStrip wine={wine} lang={lang} valueTier={valueTier} />
+        {/* Winery Satellite Map & Google Earth Explorer */}
+        <div className="mt-5 somm-sub-surface overflow-hidden rounded-2xl p-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <MapPin
+                className="h-4 w-4 text-[#6B1D2F] dark:text-[#E59BAE]"
+                strokeWidth={1.5}
+              />
+              <div>
+                <div className="text-[13px] font-bold text-[var(--text-primary)]">
+                  {t.wineryMapTitle}
+                </div>
+                <div className="text-[12px] text-[var(--text-secondary)]">
+                  {lang === 'ko' ? loc.placeLabelKo : loc.placeLabelEn}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <a
+                href={googleEarthUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-full bg-[#6B1D2F] px-3.5 py-1.5 text-[12px] font-semibold text-[#FFFFFF] transition-colors hover:bg-[#561524]"
+              >
+                <Globe className="h-3.5 w-3.5" strokeWidth={1.5} />
+                <span>{t.openGoogleEarthBtn}</span>
+                <ExternalLink className="h-3 w-3" strokeWidth={1.5} />
+              </a>
+
+              <a
+                href={googleMapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-full bg-[var(--bg-secondary)] px-3.5 py-1.5 text-[12px] font-semibold text-[var(--text-primary)] shadow-sm transition-colors hover:opacity-85"
+              >
+                <span>{t.openGoogleMapsBtn}</span>
+                <ExternalLink className="h-3 w-3" strokeWidth={1.5} />
+              </a>
+            </div>
+          </div>
+
+          <div className="overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
+            <iframe
+              title={lang === 'ko' ? loc.placeLabelKo : loc.placeLabelEn}
+              src={mapEmbedUrl}
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              className="h-56 w-full border-0 sm:h-64"
+            />
+          </div>
         </div>
       </section>
 

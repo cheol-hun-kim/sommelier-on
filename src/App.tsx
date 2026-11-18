@@ -157,7 +157,7 @@ export function App() {
   // Cross-tab real-time sync when Admin updates stock in another tab
   useEffect(() => {
     const handleStorage = (e: StorageEvent) => {
-      if (e.key === 'sommon_wines_v2') setWines(loadWines());
+      if (e.key === 'sommon_wines_v3') setWines(loadWines());
       if (e.key === 'sommon_venues_v5') setVenues(loadVenues());
       if (e.key === 'sommon_taste_profile_v1')
         setTasteProfile(loadTasteProfile());
