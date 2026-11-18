@@ -17,7 +17,7 @@ import {
   swapSpecificWinesInBundle,
 } from './engine/pairingEngine';
 import { CATEGORY_LABELS, formatKrw } from './i18n/translations';
-import { analyzeMenuImage } from './services/aiService';
+import { analyzeMenuImage, enrichCorkageBottle } from './services/aiService';
 import {
   addJournalEntry,
   getGeminiApiKey,
@@ -327,7 +327,7 @@ export function App() {
     };
   };
 
-  const runRecommendation = (
+  const runRecommendation = async (
     overrideProfile?: UserTasteProfile,
     overridePersonaId?: string,
     keepStep = false
@@ -335,17 +335,21 @@ export function App() {
     const pId = overridePersonaId ?? selectedPersonaId;
     const persona = personas.find((p) => p.id === pId) ?? personas[0];
 
-    const bundle =
-      corkageOnly && corkageWine && corkageWine.name.trim().length > 0
-        ? generateCorkageOnlyRecommendation({
-            venue: activeVenue,
-            persona,
-            corkage: corkageWine,
-            tasteProfile: overrideProfile ?? tasteProfile,
-          })
-        : generatePairingRecommendation(
-            buildPairingQuery(overridePersonaId, overrideProfile, [])
-          );
+    let bundle: PairingRecommendationBundle;
+    if (corkageOnly && corkageWine && corkageWine.name.trim().length > 0) {
+      const enriched = await enrichCorkageBottle(corkageWine);
+      setCorkageWine(enriched);
+      bundle = generateCorkageOnlyRecommendation({
+        venue: activeVenue,
+        persona,
+        corkage: enriched,
+        tasteProfile: overrideProfile ?? tasteProfile,
+      });
+    } else {
+      bundle = generatePairingRecommendation(
+        buildPairingQuery(overridePersonaId, overrideProfile, [])
+      );
+    }
     setSwappedExcludedIds([]);
 
     const recIds =

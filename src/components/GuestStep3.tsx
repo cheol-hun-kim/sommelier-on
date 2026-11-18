@@ -148,10 +148,18 @@ export const GuestStep3: React.FC<GuestStep3Props> = ({
 
           <div className="text-left sm:text-right">
             <div className="text-[11px] font-medium text-[var(--text-secondary)]">
-              {t.venuePriceLabel}
+              {wine.venuePrice <= 0
+                ? lang === 'ko'
+                  ? '지참 와인'
+                  : 'BYOB'
+                : t.venuePriceLabel}
             </div>
             <div className="text-[20px] font-bold tabular-nums text-[var(--text-primary)]">
-              {formatKrw(wine.venuePrice, lang)}
+              {wine.venuePrice <= 0
+                ? lang === 'ko'
+                  ? '고객 지참'
+                  : 'Corkage'
+                : formatKrw(wine.venuePrice, lang)}
             </div>
           </div>
         </div>

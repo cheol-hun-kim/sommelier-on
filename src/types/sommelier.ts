@@ -302,6 +302,13 @@ export interface CorkageBottle {
   body: number; // 1..5
   structure?: WineStructure;
   aromas?: WineAromas;
+  heavenClimateKo?: string;
+  heavenClimateEn?: string;
+  earthSoilKo?: string;
+  earthSoilEn?: string;
+  humanPhilosophyKo?: string;
+  humanPhilosophyEn?: string;
+  wineryLocation?: WineryLocation;
   slotPosition: 'early' | 'middle' | 'late';
 }
 

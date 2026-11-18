@@ -1098,13 +1098,16 @@ export function generateCorkageOnlyRecommendation(params: {
     tertiary: ['mineral_stone'],
   };
 
+  const yearInName = corkage.name.match(/\b(19\d{2}|20\d{2})\b/);
+  const effectiveVintage = corkage.vintage ?? (yearInName ? Number(yearInName[1]) : new Date().getFullYear() - 3);
+
   const corkageWineItem: WineItem = {
     id: `corkage_${Date.now()}`,
     venueId: venue.id,
     nameKo: corkage.name,
     nameEn: corkage.nameEn || corkage.name,
     producer: corkage.producer || 'Guest Cellar',
-    vintage: corkage.vintage || new Date().getFullYear() - 3,
+    vintage: effectiveVintage,
     category: corkage.category,
     varietalsKo:
       corkage.varietalsKo ||
@@ -1148,13 +1151,25 @@ export function generateCorkageOnlyRecommendation(params: {
       terroirEn: `Personal selection from ${corkage.regionEn || 'your cellar'}.`,
       vinificationKo: '매장의 권장 글라스와 음용 온도에 맞춰 즐기시면 풍미가 한층 살아납니다.',
       vinificationEn: 'Served at its ideal temperature and stemware to unlock full aromatics.',
-      heavenClimateKo: `${corkage.vintage || '해당'} 빈티지의 자연스러운 기후 결을 간직한 보틀입니다.`,
-      heavenClimateEn: `Expressing the natural vintage character of ${corkage.vintage || 'its harvest'}.`,
-      earthSoilKo: `${corkage.regionKo || '산지'} 특유의 지질과 미네랄이 와인의 구조와 여운을 형성합니다.`,
-      earthSoilEn: `Mineral structure shaped by ${corkage.regionEn || 'its origin soils'}.`,
-      humanPhilosophyKo: '고객님이 직접 소장해 오신 보틀이 오늘 식탁의 요리와 가장 빛나는 순간을 연결해 드립니다.',
-      humanPhilosophyEn: 'Paired thoughtfully with tonight’s dishes to let your bottle shine.',
-      wineryLocation: {
+      heavenClimateKo:
+        corkage.heavenClimateKo ||
+        `${effectiveVintage}년 빈티지의 자연스러운 기후 결을 간직한 보틀입니다.`,
+      heavenClimateEn:
+        corkage.heavenClimateEn ||
+        `Expressing the natural vintage character of ${effectiveVintage}.`,
+      earthSoilKo:
+        corkage.earthSoilKo ||
+        `${corkage.regionKo || '산지'} 특유의 지질과 미네랄이 와인의 구조와 여운을 형성합니다.`,
+      earthSoilEn:
+        corkage.earthSoilEn ||
+        `Mineral structure shaped by ${corkage.regionEn || 'its origin soils'}.`,
+      humanPhilosophyKo:
+        corkage.humanPhilosophyKo ||
+        '고객님이 직접 소장해 오신 보틀이 오늘 식탁의 요리와 가장 빛나는 순간을 연결해 드립니다.',
+      humanPhilosophyEn:
+        corkage.humanPhilosophyEn ||
+        'Paired thoughtfully with tonight’s dishes to let your bottle shine.',
+      wineryLocation: corkage.wineryLocation ?? {
         lat: 47.0247,
         lng: 4.8386,
         placeLabelKo: corkage.regionKo || corkage.name,
