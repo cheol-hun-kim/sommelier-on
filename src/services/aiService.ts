@@ -11,6 +11,7 @@ import type {
   WineStructure,
 } from '../types/sommelier';
 import { extractTagsFromFreeText } from '../engine/pairingEngine';
+import { lookupWineKnowledge } from '../data/wineKnowledgeBase';
 import { getGeminiApiKey } from './storageService';
 
 export interface ScannedWineLabelDraft {
@@ -383,56 +384,29 @@ Return STRICT JSON:
     }
   }
 
-  // Built-in iconic wine knowledge fallback (e.g. Salon, Krug, Dom Perignon, Opus One)
-  const lower = corkage.name.toLowerCase();
-  if (lower.includes('살롱') || lower.includes('salon')) {
-    return {
-      ...corkage,
-      name: `살롱 르 메닐 블랑 드 블랑 그랑 크뤼`,
-      nameEn: 'Champagne Salon Le Mesnil Blanc de Blancs Grand Cru',
-      producer: 'Champagne Salon',
-      vintage: parsedVintage ?? 1996,
-      category: 'sparkling',
-      varietalsKo: '샤르도네 100% (르 메닐 쉬르 오제 그랑 크뤼)',
-      varietalsEn: '100% Chardonnay (Le Mesnil-sur-Oger Grand Cru)',
-      regionKo: '프랑스 샹파뉴 르 메닐 쉬르 오제',
-      regionEn: 'Le Mesnil-sur-Oger, Champagne, France',
-      countryCode: 'FR',
-      body: 4,
-      structure: { body: 4, acidity: 5, tannin: 1, sweetness: 1, alcohol: 3 },
-      aromas: {
-        primary: ['citrus', 'pear_apple', 'white_flower'],
-        secondary: ['butter_brioche', 'honey'],
-        tertiary: ['mineral_stone'],
-      },
-      heavenClimateKo:
-        parsedVintage === 1996
-          ? '1996년 샹파뉴는 높은 당도와 극도로 날카로운 산도가 동시에 기록된 전설적인 빈티지로, 수십 년의 장기 숙성 잠재력을 품고 태어났습니다.'
-          : `${parsedVintage ?? ''}년 샹파뉴의 서늘한 수확기 덕분에 샤르도네 특유의 맑고 정교한 산도가 그대로 살아있습니다.`,
-      heavenClimateEn:
-        parsedVintage === 1996
-          ? 'The legendary 1996 Champagne harvest combined extraordinary natural acidity with deep ripeness for multi-decade longevity.'
-          : 'Cool harvest conditions preserved razor-sharp Chardonnay acidity and crystalline purity.',
-      earthSoilKo:
-        '꼬뜨 데 블랑의 심장부인 르 메닐 쉬르 오제의 순수 백악질(Chalk) 단일 밭에서만 수확해 짭조름한 조개껍질 미네랄과 긴 여운을 자랑합니다.',
-      earthSoilEn:
-        'Sourced solely from pure chalk slopes in Grand Cru Le Mesnil-sur-Oger, yielding intense chalky salinity.',
-      humanPhilosophyKo:
-        '1905년 유진 에메 살롱이 "가장 위대한 해에만, 단일 마을·단일 품종으로 빚는다"는 철학으로 창립한 뒤 100년간 단 40여 차례만 출시된 샹파뉴의 전설입니다.',
-      humanPhilosophyEn:
-        'Founded by Eugène-Aimé Salon in 1905 to craft one wine from one village and one grape only in truly exceptional vintages.',
-      wineryLocation: {
-        lat: 48.9475,
-        lng: 4.0218,
-        placeLabelKo: '프랑스 르 메닐 쉬르 오제 · 샴페인 살롱',
-        placeLabelEn: 'Champagne Salon, Le Mesnil-sur-Oger, France',
-        earthQuery: 'Champagne Salon, Le Mesnil-sur-Oger, France',
-      },
-    };
-  }
-
+  // 3-Tier Built-In Wine Knowledge Base fallback (Producer + Appellation + Vintage Chronicle)
+  const kb = lookupWineKnowledge(corkage.name, corkage.category, parsedVintage);
   return {
     ...corkage,
-    vintage: parsedVintage,
+    name: kb.canonicalNameKo ?? corkage.name,
+    nameEn: kb.canonicalNameEn ?? corkage.nameEn ?? corkage.name,
+    producer: kb.producer ?? corkage.producer,
+    vintage: kb.vintage,
+    category: kb.category,
+    varietalsKo: kb.varietalsKo ?? corkage.varietalsKo,
+    varietalsEn: kb.varietalsEn ?? corkage.varietalsEn,
+    regionKo: kb.regionKo ?? corkage.regionKo,
+    regionEn: kb.regionEn ?? corkage.regionEn,
+    countryCode: kb.countryCode ?? corkage.countryCode,
+    body: kb.structure?.body ?? corkage.body,
+    structure: kb.structure ?? corkage.structure,
+    aromas: kb.aromas ?? corkage.aromas,
+    heavenClimateKo: kb.heavenClimateKo ?? corkage.heavenClimateKo,
+    heavenClimateEn: kb.heavenClimateEn ?? corkage.heavenClimateEn,
+    earthSoilKo: kb.earthSoilKo ?? corkage.earthSoilKo,
+    earthSoilEn: kb.earthSoilEn ?? corkage.earthSoilEn,
+    humanPhilosophyKo: kb.humanPhilosophyKo ?? corkage.humanPhilosophyKo,
+    humanPhilosophyEn: kb.humanPhilosophyEn ?? corkage.humanPhilosophyEn,
+    wineryLocation: kb.wineryLocation ?? corkage.wineryLocation,
   };
 }
