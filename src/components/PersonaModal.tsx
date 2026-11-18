@@ -90,7 +90,7 @@ export const PersonaModal: React.FC<PersonaModalProps> = ({
           </div>
 
           <div className="grid grid-cols-[96px_1fr] gap-3">
-            <dt className="font-medium text-[var(--text-secondary)]">Credentials</dt>
+            <dt className="font-medium text-[var(--text-secondary)]">{t.personaCredentialsLabel}</dt>
             <dd className="text-[var(--text-primary)]">{credentials}</dd>
           </div>
 

@@ -29,20 +29,36 @@ function recordGate(num, name, passed, detail) {
   console.log(`[Gate ${num}] ${badge} — ${name}: ${detail}`);
 }
 
-// GATE 1: Zero Emoji Characters in UI/Source
+// GATE 1: Zero Emoji Characters & Zero Technical/Developer Jargon in UI
 const emojiRegex = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
+const jargonRegex = /\b(OCR|Vision AI|LLM|JSON|5-AXIS|Opt-In|MVP)\b/;
 const emojiHits = [];
+const jargonHits = [];
+const uiScanFiles = tsFiles.filter(
+  (f) =>
+    f.endsWith('translations.ts') ||
+    f.includes(`${path.sep}components${path.sep}`)
+);
 for (const file of tsFiles) {
   const txt = fs.readFileSync(file, 'utf8');
   if (emojiRegex.test(txt)) {
     emojiHits.push(path.relative(ROOT, file));
   }
 }
+for (const file of uiScanFiles) {
+  const txt = fs.readFileSync(file, 'utf8');
+  const m = txt.match(jargonRegex);
+  if (m) {
+    jargonHits.push(`${path.relative(ROOT, file)} (${m[0]})`);
+  }
+}
 recordGate(
   1,
-  'Zero Emoji Icon Discipline',
-  emojiHits.length === 0,
-  emojiHits.length === 0 ? '0 emojis across all src files' : `Found in: ${emojiHits.join(', ')}`
+  'Zero Emoji & Zero Developer Jargon in UI',
+  emojiHits.length === 0 && jargonHits.length === 0,
+  emojiHits.length === 0 && jargonHits.length === 0
+    ? '0 emojis and 0 technical jargon tokens across all UI files'
+    : `Emojis: [${emojiHits.join(', ')}], Jargon: [${jargonHits.join(', ')}]`
 );
 
 // GATE 2: Zero Raw LaTeX / Escaped Markup Leaks

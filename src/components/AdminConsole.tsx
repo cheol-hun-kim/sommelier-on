@@ -273,7 +273,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
         </div>
       </div>
 
-      {/* 2. Quick Operations Bar: Price Opt-In, Print List, QR Simulator, AI Setup */}
+      {/* 2. Quick Operations Bar: Price Transparency, Print List, QR Simulator, Image Scan Setup */}
       <div className="no-print somm-card flex flex-col gap-4 rounded-3xl p-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="text-[14px] font-bold text-[var(--text-primary)]">
@@ -298,7 +298,15 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
             }`}
           >
             <Check className="h-3.5 w-3.5" strokeWidth={2} />
-            <span>{venue.priceTransparencyOptIn ? 'Opt-In ON' : 'OFF'}</span>
+            <span>
+              {venue.priceTransparencyOptIn
+                ? lang === 'ko'
+                  ? '노출 중'
+                  : 'Visible'
+                : lang === 'ko'
+                  ? '비노출'
+                  : 'Hidden'}
+            </span>
           </button>
 
           <button

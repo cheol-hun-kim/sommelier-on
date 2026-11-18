@@ -112,6 +112,7 @@ export interface Venue {
   id: string;
   nameKo: string;
   nameEn: string;
+  venueType: 'course' | 'alacarte';
   cuisineKo: string;
   cuisineEn: string;
   locationKo: string;
@@ -122,6 +123,7 @@ export interface Venue {
   adminPin: string;
   tables: string[];
   registeredDishes: RegisteredDish[];
+  courseMenu?: ParsedMenuDish[];
 }
 
 export type BudgetTier = 'under_50' | '50_100' | '100_150' | 'over_150';

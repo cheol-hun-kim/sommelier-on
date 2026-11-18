@@ -102,7 +102,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             </span>
             {aiLiveConnected && (
               <span className="hidden rounded-full bg-[#FBF4E8] px-2 py-0.5 text-[10px] font-semibold text-[#7A541C] dark:bg-[#2B2214] dark:text-[#ECC88D] sm:inline-flex">
-                Vision AI
+                Live
               </span>
             )}
           </div>

@@ -6,7 +6,6 @@ import { GuestStep3 } from './components/GuestStep3';
 import { HeaderBar } from './components/HeaderBar';
 import { PersonaModal } from './components/PersonaModal';
 import { VenueLogo } from './components/icons/WineVectors';
-import { SAMPLE_MENU_ALACARTE, SAMPLE_MENU_COURSE } from './data/seedData';
 import {
   applyDislikeToTasteProfile,
   applyLikeToTasteProfile,
@@ -109,6 +108,9 @@ export function App() {
     null
   );
   const [isAnalyzingMenu, setIsAnalyzingMenu] = useState(false);
+  const [pairingScope, setPairingScope] = useState<'course' | 'dishes'>(() =>
+    activeVenue.venueType === 'course' ? 'course' : 'dishes'
+  );
 
   const [courseBottleCount, setCourseBottleCount] =
     useState<CourseBottleCount>(3);
@@ -151,7 +153,7 @@ export function App() {
   useEffect(() => {
     const handleStorage = (e: StorageEvent) => {
       if (e.key === 'sommon_wines_v2') setWines(loadWines());
-      if (e.key === 'sommon_venues_v3') setVenues(loadVenues());
+      if (e.key === 'sommon_venues_v5') setVenues(loadVenues());
       if (e.key === 'sommon_taste_profile_v1')
         setTasteProfile(loadTasteProfile());
     };
@@ -166,6 +168,7 @@ export function App() {
     const nextTable = target.tables[0] ?? '1';
     setTableNo(nextTable);
     setSelectedPersonaId(target.defaultPersonaId);
+    setPairingScope(target.venueType === 'course' ? 'course' : 'dishes');
     setSelectedRegisteredDishIds(
       target.registeredDishes[0] ? [target.registeredDishes[0].id] : []
     );
@@ -215,20 +218,6 @@ export function App() {
     }
   };
 
-  const handleLoadSampleMenu = (kind: 'alacarte' | 'course') => {
-    const preset =
-      kind === 'course'
-        ? {
-            ...SAMPLE_MENU_COURSE,
-            dishes: SAMPLE_MENU_COURSE.dishes.map((d) => ({ ...d })),
-          }
-        : {
-            ...SAMPLE_MENU_ALACARTE,
-            dishes: SAMPLE_MENU_ALACARTE.dishes.map((d) => ({ ...d })),
-          };
-    setMenuAnalysis(preset);
-  };
-
   const handleToggleOcrDish = (dishId: string) => {
     setMenuAnalysis((prev) => {
       if (!prev) return null;
@@ -240,6 +229,10 @@ export function App() {
       };
     });
   };
+
+  const isCourseFlow =
+    menuAnalysis?.mode === 'course' ||
+    (activeVenue.venueType === 'course' && pairingScope === 'course' && !menuAnalysis);
 
   const collectedDishes = useMemo<ParsedMenuDish[]>(() => {
     const regDishes: ParsedMenuDish[] = activeVenue.registeredDishes
@@ -257,16 +250,20 @@ export function App() {
       return [...menuAnalysis.dishes, ...customDishes];
     }
 
+    if (activeVenue.venueType === 'course' && pairingScope === 'course' && activeVenue.courseMenu) {
+      return [...activeVenue.courseMenu, ...customDishes];
+    }
+
     if (menuAnalysis?.mode === 'alacarte') {
       const checkedOcr = menuAnalysis.dishes.filter((d) => d.selected);
       return [...checkedOcr, ...regDishes, ...customDishes];
     }
 
     return [...regDishes, ...customDishes];
-  }, [activeVenue.registeredDishes, selectedRegisteredDishIds, menuAnalysis, customDishes]);
+  }, [activeVenue, pairingScope, selectedRegisteredDishIds, menuAnalysis, customDishes]);
 
   const hasAnyDishSelected =
-    collectedDishes.length > 0 || customDishInput.trim().length > 0;
+    isCourseFlow || collectedDishes.length > 0 || customDishInput.trim().length > 0;
 
   const runRecommendation = (overrideProfile?: UserTasteProfile) => {
     const persona =
@@ -283,7 +280,7 @@ export function App() {
       bodyPref,
       sweetnessPref,
       occasion,
-      menuMode: menuAnalysis?.mode ?? 'alacarte',
+      menuMode: isCourseFlow ? 'course' : 'alacarte',
       courseBottleCount,
       coursePairingMode,
       customSlots,
@@ -407,9 +404,10 @@ export function App() {
             menuAnalysis={menuAnalysis}
             isAnalyzingMenu={isAnalyzingMenu}
             onUploadMenuPhoto={handleUploadMenuPhoto}
-            onLoadSampleMenu={handleLoadSampleMenu}
             onToggleOcrDish={handleToggleOcrDish}
             onClearMenuAnalysis={() => setMenuAnalysis(null)}
+            pairingScope={pairingScope}
+            onPairingScopeChange={setPairingScope}
             courseBottleCount={courseBottleCount}
             onCourseBottleCountChange={(c) => {
               setCourseBottleCount(c);
