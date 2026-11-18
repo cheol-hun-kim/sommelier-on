@@ -5,7 +5,64 @@ import { AROMA_LABELS, GLASS_LABELS, TRANSLATIONS, formatKrw } from '../i18n/tra
 import { AromaVectorIcon, GlassSilhouetteIcon } from './icons/WineVectors';
 
 /* ============================================================================
-   1. 9-Glass Wine Style Spectrum Strip (SP -> DS, inspired by Reference Image 3 & 5)
+   1. Dynamic Wine Liquid Color Palette (maps wine style/varietal/region -> glass color)
+   ============================================================================ */
+interface WineLiquidPalette {
+  strong: string;
+  soft: string;
+  labelKo: string;
+  labelEn: string;
+}
+
+export function getWineLiquidPalette(wine: WineItem): WineLiquidPalette {
+  const combined = `${wine.nameKo} ${wine.nameEn} ${wine.varietalsKo} ${wine.varietalsEn}`.toLowerCase();
+
+  if (wine.category === 'sparkling') {
+    if (combined.includes('rosé') || combined.includes('rose') || combined.includes('로제')) {
+      return { strong: '#C85A6E', soft: '#DF8B9A', labelKo: '로제 스파클링', labelEn: 'Rosé Sparkling' };
+    }
+    return { strong: '#B8943A', soft: '#D5B86A', labelKo: '샴페인 골드', labelEn: 'Champagne Gold' };
+  }
+
+  if (wine.category === 'white') {
+    if (wine.structure.body >= 4 || combined.includes('meursault') || combined.includes('뫼르소')) {
+      return { strong: '#C2922B', soft: '#DCB55E', labelKo: '골드 화이트', labelEn: 'Golden White' };
+    }
+    return { strong: '#9A9B48', soft: '#BEC078', labelKo: '페일 스트로', labelEn: 'Pale Straw' };
+  }
+
+  if (wine.category === 'rose_orange') {
+    const isOrange =
+      combined.includes('오렌지') ||
+      combined.includes('orange') ||
+      combined.includes('skin-contact') ||
+      combined.includes('껍질 침용') ||
+      combined.includes('암포라') ||
+      combined.includes('anfora') ||
+      combined.includes('라디콘') ||
+      combined.includes('radikon');
+    if (isOrange) {
+      return { strong: '#C66A28', soft: '#DF9258', labelKo: '앰버 오렌지', labelEn: 'Amber Orange' };
+    }
+    return { strong: '#CF6A7A', soft: '#E597A3', labelKo: '블러시 로제', labelEn: 'Blush Rosé' };
+  }
+
+  if (wine.category === 'dessert') {
+    if (wine.structure.sweetness >= 5 || combined.includes('sauternes') || combined.includes('소테른')) {
+      return { strong: '#B57418', soft: '#D49B45', labelKo: '딥 앰버 골드', labelEn: 'Deep Sauternes Gold' };
+    }
+    return { strong: '#C89B34', soft: '#E0BC68', labelKo: '허니 골드', labelEn: 'Honey Gold' };
+  }
+
+  // Red
+  if (wine.structure.body <= 2) {
+    return { strong: '#942840', soft: '#B8546A', labelKo: '루비 가넷', labelEn: 'Ruby Garnet' };
+  }
+  return { strong: '#6B1D2F', soft: '#94354A', labelKo: '딥 버건디', labelEn: 'Deep Burgundy' };
+}
+
+/* ============================================================================
+   2. 9-Glass Wine Style Spectrum Strip (SP -> DS, inspired by Reference Image 3 & 5)
    ============================================================================ */
 type StyleSlot = 'SP' | 'LW' | 'FW' | 'AW' | 'RS' | 'LR' | 'MR' | 'FR' | 'DS';
 
@@ -103,6 +160,7 @@ export const StructureBalanceChart: React.FC<{
 }> = ({ wine, lang }) => {
   const t = TRANSLATIONS[lang];
   const [viewMode, setViewMode] = useState<'radial' | 'bars'>('radial');
+  const liquid = getWineLiquidPalette(wine);
 
   const axes = [
     { key: 'body', label: t.bodyAxis, val: wine.structure.body },
@@ -122,16 +180,24 @@ export const StructureBalanceChart: React.FC<{
   return (
     <div className="somm-sub-surface rounded-2xl p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <span className="text-[13px] font-semibold text-[var(--text-primary)]">
-          {t.structureTitle}
-        </span>
+        <div className="flex items-center gap-2">
+          <span
+            className="h-2.5 w-2.5 rounded-full"
+            style={{ backgroundColor: liquid.strong }}
+            aria-hidden="true"
+          />
+          <span className="text-[13px] font-semibold text-[var(--text-primary)]">
+            {t.structureTitle}
+          </span>
+        </div>
         <div className="inline-flex rounded-full bg-[var(--bg-secondary)] p-0.5 shadow-sm">
           <button
             type="button"
             onClick={() => setViewMode('radial')}
+            style={viewMode === 'radial' ? { backgroundColor: liquid.strong, color: '#FFFFFF' } : undefined}
             className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${
               viewMode === 'radial'
-                ? 'bg-[#6B1D2F] text-[#FFFFFF]'
+                ? 'shadow-xs'
                 : 'text-[var(--text-secondary)]'
             }`}
           >
@@ -140,9 +206,10 @@ export const StructureBalanceChart: React.FC<{
           <button
             type="button"
             onClick={() => setViewMode('bars')}
+            style={viewMode === 'bars' ? { backgroundColor: liquid.strong, color: '#FFFFFF' } : undefined}
             className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${
               viewMode === 'bars'
-                ? 'bg-[#6B1D2F] text-[#FFFFFF]'
+                ? 'shadow-xs'
                 : 'text-[var(--text-secondary)]'
             }`}
           >
@@ -160,17 +227,7 @@ export const StructureBalanceChart: React.FC<{
             aria-label={t.structureTitle}
           >
             <circle cx={cx} cy={cy} r={14} fill="var(--bg-secondary)" />
-            <text
-              x={cx}
-              y={cy + 3}
-              textAnchor="middle"
-              fontSize="8.5"
-              fontWeight="700"
-              fill="var(--text-secondary)"
-              fontFamily="Plus Jakarta Sans, Pretendard, sans-serif"
-            >
-              5-AXIS
-            </text>
+            <circle cx={cx} cy={cy} r={5} fill={liquid.strong} opacity="0.85" />
 
             {axes.map((axis, idx) => {
               const centerAngle = idx * 72;
@@ -192,8 +249,8 @@ export const StructureBalanceChart: React.FC<{
                         fill={
                           filled
                             ? step >= 4
-                              ? '#6B1D2F'
-                              : '#94354A'
+                              ? liquid.strong
+                              : liquid.soft
                             : 'var(--bg-secondary)'
                         }
                         opacity={filled ? 1 : 0.8}
@@ -240,9 +297,10 @@ export const StructureBalanceChart: React.FC<{
                 {[1, 2, 3, 4, 5].map((step) => (
                   <div
                     key={step}
+                    style={step <= axis.val ? { backgroundColor: step >= 4 ? liquid.strong : liquid.soft } : undefined}
                     className={`h-2 rounded-full transition-colors ${
                       step <= axis.val
-                        ? 'bg-[#6B1D2F]'
+                        ? ''
                         : 'bg-[var(--bg-secondary)]'
                     }`}
                   />
