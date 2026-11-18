@@ -6,6 +6,7 @@ import type {
   CourseBottleCount,
   CourseBottleSlotRecommendation,
   CoursePairingMode,
+  CourseServeFormat,
   DislikeReasonTag,
   MenuMode,
   OccasionType,
@@ -34,9 +35,11 @@ export interface PairingQuery {
   sweetnessPref: SweetnessPref;
   occasion: OccasionType;
   menuMode: MenuMode;
+  courseServeFormat?: CourseServeFormat;
   courseBottleCount: CourseBottleCount;
   coursePairingMode: CoursePairingMode;
   customSlots: WineCategory[];
+  includeExtraGlass?: boolean;
   tasteProfile: UserTasteProfile;
 }
 
@@ -297,7 +300,7 @@ function chooseAutoCourseSequence(
   bottleCount: CourseBottleCount,
   segments: ParsedMenuDish[][]
 ): WineCategory[] {
-  if (bottleCount === 1) return ['white']; // Unused directly; single recommendation takes top overall
+  if (bottleCount === 1) return ['white'];
   const segHas = (segIdx: number, tag: string) =>
     segments[segIdx]?.some((d) => d.flavorTags.includes(tag)) ?? false;
 
@@ -307,6 +310,10 @@ function chooseAutoCourseSequence(
     if (firstIsSeafood && secondIsMeat) return ['sparkling', 'red'];
     if (secondIsMeat) return ['white', 'red'];
     return ['sparkling', 'white'];
+  }
+
+  if (bottleCount === 4) {
+    return ['sparkling', 'white', 'red', 'dessert'];
   }
 
   // 3 bottles
@@ -327,17 +334,14 @@ function partitionDishesIntoSegments(
     const mid = Math.max(1, Math.ceil(dishes.length / 2));
     return [dishes.slice(0, mid), dishes.slice(mid).length > 0 ? dishes.slice(mid) : [dishes[dishes.length - 1]]];
   }
-  // 3 segments
-  if (dishes.length <= 2) {
-    return [
-      [dishes[0]],
-      [dishes[Math.min(1, dishes.length - 1)]],
-      [dishes[dishes.length - 1]],
-    ];
+  // 3 or 4 segments
+  const result: ParsedMenuDish[][] = [];
+  for (let i = 0; i < count; i++) {
+    const start = Math.floor((i * dishes.length) / count);
+    const end = Math.max(start + 1, Math.floor(((i + 1) * dishes.length) / count));
+    result.push(dishes.slice(start, end));
   }
-  const s1 = Math.max(1, Math.floor(dishes.length / 3));
-  const s2 = Math.max(s1 + 1, Math.ceil((dishes.length * 2) / 3));
-  return [dishes.slice(0, s1), dishes.slice(s1, s2), dishes.slice(s2)];
+  return result;
 }
 
 export function generatePairingRecommendation(query: PairingQuery): PairingRecommendationBundle {
@@ -353,9 +357,11 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
     sweetnessPref,
     occasion,
     menuMode,
+    courseServeFormat = 'bottle',
     courseBottleCount,
     coursePairingMode,
     customSlots,
+    includeExtraGlass = false,
     tasteProfile,
   } = query;
 
@@ -382,9 +388,64 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
       ? workingDishes.reduce((sum, d) => sum + d.intensity, 0) / workingDishes.length
       : 3;
 
-  const isMultiBottleCourse = menuMode === 'course' && courseBottleCount > 1;
-  const effectiveBottleCount: CourseBottleCount = isMultiBottleCourse ? courseBottleCount : 1;
+  const isGlassCourse = menuMode === 'course' && courseServeFormat === 'glass';
+  const isMultiBottleCourse =
+    menuMode === 'course' && (isGlassCourse || courseBottleCount > 1);
+  const effectiveBottleCount: CourseBottleCount = isGlassCourse
+    ? 3
+    : isMultiBottleCourse
+      ? courseBottleCount
+      : 1;
   const budgetWindow = getBudgetWindow(budgetTier, budgetScope, effectiveBottleCount);
+
+  const pickExtraGlass = (excludedIds: Set<string>, usedCats: WineCategory[]): SingleWineRecommendation | undefined => {
+    if (!includeExtraGlass || isGlassCourse) return undefined;
+    const desiredCat: WineCategory = !usedCats.includes('sparkling')
+      ? 'sparkling'
+      : !usedCats.includes('dessert')
+        ? 'dessert'
+        : 'white';
+    const glassPool = eligiblePool.filter((w) => !excludedIds.has(w.id));
+    const scoredGlass = (glassPool.length > 0 ? glassPool : eligiblePool)
+      .map((wine) => ({
+        wine,
+        score:
+          scoreWineForContext(wine, {
+            persona,
+            budgetWindow: { min: 0, max: 140000, ideal: 70000 },
+            flavorTags: desiredCat === 'dessert' ? ['dessert', 'sweet'] : ['seafood', 'delicate'],
+            avgIntensity: desiredCat === 'dessert' ? 3 : 2,
+            bodyPref,
+            sweetnessPref,
+            occasion,
+            tasteProfile,
+            forcedCategory: desiredCat,
+          }) + (wine.glassPrice ? 18 : 0),
+      }))
+      .sort((a, b) => b.score - a.score);
+    const top = scoredGlass[0]?.wine;
+    if (!top) return undefined;
+    return {
+      wine: top,
+      rank: 1,
+      matchScore: 95,
+      valueTier: computeValueTier(top, venue.priceTransparencyOptIn),
+      commentaryKo:
+        desiredCat === 'sparkling'
+          ? `메인 바틀을 여시기 전, 입맛을 산뜻하게 열어줄 식전 글라스 한 잔으로 ${top.nameKo}를 함께 곁들이시면 코스의 시작이 훨씬 경쾌해집니다.`
+          : `바틀 페어링 후 식사의 여운을 부드럽게 마무리할 글라스 와인으로 ${top.nameKo}를 제안드립니다.`,
+      commentaryEn:
+        desiredCat === 'sparkling'
+          ? `Before opening your main bottle, a crisp glass of ${top.nameEn} awakens the palate for the opening bites.`
+          : `To close your bottle progression gracefully, enjoy a finishing glass of ${top.nameEn}.`,
+      pairingPointsKo: [
+        top.glassPrice ? `글라스 가능 (${top.glassPrice.toLocaleString('ko-KR')}원)` : '업장 잔 와인 문의 가능',
+      ],
+      pairingPointsEn: [
+        top.glassPrice ? `By the glass (₩${top.glassPrice.toLocaleString('ko-KR')})` : 'Ask your host for glass pour',
+      ],
+    };
+  };
 
   if (!isMultiBottleCourse) {
     const scored = eligiblePool
@@ -441,18 +502,24 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
       kind: 'single_or_alacarte',
       persona,
       menuMode,
+      serveFormat: courseServeFormat,
       bottleCount: 1,
       totalPrice: singleItems[0]?.wine.venuePrice ?? 0,
       overallNoteKo,
       overallNoteEn,
       singleItems,
+      extraGlass: pickExtraGlass(
+        new Set(singleItems[0] ? [singleItems[0].wine.id] : []),
+        singleItems[0] ? [singleItems[0].wine.category] : []
+      ),
     };
   }
 
-  // MULTI-BOTTLE COURSE MODE (2 or 3 bottles)
+  // MULTI-BOTTLE (OR 3-GLASS) COURSE MODE
   const segments = partitionDishesIntoSegments(workingDishes, effectiveBottleCount);
-  const targetCategories: WineCategory[] =
-    coursePairingMode === 'custom_slots'
+  const targetCategories: WineCategory[] = isGlassCourse
+    ? ['sparkling', 'white', 'red']
+    : coursePairingMode === 'custom_slots'
       ? customSlots.slice(0, effectiveBottleCount)
       : chooseAutoCourseSequence(effectiveBottleCount, segments);
 
@@ -540,11 +607,15 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
     const segLabelsKo =
       effectiveBottleCount === 2
         ? ['전반부 코스 (전채 · 에피타이저)', '후반부 코스 (메인 · 마무리)']
-        : ['전반부 코스 (아뮤즈 · 전채)', '중반부 코스 (온요리 · 중간요리)', '후반부 코스 (메인 · 피날레)'];
+        : effectiveBottleCount === 4
+          ? ['1구간 (아뮤즈 · 전채)', '2구간 (해산물 · 온요리)', '3구간 (육류 메인)', '4구간 (디저트 · 마무리)']
+          : ['전반부 코스 (아뮤즈 · 전채)', '중반부 코스 (온요리 · 중간요리)', '후반부 코스 (메인 · 피날레)'];
     const segLabelsEn =
       effectiveBottleCount === 2
         ? ['Opening Arc (Starters & Light Plates)', 'Closing Arc (Main & Finale)']
-        : ['Opening Arc (Amuse & Starter)', 'Middle Arc (Warm & Mid Course)', 'Climax Arc (Main & Finale)'];
+        : effectiveBottleCount === 4
+          ? ['Act I (Amuse & Starter)', 'Act II (Seafood & Warm)', 'Act III (Main Course)', 'Act IV (Dessert & Finale)']
+          : ['Opening Arc (Amuse & Starter)', 'Middle Arc (Warm & Mid Course)', 'Climax Arc (Main & Finale)'];
 
     const segDishesKo = segDishes.map((d) => d.nameKo);
     const segDishesEn = segDishes.map((d) => d.nameEn);
@@ -588,16 +659,25 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
     kind: 'course_sequence',
     persona,
     menuMode: 'course',
+    serveFormat: courseServeFormat,
     bottleCount: effectiveBottleCount,
     coursePairingMode,
     totalPrice,
-    overallNoteKo: usedFallbackCategory
-      ? `[${comboNamesKo}] 흐름으로 구성했습니다. 선택하신 주종 중 일부 재고가 소진되어 인접 주종으로 매끄럽게 보완했습니다.`
-      : `${persona.nameKo}가 코스의 강도 곡선을 따라 [${comboNamesKo}] 시퀀스로 한 병씩 자연스럽게 이어지도록 설계했습니다.`,
-    overallNoteEn: usedFallbackCategory
-      ? `Built as [${comboNamesEn}]. Where a requested cellar style was out of stock, the closest in-stock style maintains course harmony.`
-      : `Structured by ${persona.nameEn} along a [${comboNamesEn}] arc so texture and intensity rise alongside every plate.`,
+    overallNoteKo: isGlassCourse
+      ? `${persona.nameKo}가 코스 흐름에 맞춰 1잔씩 부담 없이 즐기실 수 있도록 [${comboNamesKo}] 3잔 페어링을 구성했습니다.`
+      : usedFallbackCategory
+        ? `[${comboNamesKo}] 흐름으로 구성했습니다. 선택하신 주종 중 일부 재고가 소진되어 인접 주종으로 매끄럽게 보완했습니다.`
+        : `${persona.nameKo}가 코스의 강도 곡선을 따라 [${comboNamesKo}] 시퀀스로 한 병씩 자연스럽게 이어지도록 설계했습니다.`,
+    overallNoteEn: isGlassCourse
+      ? `Curated by ${persona.nameEn}: a 3-glass [${comboNamesEn}] progression paced to every course.`
+      : usedFallbackCategory
+        ? `Built as [${comboNamesEn}]. Where a requested cellar style was out of stock, the closest in-stock style maintains course harmony.`
+        : `Structured by ${persona.nameEn} along a [${comboNamesEn}] arc so texture and intensity rise alongside every plate.`,
     courseSequence: sequence,
+    extraGlass: pickExtraGlass(
+      usedIds,
+      sequence.map((s) => s.assignedCategory)
+    ),
   };
 }
 

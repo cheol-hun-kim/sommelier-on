@@ -16,6 +16,7 @@ import type {
   BudgetTier,
   CourseBottleCount,
   CoursePairingMode,
+  CourseServeFormat,
   Language,
   MenuAnalysisResult,
   OccasionType,
@@ -61,13 +62,16 @@ interface GuestStep1Props {
   onClearMenuAnalysis: () => void;
   pairingScope: 'course' | 'dishes';
   onPairingScopeChange: (scope: 'course' | 'dishes') => void;
+  courseServeFormat: CourseServeFormat;
+  onCourseServeFormatChange: (fmt: CourseServeFormat) => void;
   courseBottleCount: CourseBottleCount;
   onCourseBottleCountChange: (count: CourseBottleCount) => void;
+  includeExtraGlass: boolean;
+  onIncludeExtraGlassChange: (val: boolean) => void;
   coursePairingMode: CoursePairingMode;
   onCoursePairingModeChange: (mode: CoursePairingMode) => void;
   customSlots: WineCategory[];
   onChangeCustomSlot: (slotIdx: number, cat: WineCategory) => void;
-  onApplySlotPreset: (slots: WineCategory[]) => void;
   bodyPref: BodyPref;
   onBodyPrefChange: (pref: BodyPref) => void;
   sweetnessPref: SweetnessPref;
@@ -113,13 +117,16 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
   onClearMenuAnalysis,
   pairingScope,
   onPairingScopeChange,
+  courseServeFormat,
+  onCourseServeFormatChange,
   courseBottleCount,
   onCourseBottleCountChange,
+  includeExtraGlass,
+  onIncludeExtraGlassChange,
   coursePairingMode,
   onCoursePairingModeChange,
   customSlots,
   onChangeCustomSlot,
-  onApplySlotPreset,
   bodyPref,
   onBodyPrefChange,
   sweetnessPref,
@@ -142,52 +149,11 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
     menuAnalysis?.mode === 'course'
       ? menuAnalysis.dishes
       : venue.courseMenu ?? [];
-  const isCourseMultiBottle = isCourseActive && courseBottleCount > 1;
+  const isCourseMultiBottle =
+    isCourseActive && courseServeFormat === 'bottle' && courseBottleCount > 1;
   const hasTasteMemory =
     tasteProfile.likedWineIds.length > 0 ||
     tasteProfile.dislikedFeedbacks.length > 0;
-
-  const quickPresets: Array<{
-    label2Ko: string;
-    label2En: string;
-    label3Ko: string;
-    label3En: string;
-    slots2: WineCategory[];
-    slots3: WineCategory[];
-  }> = [
-    {
-      label2Ko: '샴레',
-      label2En: 'Spk · Red',
-      label3Ko: '샴화레',
-      label3En: 'Spk · Wht · Red',
-      slots2: ['sparkling', 'red'],
-      slots3: ['sparkling', 'white', 'red'],
-    },
-    {
-      label2Ko: '화레',
-      label2En: 'Wht · Red',
-      label3Ko: '화레레',
-      label3En: 'Wht · Red · Red',
-      slots2: ['white', 'red'],
-      slots3: ['white', 'red', 'red'],
-    },
-    {
-      label2Ko: '화화',
-      label2En: 'Wht · Wht',
-      label3Ko: '화화화',
-      label3En: 'Wht · Wht · Wht',
-      slots2: ['white', 'white'],
-      slots3: ['white', 'white', 'white'],
-    },
-    {
-      label2Ko: '샴샴',
-      label2En: 'Spk · Spk',
-      label3Ko: '샴샴샴',
-      label3En: 'Spk · Spk · Spk',
-      slots2: ['sparkling', 'sparkling'],
-      slots3: ['sparkling', 'sparkling', 'sparkling'],
-    },
-  ];
 
   return (
     <div className="mx-auto max-w-4xl space-y-5 px-4 py-6 safe-bottom-scroll sm:px-6">
@@ -607,47 +573,116 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
                 </div>
               )}
 
-              {/* 1 / 2 / 3 Bottle Count Picker */}
+              {/* Serve Format: Glass vs Bottle (with 1-4 bottle dropdown + extra glass option) */}
               <div>
                 <div className="mb-2 text-[13px] font-semibold text-[var(--text-primary)]">
-                  {t.courseBottleCountLabel}
+                  {t.courseServeFormatLabel}
                 </div>
-                <div className="grid grid-cols-3 gap-2">
-                  {([
-                    { count: 1 as const, label: t.course1Bottle },
-                    { count: 2 as const, label: t.course2Bottles },
-                    { count: 3 as const, label: t.course3Bottles },
-                  ]).map((opt) => {
-                    const active = courseBottleCount === opt.count;
-                    return (
-                      <button
-                        key={opt.count}
-                        type="button"
-                        onClick={() => onCourseBottleCountChange(opt.count)}
-                        data-surface={active ? 'accent' : undefined}
-                        className={`rounded-xl px-3 py-2.5 text-[13px] font-semibold transition-colors ${
-                          active
-                            ? 'btn-accent'
-                            : 'bg-[var(--bg-secondary)] text-[var(--text-primary)]'
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    );
-                  })}
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => onCourseServeFormatChange('glass')}
+                    data-surface={courseServeFormat === 'glass' ? 'accent' : undefined}
+                    className={`rounded-2xl p-3.5 text-left transition-all ${
+                      courseServeFormat === 'glass'
+                        ? 'btn-accent shadow-sm'
+                        : 'bg-[var(--bg-secondary)] text-[var(--text-primary)]'
+                    }`}
+                  >
+                    <div className="text-[14px] font-bold">
+                      {t.courseFormatGlassTitle}
+                    </div>
+                    <div
+                      className={`mt-1 text-[11px] leading-snug ${
+                        courseServeFormat === 'glass'
+                          ? 'text-white/90'
+                          : 'text-[var(--text-secondary)]'
+                      }`}
+                    >
+                      {t.courseFormatGlassDesc}
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => onCourseServeFormatChange('bottle')}
+                    data-surface={courseServeFormat === 'bottle' ? 'accent' : undefined}
+                    className={`rounded-2xl p-3.5 text-left transition-all ${
+                      courseServeFormat === 'bottle'
+                        ? 'btn-accent shadow-sm'
+                        : 'bg-[var(--bg-secondary)] text-[var(--text-primary)]'
+                    }`}
+                  >
+                    <div className="text-[14px] font-bold">
+                      {t.courseFormatBottleTitle}
+                    </div>
+                    <div
+                      className={`mt-1 text-[11px] leading-snug ${
+                        courseServeFormat === 'bottle'
+                          ? 'text-white/90'
+                          : 'text-[var(--text-secondary)]'
+                      }`}
+                    >
+                      {t.courseFormatBottleDesc}
+                    </div>
+                  </button>
                 </div>
               </div>
 
-              {/* 2 or 3 Bottles -> Sommelier Curated vs Custom Slot Picker */}
-              {courseBottleCount > 1 && (
-                <div className="space-y-3 rounded-2xl bg-[#F5EBEF]/65 p-3.5 dark:bg-[#2E181F]/65">
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {/* Bottle Count Dropdown (1-4 bottles) + Optional Extra Glass */}
+              {courseServeFormat === 'bottle' && (
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-[var(--bg-secondary)] px-4 py-3 shadow-sm">
+                  <div className="flex items-center gap-2.5">
+                    <label
+                      htmlFor="course-bottle-select"
+                      className="text-[13px] font-semibold text-[var(--text-primary)]"
+                    >
+                      {t.courseBottleCountLabel}
+                    </label>
+                    <select
+                      id="course-bottle-select"
+                      value={courseBottleCount}
+                      onChange={(e) =>
+                        onCourseBottleCountChange(Number(e.target.value) as CourseBottleCount)
+                      }
+                      className="rounded-xl bg-[var(--bg-tertiary)] px-3 py-1.5 text-[13px] font-bold tabular-nums text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[#6B1D2F]"
+                    >
+                      {[1, 2, 3, 4].map((num) => (
+                        <option key={num} value={num}>
+                          {num}
+                          {lang === 'ko' ? t.courseBottleUnit : ` ${t.courseBottleUnit}`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => onIncludeExtraGlassChange(!includeExtraGlass)}
+                    data-surface={includeExtraGlass ? 'accent' : undefined}
+                    className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition-colors ${
+                      includeExtraGlass
+                        ? 'btn-accent'
+                        : 'somm-sub-surface text-[var(--text-primary)]'
+                    }`}
+                  >
+                    {includeExtraGlass && <Check className="h-3.5 w-3.5" strokeWidth={2} />}
+                    <span>{t.courseExtraGlassToggle}</span>
+                  </button>
+                </div>
+              )}
+
+              {/* 2–4 Bottles -> Full-width aligned Sommelier Curated vs Custom Slot Picker */}
+              {courseServeFormat === 'bottle' && courseBottleCount > 1 && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2.5">
                     <button
                       type="button"
                       onClick={() => onCoursePairingModeChange('ai_auto')}
-                      className={`rounded-xl p-3 text-left transition-all ${
+                      data-surface={coursePairingMode === 'ai_auto' ? 'accent' : undefined}
+                      className={`rounded-2xl p-3.5 text-left transition-all ${
                         coursePairingMode === 'ai_auto'
-                          ? 'bg-[#6B1D2F] text-[#FFFFFF] shadow-sm'
+                          ? 'btn-accent shadow-sm'
                           : 'bg-[var(--bg-secondary)] text-[var(--text-primary)]'
                       }`}
                     >
@@ -668,9 +703,10 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
                     <button
                       type="button"
                       onClick={() => onCoursePairingModeChange('custom_slots')}
-                      className={`rounded-xl p-3 text-left transition-all ${
+                      data-surface={coursePairingMode === 'custom_slots' ? 'accent' : undefined}
+                      className={`rounded-2xl p-3.5 text-left transition-all ${
                         coursePairingMode === 'custom_slots'
-                          ? 'bg-[#6B1D2F] text-[#FFFFFF] shadow-sm'
+                          ? 'btn-accent shadow-sm'
                           : 'bg-[var(--bg-secondary)] text-[var(--text-primary)]'
                       }`}
                     >
@@ -690,69 +726,43 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
                   </div>
 
                   {coursePairingMode === 'custom_slots' && (
-                    <div className="space-y-3 pt-1">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        {quickPresets.map((preset) => {
-                          const isTwo = courseBottleCount === 2;
-                          const targetArr = isTwo ? preset.slots2 : preset.slots3;
-                          const label = isTwo
-                            ? lang === 'ko'
-                              ? preset.label2Ko
-                              : preset.label2En
-                            : lang === 'ko'
-                              ? preset.label3Ko
-                              : preset.label3En;
-                          return (
-                            <button
-                              key={label}
-                              type="button"
-                              onClick={() => onApplySlotPreset(targetArr)}
-                              className="rounded-full bg-[var(--bg-secondary)] px-3 py-1 text-[11px] font-semibold text-[#6B1D2F] shadow-sm hover:bg-[#6B1D2F] hover:text-[#FFFFFF] dark:text-[#F4B8C6]"
-                            >
-                              {label}
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      <div className="space-y-2.5">
-                        {Array.from({ length: courseBottleCount }).map((_, idx) => {
-                          const chosenCat = customSlots[idx] ?? 'white';
-                          return (
-                            <div
-                              key={idx}
-                              className="rounded-xl bg-[var(--bg-secondary)] p-3 shadow-sm"
-                            >
-                              <div className="mb-2 text-[12px] font-semibold text-[var(--text-primary)]">
-                                {idx + 1}
-                                {lang === 'ko'
-                                  ? `번째 ${t.courseSlotPrefix} ${t.courseSlotSuffix}`
-                                  : ` · ${t.courseSlotPrefix} ${t.courseSlotSuffix}`}
-                              </div>
-                              <div className="flex flex-wrap gap-1.5">
-                                {SLOT_CATEGORIES.map((cat) => {
-                                  const isCatActive = chosenCat === cat;
-                                  return (
-                                    <button
-                                      key={cat}
-                                      type="button"
-                                      onClick={() => onChangeCustomSlot(idx, cat)}
-                                      data-surface={isCatActive ? 'accent' : undefined}
-                                      className={`rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors ${
-                                        isCatActive
-                                          ? 'btn-accent'
-                                          : 'somm-sub-surface text-[var(--text-primary)]'
-                                      }`}
-                                    >
-                                      {CATEGORY_LABELS[cat][lang === 'ko' ? 'shortKo' : 'shortEn']}
-                                    </button>
-                                  );
-                                })}
-                              </div>
+                    <div className="space-y-2.5">
+                      {Array.from({ length: courseBottleCount }).map((_, idx) => {
+                        const chosenCat = customSlots[idx] ?? 'white';
+                        return (
+                          <div
+                            key={idx}
+                            className="rounded-2xl bg-[var(--bg-secondary)] p-3.5 shadow-sm"
+                          >
+                            <div className="mb-2 text-[12px] font-semibold text-[var(--text-primary)]">
+                              {idx + 1}
+                              {lang === 'ko'
+                                ? `번째 ${t.courseSlotPrefix} ${t.courseSlotSuffix}`
+                                : ` · ${t.courseSlotPrefix} ${t.courseSlotSuffix}`}
                             </div>
-                          );
-                        })}
-                      </div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {SLOT_CATEGORIES.map((cat) => {
+                                const isCatActive = chosenCat === cat;
+                                return (
+                                  <button
+                                    key={cat}
+                                    type="button"
+                                    onClick={() => onChangeCustomSlot(idx, cat)}
+                                    data-surface={isCatActive ? 'accent' : undefined}
+                                    className={`rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors ${
+                                      isCatActive
+                                        ? 'btn-accent'
+                                        : 'somm-sub-surface text-[var(--text-primary)]'
+                                    }`}
+                                  >
+                                    {CATEGORY_LABELS[cat][lang === 'ko' ? 'shortKo' : 'shortEn']}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>

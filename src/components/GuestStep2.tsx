@@ -139,9 +139,13 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
             lang={lang}
             wine={slot.wine}
             badgeLabel={
-              lang === 'ko'
-                ? `${t.bottleSeqPrefix} ${slot.slotIndex + 1}${t.bottleSeqSuffix} · ${CATEGORY_LABELS[slot.assignedCategory].shortKo}`
-                : `${t.bottleSeqPrefix} ${slot.slotIndex + 1} · ${CATEGORY_LABELS[slot.assignedCategory].shortEn}`
+              bundle.serveFormat === 'glass'
+                ? lang === 'ko'
+                  ? `제 ${slot.slotIndex + 1}잔 · ${CATEGORY_LABELS[slot.assignedCategory].shortKo}`
+                  : `Glass ${slot.slotIndex + 1} · ${CATEGORY_LABELS[slot.assignedCategory].shortEn}`
+                : lang === 'ko'
+                  ? `${t.bottleSeqPrefix} ${slot.slotIndex + 1}${t.bottleSeqSuffix} · ${CATEGORY_LABELS[slot.assignedCategory].shortKo}`
+                  : `${t.bottleSeqPrefix} ${slot.slotIndex + 1} · ${CATEGORY_LABELS[slot.assignedCategory].shortEn}`
             }
             courseSegmentTitle={
               lang === 'ko' ? slot.courseSegmentKo : slot.courseSegmentEn
@@ -153,6 +157,31 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
             onChoose={() => onSelectWineForDrinking(slot.wine)}
           />
         ))}
+
+      {/* Optional Complementary Extra Glass Card */}
+      {bundle.extraGlass && (
+        <WineDetailRecommendationCard
+          lang={lang}
+          wine={bundle.extraGlass.wine}
+          badgeLabel={
+            lang === 'ko'
+              ? `추가 글라스 추천 · ${CATEGORY_LABELS[bundle.extraGlass.wine.category].shortKo}`
+              : `Extra Glass · ${CATEGORY_LABELS[bundle.extraGlass.wine.category].shortEn}`
+          }
+          valueTier={bundle.extraGlass.valueTier}
+          commentary={
+            lang === 'ko'
+              ? bundle.extraGlass.commentaryKo
+              : bundle.extraGlass.commentaryEn
+          }
+          highlights={
+            lang === 'ko'
+              ? bundle.extraGlass.pairingPointsKo
+              : bundle.extraGlass.pairingPointsEn
+          }
+          onChoose={() => onSelectWineForDrinking(bundle.extraGlass!.wine)}
+        />
+      )}
 
       {/* Hospitality / Staff Respect Note */}
       <div className="flex items-start gap-2 rounded-2xl bg-[var(--bg-tertiary)] px-4 py-3 text-[12px] text-[var(--text-secondary)]">

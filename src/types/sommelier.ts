@@ -133,7 +133,8 @@ export type SweetnessPref = 'any' | 'dry' | 'off_dry';
 export type OccasionType = 'date' | 'celebration' | 'business' | 'casual';
 
 export type MenuMode = 'alacarte' | 'course';
-export type CourseBottleCount = 1 | 2 | 3;
+export type CourseServeFormat = 'bottle' | 'glass';
+export type CourseBottleCount = 1 | 2 | 3 | 4;
 export type CoursePairingMode = 'ai_auto' | 'custom_slots';
 
 export interface ParsedMenuDish {
@@ -212,6 +213,7 @@ export interface PairingRecommendationBundle {
   kind: 'single_or_alacarte' | 'course_sequence';
   persona: SommelierPersona;
   menuMode: MenuMode;
+  serveFormat?: CourseServeFormat;
   bottleCount: CourseBottleCount;
   coursePairingMode?: CoursePairingMode;
   totalPrice: number;
@@ -219,6 +221,7 @@ export interface PairingRecommendationBundle {
   overallNoteEn: string;
   singleItems?: SingleWineRecommendation[];
   courseSequence?: CourseBottleSlotRecommendation[];
+  extraGlass?: SingleWineRecommendation;
 }
 
 export interface PairingSessionStats {

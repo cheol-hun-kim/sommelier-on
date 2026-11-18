@@ -38,6 +38,7 @@ import type {
   BudgetTier,
   CourseBottleCount,
   CoursePairingMode,
+  CourseServeFormat,
   DislikeReasonTag,
   Language,
   MenuAnalysisResult,
@@ -112,14 +113,18 @@ export function App() {
     activeVenue.venueType === 'course' ? 'course' : 'dishes'
   );
 
+  const [courseServeFormat, setCourseServeFormat] =
+    useState<CourseServeFormat>('bottle');
   const [courseBottleCount, setCourseBottleCount] =
-    useState<CourseBottleCount>(3);
+    useState<CourseBottleCount>(2);
+  const [includeExtraGlass, setIncludeExtraGlass] = useState(false);
   const [coursePairingMode, setCoursePairingMode] =
     useState<CoursePairingMode>('ai_auto');
   const [customSlots, setCustomSlots] = useState<WineCategory[]>([
     'sparkling',
     'white',
     'red',
+    'dessert',
   ]);
 
   const [bodyPref, setBodyPref] = useState<BodyPref>('any');
@@ -281,9 +286,11 @@ export function App() {
       sweetnessPref,
       occasion,
       menuMode: isCourseFlow ? 'course' : 'alacarte',
+      courseServeFormat,
       courseBottleCount,
       coursePairingMode,
       customSlots,
+      includeExtraGlass,
       tasteProfile: effectiveProfile,
     });
 
@@ -408,13 +415,14 @@ export function App() {
             onClearMenuAnalysis={() => setMenuAnalysis(null)}
             pairingScope={pairingScope}
             onPairingScopeChange={setPairingScope}
+            courseServeFormat={courseServeFormat}
+            onCourseServeFormatChange={setCourseServeFormat}
             courseBottleCount={courseBottleCount}
             onCourseBottleCountChange={(c) => {
               setCourseBottleCount(c);
-              if (c === 2 && customSlots.length < 2) {
-                setCustomSlots(['sparkling', 'red', 'red']);
-              }
             }}
+            includeExtraGlass={includeExtraGlass}
+            onIncludeExtraGlassChange={setIncludeExtraGlass}
             coursePairingMode={coursePairingMode}
             onCoursePairingModeChange={setCoursePairingMode}
             customSlots={customSlots}
@@ -424,13 +432,6 @@ export function App() {
                 copy[slotIdx] = cat;
                 return copy;
               })
-            }
-            onApplySlotPreset={(slots) =>
-              setCustomSlots([
-                slots[0] ?? 'sparkling',
-                slots[1] ?? 'white',
-                slots[2] ?? 'red',
-              ])
             }
             bodyPref={bodyPref}
             onBodyPrefChange={setBodyPref}

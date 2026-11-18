@@ -52,10 +52,14 @@ export interface Translations {
   ocrBadgeCourse: string;
   ocrAlacarteHint: string;
   ocrCourseHint: string;
+  courseServeFormatLabel: string;
+  courseFormatGlassTitle: string;
+  courseFormatGlassDesc: string;
+  courseFormatBottleTitle: string;
+  courseFormatBottleDesc: string;
   courseBottleCountLabel: string;
-  course1Bottle: string;
-  course2Bottles: string;
-  course3Bottles: string;
+  courseBottleUnit: string;
+  courseExtraGlassToggle: string;
   courseModeAutoTitle: string;
   courseModeAutoDesc: string;
   courseModeCustomTitle: string;
@@ -226,10 +230,14 @@ export const TRANSLATIONS: Record<Language, Translations> = {
     ocrBadgeCourse: '코스 메뉴 인식됨',
     ocrAlacarteHint: '주문하실 요리를 여러 개 체크하시면 풍미의 공통분모를 계산해 추천합니다.',
     ocrCourseHint: '전채부터 메인까지 코스 흐름에 맞춰 1~3병 페어링 구성을 선택해 주세요.',
-    courseBottleCountLabel: '코스 와인 병 수 선택',
-    course1Bottle: '1병 (전체 관통)',
-    course2Bottles: '2병 구성',
-    course3Bottles: '3병 구성',
+    courseServeFormatLabel: '와인 주문 방식',
+    courseFormatGlassTitle: '글라스 페어링',
+    courseFormatGlassDesc: '코스 흐름에 맞춰 한 잔씩 가볍게 즐깁니다.',
+    courseFormatBottleTitle: '바틀 구성',
+    courseFormatBottleDesc: '원하는 병 수만큼 코스 전용 바틀을 구성합니다.',
+    courseBottleCountLabel: '바틀 수',
+    courseBottleUnit: '병',
+    courseExtraGlassToggle: '+ 추가 글라스 1잔 함께 추천',
     courseModeAutoTitle: '소믈리에 추천 조합',
     courseModeAutoDesc: '코스 강도 곡선에 맞춰 가장 이상적인 주종 시퀀스를 자동 설계합니다.',
     courseModeCustomTitle: '원하는 조합 직접 선택',
@@ -394,10 +402,14 @@ export const TRANSLATIONS: Record<Language, Translations> = {
     ocrBadgeCourse: 'Course Progression Detected',
     ocrAlacarteHint: 'Check multiple dishes you plan to share; we balance their shared flavor bridge.',
     ocrCourseHint: 'Choose 1 to 3 bottles across the tasting arc from starter to finale.',
-    courseBottleCountLabel: 'Number of Bottles for Course',
-    course1Bottle: '1 Bottle (Full Arc)',
-    course2Bottles: '2-Bottle Flow',
-    course3Bottles: '3-Bottle Flow',
+    courseServeFormatLabel: 'How Would You Like to Pour?',
+    courseFormatGlassTitle: 'By the Glass',
+    courseFormatGlassDesc: 'Lighter glass pours paced across the tasting arc.',
+    courseFormatBottleTitle: 'Bottle Sequence',
+    courseFormatBottleDesc: 'Select 1 to 4 bottles tailored to the full course.',
+    courseBottleCountLabel: 'Bottles',
+    courseBottleUnit: 'Bottle(s)',
+    courseExtraGlassToggle: '+ Add 1 complementary glass',
     courseModeAutoTitle: 'Sommelier Curated Sequence',
     courseModeAutoDesc: 'Designs the ideal progression of styles matched to the rising flavor intensity.',
     courseModeCustomTitle: 'Custom Bottle Sequence',
