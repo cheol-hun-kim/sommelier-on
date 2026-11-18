@@ -489,12 +489,35 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
     };
   }
 
-  // MULTI-BOTTLE (OR 3-GLASS) COURSE MODE WITH MULTIPLE WEIGHT-FOCUSED SCENARIOS
+  // MULTI-BOTTLE (OR 3-GLASS) COURSE MODE WITH BUDGET/QUALITY FOCUS SCENARIOS
   const segments = partitionDishesIntoSegments(workingDishes, effectiveBottleCount);
 
-  const buildSequenceForCategories = (
+  const chooseFoodMatchedSequence = (): WineCategory[] => {
+    if (isGlassCourse) return ['sparkling', 'white', 'red'];
+    if (coursePairingMode === 'custom_slots') return customSlots.slice(0, effectiveBottleCount);
+
+    const segHas = (segIdx: number, tag: string) =>
+      segments[segIdx]?.some((d) => d.flavorTags.includes(tag)) ?? false;
+
+    if (effectiveBottleCount === 2) {
+      const firstIsSeafood = segHas(0, 'seafood') || segHas(0, 'delicate');
+      const secondIsMeat = segHas(1, 'steak') || segHas(1, 'rich');
+      if (firstIsSeafood && secondIsMeat) return ['sparkling', 'red'];
+      if (secondIsMeat) return ['white', 'red'];
+      return ['sparkling', 'white'];
+    }
+    if (effectiveBottleCount === 4) {
+      return ['sparkling', 'white', 'red', 'dessert'];
+    }
+    const finaleIsDessert = segHas(2, 'dessert') && !segHas(2, 'steak');
+    return finaleIsDessert ? ['sparkling', 'red', 'dessert'] : ['sparkling', 'white', 'red'];
+  };
+
+  const baseCategories = chooseFoodMatchedSequence();
+
+  const buildSequenceWithQualityFocus = (
     targetCats: WineCategory[],
-    preferBias: 'balanced' | 'fresh' | 'rich' = 'balanced'
+    focusSlotIdx: number | null // which bottle slot receives the highest budget/quality weight; null = balanced
   ): { sequence: CourseBottleSlotRecommendation[]; usedFallbackCategory: boolean } => {
     const usedIds = new Set<string>();
     const sequence: CourseBottleSlotRecommendation[] = [];
@@ -550,6 +573,7 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
             : Math.min(maxValidIdx, Math.round(ratio * maxValidIdx));
         chosen = byWeight[targetPos];
       } else {
+        // Apply Quality / Budget Allocation Focus
         const scoredSlot = candidates
           .map((wine) => {
             let s = scoreWineForContext(wine, {
@@ -563,8 +587,15 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
               tasteProfile,
               forcedCategory: requestedCat,
             });
-            if (preferBias === 'fresh') s += (5 - wine.structure.body) * 4 + wine.structure.acidity * 3;
-            if (preferBias === 'rich') s += wine.structure.body * 4 + wine.venuePrice / 40000;
+            if (focusSlotIdx !== null) {
+              if (i === focusSlotIdx) {
+                // Elevate prestige / higher-tier bottle in the focused slot
+                s += wine.venuePrice / 3200;
+              } else {
+                // Keep non-focused slots smart, harmonious, and budget-friendly
+                s -= wine.venuePrice / 4500;
+              }
+            }
             return { wine, score: s };
           })
           .sort((a, b) => b.score - a.score);
@@ -601,11 +632,15 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
       const slotPrefixKo =
         coursePairingMode === 'custom_slots'
           ? `지정하신 [${CATEGORY_LABELS[requestedCat].shortKo}] 슬롯에 맞춰 `
-          : '코스 강도 변화에 맞춰 ';
+          : focusSlotIdx === i
+            ? `이번 구성에서 예산과 퀄리티 비중을 가장 크게 실은 핵심 바틀로, `
+            : '코스 강도 변화에 맞춰 ';
       const slotPrefixEn =
         coursePairingMode === 'custom_slots'
           ? `Matched to your chosen [${CATEGORY_LABELS[requestedCat].shortEn}] slot: `
-          : 'Paced to the course arc: ';
+          : focusSlotIdx === i
+            ? `Designated as the centerpiece bottle of this lineup: `
+            : 'Paced to the course arc: ';
 
       sequence.push({
         slotIndex: i,
@@ -628,97 +663,54 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
   const courseScenarios: CourseScenario[] = [];
 
   if (isGlassCourse) {
-    const { sequence } = buildSequenceForCategories(['sparkling', 'white', 'red'], 'balanced');
+    const { sequence } = buildSequenceWithQualityFocus(baseCategories, null);
     courseScenarios.push({
       id: 'glass_flow',
-      labelKo: '코스 글라스 흐름',
+      labelKo: '코스 글라스 구성',
       labelEn: 'Course Glass Flow',
       focusDescKo: '스파클링 · 화이트 · 레드 3잔으로 가볍게 이어집니다.',
       focusDescEn: 'Three light pours across sparkling, white, and red.',
       totalPrice: sequence.reduce((s, x) => s + (x.wine.glassPrice ?? Math.round(x.wine.venuePrice / 5)), 0),
       sequence,
     });
-  } else if (coursePairingMode === 'custom_slots') {
-    const slots = customSlots.slice(0, effectiveBottleCount);
-    const biases: Array<{ id: string; bias: 'balanced' | 'fresh' | 'rich'; ko: string; en: string; descKo: string; descEn: string }> = [
-      { id: 'custom_balanced', bias: 'balanced', ko: '밸런스 추천', en: 'Balanced Selection', descKo: '지정하신 주종 안에서 요리와 가장 매끄럽게 어울리는 구성입니다.', descEn: 'Best overall harmony within your chosen styles.' },
-      { id: 'custom_fresh', bias: 'fresh', ko: '산뜻 · 미네랄 중심', en: 'Crisp & Mineral', descKo: '산뜻한 산도와 미네랄이 돋보이는 경쾌한 구성입니다.', descEn: 'Brighter acidity and mineral-driven lift.' },
-      { id: 'custom_rich', bias: 'rich', ko: '깊고 풍성한 중심', en: 'Rich & Expressive', descKo: '질감과 여운이 깊게 남는 풍성한 구성입니다.', descEn: 'Fuller texture and deeper cellar expression.' },
-    ];
-    for (const b of biases.slice(0, scenarioLimit)) {
-      const { sequence } = buildSequenceForCategories(slots, b.bias);
-      courseScenarios.push({
-        id: b.id,
-        labelKo: b.ko,
-        labelEn: b.en,
-        focusDescKo: b.descKo,
-        focusDescEn: b.descEn,
-        totalPrice: sequence.reduce((s, x) => s + x.wine.venuePrice, 0),
-        sequence,
-      });
-    }
   } else {
-    // AI Auto Course: Generate weight-focused scenarios (Sparkling Focus, White Focus, Red Focus)
-    const scenarioTemplates: Array<{
-      id: string;
-      cats2: WineCategory[];
-      cats3: WineCategory[];
-      cats4: WineCategory[];
-      ko: string;
-      en: string;
-      descKo: string;
-      descEn: string;
-      bias: 'balanced' | 'fresh' | 'rich';
-    }> = [
-      {
-        id: 'focus_sparkling',
-        cats2: ['sparkling', 'red'],
-        cats3: ['sparkling', 'white', 'red'],
-        cats4: ['sparkling', 'white', 'red', 'dessert'],
-        ko: '샴페인 · 기포 중심',
-        en: 'Sparkling-Led Flow',
-        descKo: '화사한 기포로 코스를 열어 산뜻하게 이어지는 구성입니다.',
-        descEn: 'Opens with vibrant sparkling energy before transitioning smoothly.',
-        bias: 'balanced',
-      },
-      {
-        id: 'focus_white',
-        cats2: ['white', 'red'],
-        cats3: ['white', 'white', 'red'],
-        cats4: ['sparkling', 'white', 'white', 'red'],
-        ko: '화이트 와인 중심',
-        en: 'White-Led Flow',
-        descKo: '해산물과 섬세한 소스에 무게를 두고 화이트의 변화를 즐기는 구성입니다.',
-        descEn: 'Highlights white wine depth across seafood and creamy courses.',
-        bias: 'fresh',
-      },
-      {
-        id: 'focus_red',
-        cats2: ['white', 'red'],
-        cats3: ['sparkling', 'red', 'red'],
-        cats4: ['white', 'red', 'red', 'dessert'],
-        ko: '레드 와인 중심',
-        en: 'Red-Led Flow',
-        descKo: '육류 메인과 깊은 풍미에 무게를 두어 실키한 레드부터 묵직한 레드까지 즐깁니다.',
-        descEn: 'Centers on red structure from silky Pinot Noir to rich Grand Cru.',
-        bias: 'rich',
-      },
-    ];
+    // Build Quality / Budget Allocation Scenarios within the food-matched bottle categories!
+    const focusSlots: Array<number | null> =
+      effectiveBottleCount === 2
+        ? [0, 1, null]
+        : [0, 1, 2];
 
-    for (const tpl of scenarioTemplates.slice(0, scenarioLimit)) {
-      const cats =
-        effectiveBottleCount === 2
-          ? tpl.cats2
-          : effectiveBottleCount === 4
-            ? tpl.cats4
-            : tpl.cats3;
-      const { sequence } = buildSequenceForCategories(cats, tpl.bias);
+    for (let idx = 0; idx < Math.min(scenarioLimit, focusSlots.length); idx++) {
+      const fSlot = focusSlots[idx];
+      const { sequence } = buildSequenceWithQualityFocus(baseCategories, fSlot);
+      const focusedCat = fSlot !== null ? baseCategories[fSlot] : null;
+      const focusedCatKo = focusedCat ? CATEGORY_LABELS[focusedCat].shortKo : '';
+      const focusedCatEn = focusedCat ? CATEGORY_LABELS[focusedCat].shortEn : '';
+
+      const labelKo =
+        fSlot === null
+          ? '균형 배분 구성'
+          : `${fSlot + 1}번 병(${focusedCatKo}) 퀄리티 집중`;
+      const labelEn =
+        fSlot === null
+          ? 'Balanced Allocation'
+          : `Bottle ${fSlot + 1} (${focusedCatEn}) Prestige`;
+
+      const descKo =
+        fSlot === null
+          ? '모든 병에 예산을 고르게 배분해 처음부터 끝까지 안정적인 만족감을 드리는 구성입니다.'
+          : `${fSlot + 1}번째 ${focusedCatKo}에 예산과 퀄리티 비중을 집중하고, 나머지 병은 음식과 조화로운 합리적 라인업으로 맞췄습니다.`;
+      const descEn =
+        fSlot === null
+          ? 'Balanced budget allocation across every bottle in the course.'
+          : `Invests flagship quality into Bottle ${fSlot + 1} (${focusedCatEn}) while pairing the remaining courses smartly.`;
+
       courseScenarios.push({
-        id: tpl.id,
-        labelKo: tpl.ko,
-        labelEn: tpl.en,
-        focusDescKo: tpl.descKo,
-        focusDescEn: tpl.descEn,
+        id: `focus_slot_${fSlot ?? 'balanced'}`,
+        labelKo,
+        labelEn,
+        focusDescKo: descKo,
+        focusDescEn: descEn,
         totalPrice: sequence.reduce((s, x) => s + x.wine.venuePrice, 0),
         sequence,
       });
