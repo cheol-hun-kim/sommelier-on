@@ -20,6 +20,7 @@ import type {
 } from '../types/sommelier';
 import { CATEGORY_LABELS, TRANSLATIONS, formatKrw } from '../i18n/translations';
 import { GlossaryText } from './GlossaryText';
+import { SlidingSwitch } from './SlidingSwitch';
 import {
   CountryFlagBadge,
   SommelierAvatar,
@@ -134,23 +135,42 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3.5">
             <SommelierAvatar personaId={bundle.persona.id} size={48} />
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[12px] font-semibold text-[#6B1D2F] dark:text-[#E59BAE]">
-                  {personaName}
-                </span>
-                {(visitTiming === 'pre_visit' ||
-                  (bundle.sourceMode && bundle.sourceMode !== 'venue_cellar')) && (
-                  <span className="rounded-full bg-[#F5EBEF] px-2.5 py-0.5 text-[11px] font-semibold text-[#6B1D2F] dark:bg-[#2E181F] dark:text-[#F4B8C6]">
-                    {visitTiming === 'pre_visit'
-                      ? lang === 'ko'
-                        ? '방문 전 준비'
-                        : 'Pre-Visit'
-                      : ''}
-                    {bundle.sourceLabelKo
-                      ? ` · ${lang === 'ko' ? bundle.sourceLabelKo : bundle.sourceLabelEn}`
-                      : ''}
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[12px] font-semibold text-[#6B1D2F] dark:text-[#E59BAE]">
+                    {personaName}
                   </span>
+                  {(visitTiming === 'pre_visit' ||
+                    (bundle.sourceMode && bundle.sourceMode !== 'venue_cellar')) && (
+                    <span className="rounded-full bg-[#F5EBEF] px-2.5 py-0.5 text-[11px] font-semibold text-[#6B1D2F] dark:bg-[#2E181F] dark:text-[#F4B8C6]">
+                      {visitTiming === 'pre_visit'
+                        ? lang === 'ko'
+                          ? '방문 전 준비'
+                          : 'Pre-Visit'
+                        : ''}
+                      {bundle.sourceLabelKo
+                        ? ` · ${lang === 'ko' ? bundle.sourceLabelKo : bundle.sourceLabelEn}`
+                        : ''}
+                    </span>
+                  )}
+                </div>
+                {!isEmpty && bundle.kind !== 'corkage_only' && (
+                  <SlidingSwitch
+                    size="sm"
+                    value={speechStyle}
+                    options={[
+                      {
+                        value: 'friendly',
+                        label: lang === 'ko' ? '친근한 설명' : 'Friendly',
+                      },
+                      {
+                        value: 'expert',
+                        label: lang === 'ko' ? '전문적인 설명' : 'Sommelier Pro',
+                      },
+                    ]}
+                    onChange={onSpeechStyleChange}
+                  />
                 )}
               </div>
               <p className="prose-pretty mt-1 text-[15px] leading-[1.6] text-[var(--text-primary)]">
@@ -212,34 +232,6 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
 
           {!isEmpty && bundle.kind !== 'corkage_only' && (
             <div className="flex flex-wrap items-center gap-2">
-              {/* Speech Style Toggle (Friendly vs Expert) */}
-              <div className="inline-flex rounded-full bg-[var(--bg-tertiary)] p-0.5">
-                <button
-                  type="button"
-                  onClick={() => onSpeechStyleChange('friendly')}
-                  data-surface={speechStyle === 'friendly' ? 'accent' : undefined}
-                  className={`rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${
-                    speechStyle === 'friendly'
-                      ? 'btn-accent'
-                      : 'text-[var(--text-secondary)]'
-                  }`}
-                >
-                  {lang === 'ko' ? '친근한 설명' : 'Friendly'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSpeechStyleChange('expert')}
-                  data-surface={speechStyle === 'expert' ? 'accent' : undefined}
-                  className={`rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${
-                    speechStyle === 'expert'
-                      ? 'btn-accent'
-                      : 'text-[var(--text-secondary)]'
-                  }`}
-                >
-                  {lang === 'ko' ? '전문적인 설명' : 'Sommelier Pro'}
-                </button>
-              </div>
-
               <button
                 type="button"
                 onClick={() => {

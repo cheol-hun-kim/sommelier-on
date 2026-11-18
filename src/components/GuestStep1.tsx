@@ -36,6 +36,7 @@ import {
   formatKrw,
 } from '../i18n/translations';
 import { analyzeWineLabelImage } from '../services/aiService';
+import { SlidingSwitch } from './SlidingSwitch';
 import { SommelierAvatar, VenueLogo } from './icons/WineVectors';
 
 interface GuestStep1Props {
@@ -299,32 +300,21 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
                   : 'Plan ahead before arriving or pair right from your table.'}
               </p>
             </div>
-            <div className="inline-flex rounded-full bg-[var(--bg-tertiary)] p-1 text-[12px] font-semibold">
-              <button
-                type="button"
-                onClick={() => onVisitTimingChange('pre_visit')}
-                data-surface={visitTiming === 'pre_visit' ? 'accent' : undefined}
-                className={`rounded-full px-3.5 py-1.5 transition-all ${
-                  visitTiming === 'pre_visit'
-                    ? 'btn-accent shadow-sm'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                }`}
-              >
-                {lang === 'ko' ? '방문 전 미리 준비' : 'Before Visit'}
-              </button>
-              <button
-                type="button"
-                onClick={() => onVisitTimingChange('on_site')}
-                data-surface={visitTiming === 'on_site' ? 'accent' : undefined}
-                className={`rounded-full px-3.5 py-1.5 transition-all ${
-                  visitTiming === 'on_site'
-                    ? 'btn-accent shadow-sm'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                }`}
-              >
-                {lang === 'ko' ? '매장 방문 중' : 'At Restaurant'}
-              </button>
-            </div>
+            <SlidingSwitch
+              value={visitTiming}
+              showIndicatorDot
+              options={[
+                {
+                  value: 'pre_visit',
+                  label: lang === 'ko' ? '방문 전 준비' : 'Before Visit',
+                },
+                {
+                  value: 'on_site',
+                  label: lang === 'ko' ? '매장 방문 중' : 'At Restaurant',
+                },
+              ]}
+              onChange={onVisitTimingChange}
+            />
           </div>
 
           {visitTiming === 'pre_visit' ? (
@@ -807,30 +797,15 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
               {t.budgetSectionTitle}
             </h2>
             {(isCourseMultiBottle || hasCustomBudget) && (
-              <div className="inline-flex rounded-full bg-[var(--bg-tertiary)] p-0.5">
-                <button
-                  type="button"
-                  onClick={() => onBudgetScopeChange('per_bottle')}
-                  className={`rounded-full px-3 py-1 text-[12px] font-semibold transition-colors ${
-                    budgetScope === 'per_bottle'
-                      ? 'btn-accent'
-                      : 'text-[var(--text-secondary)]'
-                  }`}
-                >
-                  {t.budgetPerBottle}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onBudgetScopeChange('total')}
-                  className={`rounded-full px-3 py-1 text-[12px] font-semibold transition-colors ${
-                    budgetScope === 'total'
-                      ? 'btn-accent'
-                      : 'text-[var(--text-secondary)]'
-                  }`}
-                >
-                  {t.budgetTotal}
-                </button>
-              </div>
+              <SlidingSwitch
+                size="sm"
+                value={budgetScope}
+                options={[
+                  { value: 'per_bottle', label: t.budgetPerBottle },
+                  { value: 'total', label: t.budgetTotal },
+                ]}
+                onChange={onBudgetScopeChange}
+              />
             )}
           </div>
 
