@@ -148,32 +148,42 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
     tasteProfile.dislikedFeedbacks.length > 0;
 
   const quickPresets: Array<{
-    labelKo: string;
-    labelEn: string;
+    label2Ko: string;
+    label2En: string;
+    label3Ko: string;
+    label3En: string;
     slots2: WineCategory[];
     slots3: WineCategory[];
   }> = [
     {
-      labelKo: '샴화레',
-      labelEn: 'Spk · Wht · Red',
+      label2Ko: '샴레',
+      label2En: 'Spk · Red',
+      label3Ko: '샴화레',
+      label3En: 'Spk · Wht · Red',
       slots2: ['sparkling', 'red'],
       slots3: ['sparkling', 'white', 'red'],
     },
     {
-      labelKo: '화레레',
-      labelEn: 'Wht · Red · Red',
+      label2Ko: '화레',
+      label2En: 'Wht · Red',
+      label3Ko: '화레레',
+      label3En: 'Wht · Red · Red',
       slots2: ['white', 'red'],
       slots3: ['white', 'red', 'red'],
     },
     {
-      labelKo: '화화화',
-      labelEn: 'Wht · Wht · Wht',
+      label2Ko: '화화',
+      label2En: 'Wht · Wht',
+      label3Ko: '화화화',
+      label3En: 'Wht · Wht · Wht',
       slots2: ['white', 'white'],
       slots3: ['white', 'white', 'white'],
     },
     {
-      labelKo: '샴샴샴',
-      labelEn: 'Spk · Spk · Spk',
+      label2Ko: '샴샴',
+      label2En: 'Spk · Spk',
+      label3Ko: '샴샴샴',
+      label3En: 'Spk · Spk · Spk',
       slots2: ['sparkling', 'sparkling'],
       slots3: ['sparkling', 'sparkling', 'sparkling'],
     },
@@ -683,16 +693,23 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
                     <div className="space-y-3 pt-1">
                       <div className="flex flex-wrap items-center gap-1.5">
                         {quickPresets.map((preset) => {
-                          const targetArr =
-                            courseBottleCount === 2 ? preset.slots2 : preset.slots3;
+                          const isTwo = courseBottleCount === 2;
+                          const targetArr = isTwo ? preset.slots2 : preset.slots3;
+                          const label = isTwo
+                            ? lang === 'ko'
+                              ? preset.label2Ko
+                              : preset.label2En
+                            : lang === 'ko'
+                              ? preset.label3Ko
+                              : preset.label3En;
                           return (
                             <button
-                              key={preset.labelKo}
+                              key={label}
                               type="button"
                               onClick={() => onApplySlotPreset(targetArr)}
                               className="rounded-full bg-[var(--bg-secondary)] px-3 py-1 text-[11px] font-semibold text-[#6B1D2F] shadow-sm hover:bg-[#6B1D2F] hover:text-[#FFFFFF] dark:text-[#F4B8C6]"
                             >
-                              {lang === 'ko' ? preset.labelKo : preset.labelEn}
+                              {label}
                             </button>
                           );
                         })}

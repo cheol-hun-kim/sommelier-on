@@ -234,7 +234,7 @@ export const TRANSLATIONS: Record<Language, Translations> = {
     courseModeAutoTitle: '소믈리에 추천 조합',
     courseModeAutoDesc: '코스 강도 곡선에 맞춰 가장 이상적인 주종 시퀀스를 자동 설계합니다.',
     courseModeCustomTitle: '원하는 조합 직접 선택',
-    courseModeCustomDesc: '화화화, 샴화레 등 원하시는 주종 슬롯을 직접 지정해 조합합니다.',
+    courseModeCustomDesc: '원하시는 병 수와 주종 조합을 슬롯별로 직접 지정합니다.',
     courseSlotPrefix: '병',
     courseSlotSuffix: '주종 선택',
 
@@ -403,7 +403,7 @@ export const TRANSLATIONS: Record<Language, Translations> = {
     courseModeAutoTitle: 'Sommelier Curated Sequence',
     courseModeAutoDesc: 'Designs the ideal progression of styles matched to the rising flavor intensity.',
     courseModeCustomTitle: 'Custom Bottle Sequence',
-    courseModeCustomDesc: 'Lock each bottle slot yourself (e.g., W-W-W, Ch-Ch-Ch, Ch-W-R, W-R-R).',
+    courseModeCustomDesc: 'Choose the exact style for each bottle slot yourself.',
     courseSlotPrefix: 'Bottle',
     courseSlotSuffix: 'Style',
 
