@@ -158,12 +158,12 @@ function scoreWineForContext(
   score += Math.max(-10, 12 - intensityDiff * 4);
 
   if (flavorTags.includes('steak') && wine.category === 'red') {
-    score += 10;
+    score += 24;
     if (wine.structure.tannin >= 3 && !tasteProfile.affinityVector.avoidTags.includes('too_tannic')) {
       score += 8;
     }
     if (tasteProfile.affinityVector.avoidTags.includes('too_tannic') && wine.structure.tannin <= 3) {
-      score += 14;
+      score += 18;
     }
   }
   if (flavorTags.includes('seafood') && (wine.category === 'white' || wine.category === 'sparkling') && wine.structure.acidity >= 4) {
@@ -196,21 +196,49 @@ function scoreWineForContext(
     score += 8;
   }
 
-  // 6. Sommelier Persona Signature Lens
+  // 6. Sommelier Persona Signature Lens (strong enough to visibly curate different bottles per persona!)
   const regionMatch = persona.preferredRegions.some((r) =>
     wine.regionEn.toLowerCase().includes(r.toLowerCase())
   );
-  if (regionMatch) score += 12;
-  score += persona.preferredCategories[wine.category] ?? 0;
+  if (regionMatch) score += 22;
+  score += (persona.preferredCategories[wine.category] ?? 0) * 1.6;
 
-  if (persona.toneStyle === 'classic_french' && wine.structure.acidity >= 4 && wine.countryCode === 'FR') {
-    score += 8;
+  if (persona.toneStyle === 'classic_french') {
+    if (
+      wine.countryCode === 'FR' &&
+      (wine.regionEn.includes('Pauillac') ||
+        wine.regionEn.includes('Burgundy') ||
+        wine.regionEn.includes('Meursault') ||
+        wine.regionEn.includes('Chablis') ||
+        wine.regionEn.includes('Champagne'))
+    ) {
+      score += 34;
+    }
+    if (wine.category === 'rose_orange') score -= 12;
   }
-  if (persona.toneStyle === 'new_korean' && wine.pairingAffinities.includes('korean_umami')) {
-    score += 10;
+
+  if (persona.toneStyle === 'new_korean') {
+    if (wine.pairingAffinities.includes('korean_umami') || wine.varietalsEn.includes('Pinot Noir') || wine.varietalsEn.includes('Riesling') || wine.varietalsEn.includes('Merlot')) {
+      score += 36;
+    }
+    if (wine.structure.tannin <= 3) score += 16;
+    if (wine.structure.tannin >= 4 && wine.regionEn.includes('Bordeaux')) score -= 18;
   }
-  if (persona.toneStyle === 'natural_explorer' && (wine.category === 'rose_orange' || wine.regionEn.includes('Loire') || wine.regionEn.includes('Friuli'))) {
-    score += 12;
+
+  if (persona.toneStyle === 'natural_explorer') {
+    const isIndieOrBio =
+      wine.category === 'rose_orange' ||
+      wine.regionEn.includes('Loire') ||
+      wine.regionEn.includes('Friuli') ||
+      wine.producer.includes('Radikon') ||
+      wine.producer.includes('Gravner') ||
+      wine.producer.includes('Huet') ||
+      wine.producer.includes('Pépière') ||
+      wine.producer.includes('Agrapart') ||
+      wine.producer.includes('Dujac');
+    if (isIndieOrBio) score += 44;
+    if (wine.category === 'rose_orange') score += 24;
+    if (wine.regionEn.includes('Pauillac') || wine.regionEn.includes('Napa')) score -= 16;
   }
 
   // 7. Cumulative User Taste Profile Learning Loop
@@ -588,14 +616,22 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
     if (effectiveBottleCount === 2) {
       const firstIsSeafood = segHas(0, 'seafood') || segHas(0, 'delicate');
       const secondIsMeat = segHas(1, 'steak') || segHas(1, 'rich');
+      if (persona.toneStyle === 'natural_explorer' && eligiblePool.some((w) => w.category === 'rose_orange')) {
+        return secondIsMeat ? ['rose_orange', 'red'] : ['sparkling', 'rose_orange'];
+      }
       if (firstIsSeafood && secondIsMeat) return ['sparkling', 'red'];
       if (secondIsMeat) return ['white', 'red'];
       return ['sparkling', 'white'];
     }
     if (effectiveBottleCount === 4) {
-      return ['sparkling', 'white', 'red', 'dessert'];
+      return persona.toneStyle === 'natural_explorer' && eligiblePool.some((w) => w.category === 'rose_orange')
+        ? ['sparkling', 'white', 'rose_orange', 'red']
+        : ['sparkling', 'white', 'red', 'dessert'];
     }
     const finaleIsDessert = segHas(2, 'dessert') && !segHas(2, 'steak');
+    if (persona.toneStyle === 'natural_explorer' && eligiblePool.some((w) => w.category === 'rose_orange')) {
+      return ['sparkling', 'rose_orange', 'red'];
+    }
     return finaleIsDessert ? ['sparkling', 'red', 'dessert'] : ['sparkling', 'white', 'red'];
   };
 
@@ -675,11 +711,11 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
             });
             if (focusSlotIdx !== null) {
               if (i === focusSlotIdx) {
-                // Elevate prestige / higher-tier bottle in the focused slot
-                s += wine.venuePrice / 3200;
+                // Elevate higher-tier bottle in the focused slot while preserving persona character
+                s += wine.venuePrice / 6000;
               } else {
                 // Keep non-focused slots smart, harmonious, and budget-friendly
-                s -= wine.venuePrice / 4500;
+                s -= wine.venuePrice / 7000;
               }
             }
             return { wine, score: s };

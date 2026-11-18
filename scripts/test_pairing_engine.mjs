@@ -216,6 +216,31 @@ if (
   throw new Error('Selective swap must keep unchecked bottles and replace checked bottle');
 }
 
+// 8. Different Sommelier Personas must curate genuinely different wine recommendations
+const personaPicks = SOMMELIER_PERSONAS.map((pers) =>
+  generatePairingRecommendation({
+    venue: v1,
+    wines: INITIAL_WINES,
+    persona: pers,
+    budgetTier: '100_150',
+    budgetScope: 'per_bottle',
+    selectedDishes: [
+      { id: 'd1', nameKo: '채끝 스테이크 & 버섯 리조또', nameEn: 'Steak & Risotto', flavorTags: ['steak', 'truffle', 'umami'], intensity: 4, selected: true },
+    ],
+    bodyPref: 'any',
+    sweetnessPref: 'any',
+    occasion: 'date',
+    menuMode: 'alacarte',
+    courseBottleCount: 1,
+    coursePairingMode: 'ai_auto',
+    customSlots: ['sparkling', 'white', 'red'],
+    tasteProfile: DEFAULT_TASTE_PROFILE,
+  }).singleItems[0].wine.nameKo
+);
+if (new Set(personaPicks).size < 2) {
+  throw new Error('Different sommeliers must produce distinct top recommendations: ' + personaPicks.join(', '));
+}
+
 export const testSummary = {
   singleTop: single.singleItems[0].wine.nameKo,
   courseAutoSeq: courseAuto.courseSequence.map((s) => s.wine.nameKo),
@@ -224,6 +249,7 @@ export const testSummary = {
   venue2Top: v2Rec.singleItems[0].wine.nameKo,
   reRecTopAfterTooTannic: reRec.singleItems[0].wine.nameKo,
   nextSimilarAfterLike: nextWines.map((w) => w.nameKo),
+  personaTopPicks: personaPicks,
 };
 `;
 
@@ -238,8 +264,12 @@ const result = await build({
 const dataUrl =
   'data:text/javascript;base64,' +
   Buffer.from(result.outputFiles[0].text).toString('base64');
-const { testSummary } = await import(dataUrl);
-
-assert.ok(testSummary.courseAutoSeq.length === 3);
-console.log('ALL BEHAVIORAL ENGINE TESTS PASSED:');
-console.log(JSON.stringify(testSummary, null, 2));
+try {
+  const { testSummary } = await import(dataUrl);
+  assert.ok(testSummary.courseAutoSeq.length === 3);
+  console.log('ALL BEHAVIORAL ENGINE TESTS PASSED:');
+  console.log(JSON.stringify(testSummary, null, 2));
+} catch (err) {
+  console.error('BEHAVIORAL TEST FAILED:', err instanceof Error ? err.message : err);
+  process.exit(1);
+}
