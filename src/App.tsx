@@ -12,6 +12,7 @@ import {
   applyDislikeToTasteProfile,
   applyLikeToTasteProfile,
   extractTagsFromFreeText,
+  generateCorkageOnlyRecommendation,
   generatePairingRecommendation,
   swapSpecificWinesInBundle,
 } from './engine/pairingEngine';
@@ -107,6 +108,7 @@ export function App() {
   const [budgetTier, setBudgetTier] = useState<BudgetTier>('50_100');
   const [customBudgetManWon, setCustomBudgetManWon] = useState('');
   const [budgetScope, setBudgetScope] = useState<BudgetScope>('per_bottle');
+  const [corkageOnly, setCorkageOnly] = useState(false);
   const [corkageWine, setCorkageWine] = useState<CorkageBottle | null>(null);
 
   const [selectedRegisteredDishIds, setSelectedRegisteredDishIds] = useState<
@@ -330,9 +332,20 @@ export function App() {
     overridePersonaId?: string,
     keepStep = false
   ) => {
-    const bundle = generatePairingRecommendation(
-      buildPairingQuery(overridePersonaId, overrideProfile, [])
-    );
+    const pId = overridePersonaId ?? selectedPersonaId;
+    const persona = personas.find((p) => p.id === pId) ?? personas[0];
+
+    const bundle =
+      corkageOnly && corkageWine && corkageWine.name.trim().length > 0
+        ? generateCorkageOnlyRecommendation({
+            venue: activeVenue,
+            persona,
+            corkage: corkageWine,
+            tasteProfile: overrideProfile ?? tasteProfile,
+          })
+        : generatePairingRecommendation(
+            buildPairingQuery(overridePersonaId, overrideProfile, [])
+          );
     setSwappedExcludedIds([]);
 
     const recIds =
@@ -550,6 +563,8 @@ export function App() {
             onCustomBudgetManWonChange={setCustomBudgetManWon}
             budgetScope={budgetScope}
             onBudgetScopeChange={setBudgetScope}
+            corkageOnly={corkageOnly}
+            onCorkageOnlyChange={setCorkageOnly}
             corkageWine={corkageWine}
             onCorkageWineChange={setCorkageWine}
             selectedRegisteredDishIds={selectedRegisteredDishIds}

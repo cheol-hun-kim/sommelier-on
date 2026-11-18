@@ -246,7 +246,7 @@ export interface CourseScenario {
 }
 
 export interface PairingRecommendationBundle {
-  kind: 'single_or_alacarte' | 'course_sequence';
+  kind: 'single_or_alacarte' | 'course_sequence' | 'corkage_only';
   persona: SommelierPersona;
   menuMode: MenuMode;
   serveFormat?: CourseServeFormat;
@@ -259,6 +259,7 @@ export interface PairingRecommendationBundle {
   courseSequence?: CourseBottleSlotRecommendation[];
   courseScenarios?: CourseScenario[];
   extraGlass?: SingleWineRecommendation;
+  corkageDishMatches?: CorkageDishMatch[];
 }
 
 export interface GuestMember {
@@ -289,9 +290,28 @@ export interface TastingJournalEntry {
 
 export interface CorkageBottle {
   name: string;
+  nameEn?: string;
+  producer?: string;
+  vintage?: number;
+  varietalsKo?: string;
+  varietalsEn?: string;
+  regionKo?: string;
+  regionEn?: string;
+  countryCode?: string;
   category: WineCategory;
   body: number; // 1..5
+  structure?: WineStructure;
+  aromas?: WineAromas;
   slotPosition: 'early' | 'middle' | 'late';
+}
+
+export interface CorkageDishMatch {
+  dishNameKo: string;
+  dishNameEn: string;
+  stageKo?: string;
+  stageEn?: string;
+  reasonKo: string;
+  reasonEn: string;
 }
 
 export interface PersonaPerformanceStat {

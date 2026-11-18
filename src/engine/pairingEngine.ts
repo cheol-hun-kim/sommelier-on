@@ -4,6 +4,7 @@ import type {
   BudgetScope,
   BudgetTier,
   CorkageBottle,
+  CorkageDishMatch,
   CourseBottleCount,
   CourseBottleSlotRecommendation,
   CoursePairingMode,
@@ -1065,6 +1066,209 @@ export function getNextRecommendedWines(
     .sort((a, b) => b.sim - a.sim)
     .slice(0, 2)
     .map((x) => x.candidate);
+}
+
+export function generateCorkageOnlyRecommendation(params: {
+  venue: Venue;
+  persona: SommelierPersona;
+  corkage: CorkageBottle;
+  tasteProfile: UserTasteProfile;
+}): PairingRecommendationBundle {
+  const { venue, persona, corkage, tasteProfile } = params;
+
+  const defaultStructure = corkage.structure ?? {
+    body: corkage.body || 3,
+    acidity: corkage.category === 'sparkling' || corkage.category === 'white' ? 4 : 3,
+    tannin: corkage.category === 'red' ? 3 : 1,
+    sweetness: corkage.category === 'dessert' ? 4 : 1,
+    alcohol: corkage.body >= 4 ? 4 : 3,
+  };
+
+  const defaultAromas = corkage.aromas ?? {
+    primary:
+      corkage.category === 'red'
+        ? ['cherry', 'blackcurrant']
+        : corkage.category === 'dessert'
+          ? ['honey', 'pear_apple']
+          : ['citrus', 'pear_apple', 'white_flower'],
+    secondary:
+      corkage.category === 'red'
+        ? ['oak_cedar', 'pepper_spice']
+        : ['butter_brioche'],
+    tertiary: ['mineral_stone'],
+  };
+
+  const corkageWineItem: WineItem = {
+    id: `corkage_${Date.now()}`,
+    venueId: venue.id,
+    nameKo: corkage.name,
+    nameEn: corkage.nameEn || corkage.name,
+    producer: corkage.producer || 'Guest Cellar',
+    vintage: corkage.vintage || new Date().getFullYear() - 3,
+    category: corkage.category,
+    varietalsKo:
+      corkage.varietalsKo ||
+      (corkage.category === 'red'
+        ? '레드 블렌드'
+        : corkage.category === 'sparkling'
+          ? '스파클링 블렌드'
+          : '화이트 품종'),
+    varietalsEn:
+      corkage.varietalsEn ||
+      (corkage.category === 'red' ? 'Red Blend' : 'White / Sparkling'),
+    regionKo: corkage.regionKo || '고객 지참 셀러',
+    regionEn: corkage.regionEn || 'Guest Personal Cellar',
+    countryCode: corkage.countryCode || 'FR',
+    venuePrice: 0,
+    marketPrice: 0,
+    stock: 1,
+    structure: defaultStructure,
+    aromas: defaultAromas,
+    serving: {
+      glassType:
+        corkage.category === 'sparkling'
+          ? 'flute'
+          : corkage.category === 'white'
+            ? 'white'
+            : corkage.category === 'dessert'
+              ? 'dessert'
+              : corkage.body <= 3
+                ? 'burgundy'
+                : 'bordeaux',
+      tempMin: corkage.category === 'red' ? 15 : 8,
+      tempMax: corkage.category === 'red' ? 17 : 10,
+      decantMinutes: corkage.category === 'red' && corkage.body >= 4 ? 45 : 0,
+      drinkWindowStart: 2023,
+      drinkWindowEnd: 2032,
+      statusKo: '지참 와인 · 상태 확인 후 서빙',
+      statusEn: 'BYOB · Check temperature before pouring',
+    },
+    storytelling: {
+      terroirKo: `${corkage.regionKo || '산지'}의 개성을 담아 고객님이 직접 준비해 오신 와인입니다.`,
+      terroirEn: `Personal selection from ${corkage.regionEn || 'your cellar'}.`,
+      vinificationKo: '매장의 권장 글라스와 음용 온도에 맞춰 즐기시면 풍미가 한층 살아납니다.',
+      vinificationEn: 'Served at its ideal temperature and stemware to unlock full aromatics.',
+      heavenClimateKo: `${corkage.vintage || '해당'} 빈티지의 자연스러운 기후 결을 간직한 보틀입니다.`,
+      heavenClimateEn: `Expressing the natural vintage character of ${corkage.vintage || 'its harvest'}.`,
+      earthSoilKo: `${corkage.regionKo || '산지'} 특유의 지질과 미네랄이 와인의 구조와 여운을 형성합니다.`,
+      earthSoilEn: `Mineral structure shaped by ${corkage.regionEn || 'its origin soils'}.`,
+      humanPhilosophyKo: '고객님이 직접 소장해 오신 보틀이 오늘 식탁의 요리와 가장 빛나는 순간을 연결해 드립니다.',
+      humanPhilosophyEn: 'Paired thoughtfully with tonight’s dishes to let your bottle shine.',
+      wineryLocation: {
+        lat: 47.0247,
+        lng: 4.8386,
+        placeLabelKo: corkage.regionKo || corkage.name,
+        placeLabelEn: corkage.regionEn || corkage.name,
+        earthQuery: `${corkage.producer || corkage.name} ${corkage.regionEn || ''}`.trim(),
+      },
+    },
+    pairingAffinities:
+      corkage.category === 'red'
+        ? ['steak', 'rich', 'poultry', 'umami']
+        : corkage.category === 'dessert'
+          ? ['dessert', 'cheese', 'sweet']
+          : ['seafood', 'delicate', 'cream', 'truffle', 'umami'],
+  };
+
+  // Match best dishes / course stages from THIS venue!
+  const candidateDishes =
+    venue.venueType === 'course' && venue.courseMenu && venue.courseMenu.length > 0
+      ? venue.courseMenu.map((d) => ({
+          nameKo: d.nameKo,
+          nameEn: d.nameEn,
+          stageKo: d.stageKo,
+          stageEn: d.stageEn,
+          flavorTags: d.flavorTags,
+          intensity: d.intensity,
+        }))
+      : venue.registeredDishes.map((d) => ({
+          nameKo: d.nameKo,
+          nameEn: d.nameEn,
+          stageKo: undefined,
+          stageEn: undefined,
+          flavorTags: d.flavorTags,
+          intensity: d.intensity,
+        }));
+
+  const scoredDishes = candidateDishes
+    .map((dish) => {
+      let match = 40;
+      const tagMatches = dish.flavorTags.filter((t) =>
+        corkageWineItem.pairingAffinities.includes(t)
+      );
+      match += tagMatches.length * 16;
+      match += Math.max(-10, 12 - Math.abs(corkageWineItem.structure.body - dish.intensity) * 4);
+      if (corkage.category === 'red' && dish.flavorTags.includes('steak')) match += 15;
+      if ((corkage.category === 'white' || corkage.category === 'sparkling') && dish.flavorTags.includes('seafood')) match += 15;
+      if (corkage.category === 'dessert' && dish.flavorTags.includes('dessert')) match += 25;
+      return { dish, match };
+    })
+    .sort((a, b) => b.match - a.match)
+    .slice(0, 3);
+
+  const corkageDishMatches: CorkageDishMatch[] = scoredDishes.map(({ dish }) => ({
+    dishNameKo: dish.nameKo,
+    dishNameEn: dish.nameEn,
+    stageKo: dish.stageKo,
+    stageEn: dish.stageEn,
+    reasonKo:
+      corkage.category === 'red'
+        ? '이 요리의 고소한 육즙과 진한 풍미가 가져오신 레드 와인의 타닌·바디와 가장 멋지게 맞물립니다.'
+        : corkage.category === 'dessert'
+          ? '디저트의 부드러운 단맛과 와인의 달콤한 여운이 조화롭게 이어지는 구간입니다.'
+          : '가져오신 와인의 산뜻한 산도와 미네랄이 재료 본연의 감칠맛을 가장 깔끔하게 살려주는 요리입니다.',
+    reasonEn:
+      corkage.category === 'red'
+        ? 'The rich savory depth of this plate meets your red wine’s structure harmoniously.'
+        : 'Bright natural freshness lifts the delicate umami and texture of this dish.',
+  }));
+
+  const topDishNamesKo = scoredDishes.map((x) => x.dish.nameKo);
+  const topDishNamesEn = scoredDishes.map((x) => x.dish.nameEn);
+  const topTags = Array.from(new Set(scoredDishes.flatMap((x) => x.dish.flavorTags)));
+
+  const commentary = buildPersonaCommentary(
+    corkageWineItem,
+    persona,
+    topDishNamesKo,
+    topDishNamesEn,
+    'date',
+    tasteProfile,
+    topTags
+  );
+
+  const singleItem: SingleWineRecommendation = {
+    wine: corkageWineItem,
+    rank: 1,
+    matchScore: 96,
+    valueTier: null,
+    commentaryKo: commentary.ko,
+    commentaryEn: commentary.en,
+    expertCommentaryKo: commentary.expertKo,
+    expertCommentaryEn: commentary.expertEn,
+    tastingTipKo: commentary.tipKo,
+    tastingTipEn: commentary.tipEn,
+    pairingPointsKo: commentary.pointsKo,
+    pairingPointsEn: commentary.pointsEn,
+  };
+
+  return {
+    kind: 'corkage_only',
+    persona,
+    menuMode: venue.venueType,
+    bottleCount: 1,
+    totalPrice: 0,
+    overallNoteKo:
+      venue.venueType === 'course'
+        ? `가져오신 [${corkage.name}]의 테이스팅 노트와 함께, ${venue.nameKo} 코스 중 가장 빛나는 요리 구간을 짚어드렸습니다.`
+        : `가져오신 [${corkage.name}]의 테이스팅 노트와 함께, ${venue.nameKo}에서 가장 잘 어울리는 추천 요리를 골랐습니다.`,
+    overallNoteEn:
+      venue.venueType === 'course'
+        ? `Tasting notes for your [${corkage.name}] plus the ideal course moments at ${venue.nameEn}.`
+        : `Tasting notes for your [${corkage.name}] plus the best-matching dishes at ${venue.nameEn}.`,
+    singleItems: [singleItem],
+    corkageDishMatches,
+  };
 }
 
 export function swapSpecificWinesInBundle(

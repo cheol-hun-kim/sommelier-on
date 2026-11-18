@@ -81,6 +81,8 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
   const isEmpty =
     (bundle.kind === 'single_or_alacarte' &&
       (!bundle.singleItems || bundle.singleItems.length === 0)) ||
+    (bundle.kind === 'corkage_only' &&
+      (!bundle.singleItems || bundle.singleItems.length === 0)) ||
     (bundle.kind === 'course_sequence' && activeSequence.length === 0);
 
   return (
@@ -99,7 +101,11 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
         <h1 className="mt-4 text-[24px] font-bold tracking-tight text-[var(--text-primary)]">
           {bundle.kind === 'course_sequence'
             ? t.step2TitleCourse
-            : t.step2TitleSingle}
+            : bundle.kind === 'corkage_only'
+              ? lang === 'ko'
+                ? '가져오신 와인 테이스팅 · 페어링 가이드'
+                : 'Your Corkage Bottle & Venue Dish Guide'
+              : t.step2TitleSingle}
         </h1>
       </div>
 
@@ -169,7 +175,7 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
             })}
           </div>
 
-          {!isEmpty && (
+          {!isEmpty && bundle.kind !== 'corkage_only' && (
             <div className="flex flex-wrap items-center gap-2">
               {/* Speech Style Toggle (Friendly vs Expert) */}
               <div className="inline-flex rounded-full bg-[var(--bg-tertiary)] p-0.5">
@@ -337,6 +343,74 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
           </p>
         </div>
       )}
+
+      {/* Corkage-Only Dish & Course Stage Recommendations */}
+      {bundle.kind === 'corkage_only' &&
+        bundle.corkageDishMatches &&
+        bundle.corkageDishMatches.length > 0 && (
+          <section className="somm-card rounded-3xl p-5 sm:p-6">
+            <h2 className="text-[17px] font-bold text-[var(--text-primary)]">
+              {bundle.menuMode === 'course'
+                ? lang === 'ko'
+                  ? '코스 중 가져오신 와인이 가장 빛나는 요리 구간'
+                  : 'Best Course Moments for Your Corkage Bottle'
+                : lang === 'ko'
+                  ? '가져오신 와인과 가장 잘 어울리는 이 업장 추천 메뉴'
+                  : 'Best Matching Dishes From This Menu'}
+            </h2>
+            <div className="mt-3.5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {bundle.corkageDishMatches.map((dm, idx) => (
+                <div
+                  key={idx}
+                  className="somm-sub-surface rounded-2xl p-4"
+                >
+                  {dm.stageKo && (
+                    <div className="text-[11px] font-bold text-[#6B1D2F] dark:text-[#E59BAE]">
+                      {lang === 'ko' ? dm.stageKo : dm.stageEn}
+                    </div>
+                  )}
+                  <div className="mt-1 text-[14px] font-bold text-[var(--text-primary)]">
+                    {lang === 'ko' ? dm.dishNameKo : dm.dishNameEn}
+                  </div>
+                  <p className="prose-pretty mt-1.5 text-[12px] leading-relaxed text-[var(--text-secondary)]">
+                    {lang === 'ko' ? dm.reasonKo : dm.reasonEn}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+      {/* Corkage-Only Bottle Full Tasting Card */}
+      {bundle.kind === 'corkage_only' &&
+        bundle.singleItems?.map((item) => (
+          <WineDetailRecommendationCard
+            key={item.wine.id}
+            lang={lang}
+            wine={item.wine}
+            badgeLabel={
+              lang === 'ko'
+                ? `고객 지참 (콜키지) · ${CATEGORY_LABELS[item.wine.category].shortKo}`
+                : `Guest Corkage · ${CATEGORY_LABELS[item.wine.category].shortEn}`
+            }
+            isCorkage={true}
+            valueTier={null}
+            commentary={
+              speechStyle === 'expert'
+                ? lang === 'ko'
+                  ? item.expertCommentaryKo
+                  : item.expertCommentaryEn
+                : lang === 'ko'
+                  ? item.commentaryKo
+                  : item.commentaryEn
+            }
+            tastingTip={lang === 'ko' ? item.tastingTipKo : item.tastingTipEn}
+            highlights={
+              lang === 'ko' ? item.pairingPointsKo : item.pairingPointsEn
+            }
+            onChoose={() => onSelectWineForDrinking(item.wine)}
+          />
+        ))}
 
       {/* Single / À la carte Neutral Cards */}
       {bundle.kind === 'single_or_alacarte' &&
