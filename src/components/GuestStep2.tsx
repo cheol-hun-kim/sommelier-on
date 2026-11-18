@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight, CheckCircle2, Info, Sparkles } from 'lucide-reac
 import type {
   Language,
   PairingRecommendationBundle,
+  ValueTier,
   WineItem,
 } from '../types/sommelier';
 import { CATEGORY_LABELS, TRANSLATIONS, formatKrw } from '../i18n/translations';
@@ -123,7 +124,7 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
                 : `${t.rankOption} ${item.rank} · ${CATEGORY_LABELS[item.wine.category][lang === 'ko' ? 'shortKo' : 'shortEn']}`
             }
             isHighlighted={item.rank === 1}
-            goodValueRatio={item.goodValueRatio}
+            valueTier={item.valueTier}
             commentary={lang === 'ko' ? item.commentaryKo : item.commentaryEn}
             highlights={lang === 'ko' ? item.pairingPointsKo : item.pairingPointsEn}
             onChoose={() => onSelectWineForDrinking(item.wine)}
@@ -147,7 +148,7 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
             }
             courseDishes={lang === 'ko' ? slot.assignedDishesKo : slot.assignedDishesEn}
             isHighlighted={slot.slotIndex === 0}
-            goodValueRatio={slot.goodValueRatio}
+            valueTier={slot.valueTier}
             commentary={lang === 'ko' ? slot.bridgeReasonKo : slot.bridgeReasonEn}
             onChoose={() => onSelectWineForDrinking(slot.wine)}
           />
@@ -169,7 +170,7 @@ interface WineCardProps {
   courseSegmentTitle?: string;
   courseDishes?: string[];
   isHighlighted?: boolean;
-  goodValueRatio: number | null;
+  valueTier: ValueTier;
   commentary: string;
   highlights?: string[];
   onChoose: () => void;
@@ -182,7 +183,7 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
   courseSegmentTitle,
   courseDishes,
   isHighlighted = false,
-  goodValueRatio,
+  valueTier,
   commentary,
   highlights,
   onChoose,
@@ -229,13 +230,15 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
               <span className="rounded-full bg-[#6B1D2F] px-3 py-1 text-[11px] font-semibold text-[#FFFFFF]">
                 {badgeLabel}
               </span>
-              {goodValueRatio !== null && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-[#FBF4E8] px-3 py-1 text-[11px] font-bold tabular-nums text-[#7A541C] dark:bg-[#2B2214] dark:text-[#ECC88D]">
+              {valueTier === 'great_value' && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#FBF4E8] px-3 py-1 text-[11px] font-bold text-[#7A541C] dark:bg-[#2B2214] dark:text-[#ECC88D]">
                   <Sparkles className="h-3 w-3" strokeWidth={1.5} />
-                  <span>
-                    {t.goodValueBadgePrefix}&nbsp;{goodValueRatio}
-                    {t.goodValueBadgeSuffix}
-                  </span>
+                  <span>{t.badgeGreatValue}</span>
+                </span>
+              )}
+              {valueTier === 'fair_dining' && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-[var(--bg-tertiary)] px-3 py-1 text-[11px] font-semibold text-[var(--text-secondary)]">
+                  <span>{t.badgeFairDining}</span>
                 </span>
               )}
             </div>
@@ -265,9 +268,6 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
             <div className="text-[22px] font-bold tabular-nums text-[var(--text-primary)]">
               {formatKrw(wine.venuePrice, lang)}
             </div>
-          </div>
-          <div className="text-[12px] tabular-nums text-[var(--text-secondary)] sm:mt-1">
-            {t.marketPriceLabel} {formatKrw(wine.marketPrice, lang)}
           </div>
         </div>
       </div>
@@ -302,7 +302,7 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
       </div>
 
       <div className="mt-4">
-        <ServingGuideStrip wine={wine} lang={lang} goodValueRatio={goodValueRatio} />
+        <ServingGuideStrip wine={wine} lang={lang} valueTier={valueTier} />
       </div>
 
       {/* Bottle Selection / In-Drinking Guide CTA */}

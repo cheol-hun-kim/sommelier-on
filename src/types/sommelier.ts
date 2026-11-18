@@ -182,11 +182,13 @@ export interface UserTasteProfile {
   };
 }
 
+export type ValueTier = 'great_value' | 'fair_dining' | null;
+
 export interface SingleWineRecommendation {
   wine: WineItem;
   rank: number;
   matchScore: number;
-  goodValueRatio: number | null; // e.g. 1.6 -> "시중가의 1.6배"
+  valueTier: ValueTier;
   commentaryKo: string;
   commentaryEn: string;
   pairingPointsKo: string[];
@@ -201,7 +203,7 @@ export interface CourseBottleSlotRecommendation {
   assignedDishesKo: string[];
   assignedDishesEn: string[];
   wine: WineItem;
-  goodValueRatio: number | null;
+  valueTier: ValueTier;
   bridgeReasonKo: string;
   bridgeReasonEn: string;
 }

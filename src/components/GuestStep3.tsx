@@ -19,7 +19,7 @@ import {
 } from '../i18n/translations';
 import { WineBottleIllustration } from './icons/WineVectors';
 import { AromaSpectrumCard, ServingGuideStrip } from './TastingInfographics';
-import { computeGoodValueRatio, getNextRecommendedWines } from '../engine/pairingEngine';
+import { computeValueTier, getNextRecommendedWines } from '../engine/pairingEngine';
 
 interface GuestStep3Props {
   lang: Language;
@@ -57,7 +57,7 @@ export const GuestStep3: React.FC<GuestStep3Props> = ({
   const vinification =
     lang === 'ko' ? wine.storytelling.vinificationKo : wine.storytelling.vinificationEn;
 
-  const goodValueRatio = computeGoodValueRatio(wine, priceTransparencyOptIn);
+  const valueTier = computeValueTier(wine, priceTransparencyOptIn);
   const nextSuggestions =
     feedbackState === 'liked' ? getNextRecommendedWines(wine, allWines, venueId) : [];
 
@@ -164,7 +164,7 @@ export const GuestStep3: React.FC<GuestStep3Props> = ({
 
         <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-2">
           <AromaSpectrumCard wine={wine} lang={lang} />
-          <ServingGuideStrip wine={wine} lang={lang} goodValueRatio={goodValueRatio} />
+          <ServingGuideStrip wine={wine} lang={lang} valueTier={valueTier} />
         </div>
       </section>
 

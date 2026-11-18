@@ -15,6 +15,7 @@ import type {
   SommelierPersona,
   SweetnessPref,
   UserTasteProfile,
+  ValueTier,
   Venue,
   WineCategory,
   WineItem,
@@ -90,12 +91,11 @@ function getBudgetWindow(
   return base;
 }
 
-export function computeGoodValueRatio(wine: WineItem, optIn: boolean): number | null {
+export function computeValueTier(wine: WineItem, optIn: boolean): ValueTier {
   if (!optIn || wine.marketPrice <= 0) return null;
   const ratio = wine.venuePrice / wine.marketPrice;
-  if (ratio <= 1.65) {
-    return Number(ratio.toFixed(1));
-  }
+  if (ratio <= 1.5) return 'great_value';
+  if (ratio <= 2.0) return 'fair_dining';
   return null;
 }
 
@@ -420,7 +420,7 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
         wine: entry.wine,
         rank: idx + 1,
         matchScore: Math.min(99, Math.max(72, Math.round(entry.score))),
-        goodValueRatio: computeGoodValueRatio(entry.wine, venue.priceTransparencyOptIn),
+        valueTier: computeValueTier(entry.wine, venue.priceTransparencyOptIn),
         commentaryKo: commentary.ko,
         commentaryEn: commentary.en,
         pairingPointsKo: commentary.pointsKo,
@@ -574,7 +574,7 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
       assignedDishesKo: segDishesKo,
       assignedDishesEn: segDishesEn,
       wine: chosen,
-      goodValueRatio: computeGoodValueRatio(chosen, venue.priceTransparencyOptIn),
+      valueTier: computeValueTier(chosen, venue.priceTransparencyOptIn),
       bridgeReasonKo: `${slotPrefixKo}${slotNote.ko}`,
       bridgeReasonEn: `${slotPrefixEn}${slotNote.en}`,
     });

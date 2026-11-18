@@ -82,9 +82,8 @@ export interface Translations {
   rankOption: string;
   bottleSeqPrefix: string;
   bottleSeqSuffix: string;
-  goodValueBadgePrefix: string;
-  goodValueBadgeSuffix: string;
-  marketPriceLabel: string;
+  badgeGreatValue: string;
+  badgeFairDining: string;
   venuePriceLabel: string;
   structureTitle: string;
   structureBarView: string;
@@ -256,9 +255,8 @@ export const TRANSLATIONS: Record<Language, Translations> = {
     rankOption: '대안 추천',
     bottleSeqPrefix: '제',
     bottleSeqSuffix: '병',
-    goodValueBadgePrefix: '착한 가격 · 시중가의',
-    goodValueBadgeSuffix: '배',
-    marketPriceLabel: '국내 시중가 참고',
+    badgeGreatValue: '착한 가격 · 합리적인 리스팅',
+    badgeFairDining: '다이닝 적정가',
     venuePriceLabel: '업장 리스팅가',
     structureTitle: '5대 구조 밸런스',
     structureBarView: '게이지',
@@ -425,9 +423,8 @@ export const TRANSLATIONS: Record<Language, Translations> = {
     rankOption: 'Alternative',
     bottleSeqPrefix: 'Bottle',
     bottleSeqSuffix: '',
-    goodValueBadgePrefix: 'Fair Listing ·',
-    goodValueBadgeSuffix: 'x Retail',
-    marketPriceLabel: 'Reference Retail',
+    badgeGreatValue: 'Great Value · Fair Listing',
+    badgeFairDining: 'Fair Dining Price',
     venuePriceLabel: 'Cellar List Price',
     structureTitle: '5-Axis Structural Balance',
     structureBarView: 'Gauge',

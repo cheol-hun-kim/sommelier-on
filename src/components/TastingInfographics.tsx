@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Flame, Thermometer, Wine } from 'lucide-react';
-import type { AromaKey, Language, WineItem } from '../types/sommelier';
-import { AROMA_LABELS, GLASS_LABELS, TRANSLATIONS, formatKrw } from '../i18n/translations';
+import type { AromaKey, Language, ValueTier, WineItem } from '../types/sommelier';
+import { AROMA_LABELS, GLASS_LABELS, TRANSLATIONS } from '../i18n/translations';
 import { AromaVectorIcon, GlassSilhouetteIcon } from './icons/WineVectors';
 
 /* ============================================================================
@@ -490,8 +490,8 @@ export const AromaSpectrumCard: React.FC<{
 export const ServingGuideStrip: React.FC<{
   wine: WineItem;
   lang: Language;
-  goodValueRatio: number | null;
-}> = ({ wine, lang, goodValueRatio }) => {
+  valueTier: ValueTier;
+}> = ({ wine, lang, valueTier }) => {
   const t = TRANSLATIONS[lang];
 
   return (
@@ -554,15 +554,15 @@ export const ServingGuideStrip: React.FC<{
           <span className="text-[10px] text-[var(--text-secondary)]">{t.decantLabel}</span>
         </div>
 
-        {/* 4. Drinking Window & Retail Benchmark */}
+        {/* 4. Drinking Window & Value Status */}
         <div className="flex flex-col items-center justify-center rounded-xl bg-[var(--bg-secondary)] p-2.5 text-center shadow-sm">
           <Flame className="h-5 w-5 text-[#B8863B]" strokeWidth={1.5} />
           <span className="mt-1.5 text-[11px] font-bold tabular-nums text-[var(--text-primary)]">
             {wine.serving.drinkWindowStart}–{wine.serving.drinkWindowEnd}
           </span>
           <span className="text-[10px] text-[var(--text-secondary)]">
-            {goodValueRatio !== null
-              ? `${t.marketPriceLabel} ${formatKrw(wine.marketPrice, lang)}`
+            {valueTier === 'great_value'
+              ? t.badgeGreatValue
               : lang === 'ko'
                 ? wine.serving.statusKo
                 : wine.serving.statusEn}
