@@ -4,11 +4,16 @@ import {
   ArrowRight,
   Check,
   CheckCircle2,
+  ExternalLink,
+  Globe,
   Info,
   MapPin,
   MessageSquareText,
+  Mountain,
   RefreshCw,
   Sparkles,
+  Sun,
+  UserCheck,
   Wine,
   X,
 } from 'lucide-react';
@@ -724,10 +729,16 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
   onChoose,
 }) => {
   const t = TRANSLATIONS[lang];
-  const [activeModal, setActiveModal] = useState<'notes' | 'commentary' | null>(null);
+  const [activeModal, setActiveModal] = useState<'notes' | 'commentary' | 'story' | null>(null);
   const wineName = lang === 'ko' ? wine.nameKo : wine.nameEn;
   const varietal = lang === 'ko' ? wine.varietalsKo : wine.varietalsEn;
   const region = lang === 'ko' ? wine.regionKo : wine.regionEn;
+  const loc = wine.storytelling.wineryLocation;
+  const mapEmbedUrl = `https://maps.google.com/maps?q=${loc.lat},${loc.lng}&z=13&t=k&output=embed`;
+  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}`;
+  const googleEarthUrl = `https://earth.google.com/web/search/${encodeURIComponent(
+    loc.earthQuery
+  )}`;
 
   return (
     <article
@@ -850,43 +861,43 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
         </div>
       </div>
 
-      {/* 3 Compact Action Buttons Directly Above 5-Aroma Icons */}
-      <div className="mt-4 grid grid-cols-3 gap-2 border-t border-[var(--border-subtle)] pt-4">
+      {/* 3 Compact Pill Buttons Positioned Right-Aligned Above the Divider */}
+      <div className="mt-3 flex flex-wrap items-center justify-end gap-1.5">
         <button
           type="button"
           onClick={() => setActiveModal('notes')}
-          className="somm-sub-surface flex items-center justify-center gap-1.5 rounded-xl px-2.5 py-2.5 text-[12px] font-bold text-[var(--text-primary)] transition-colors hover:opacity-85"
+          className="somm-sub-surface inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-bold text-[var(--text-primary)] transition-colors hover:opacity-85"
         >
-          <Wine className="h-3.5 w-3.5 shrink-0 text-[#6B1D2F] dark:text-[#E59BAE]" strokeWidth={1.75} />
+          <Wine className="h-3 w-3 shrink-0 text-[#6B1D2F] dark:text-[#E59BAE]" strokeWidth={1.75} />
           <span>{lang === 'ko' ? '테이스팅 노트' : 'Tasting Notes'}</span>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveModal('commentary')}
-          className="somm-sub-surface flex items-center justify-center gap-1.5 rounded-xl px-2.5 py-2.5 text-[12px] font-bold text-[var(--text-primary)] transition-colors hover:opacity-85"
+          className="somm-sub-surface inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-bold text-[var(--text-primary)] transition-colors hover:opacity-85"
         >
-          <MessageSquareText className="h-3.5 w-3.5 shrink-0 text-[#6B1D2F] dark:text-[#E59BAE]" strokeWidth={1.75} />
+          <MessageSquareText className="h-3 w-3 shrink-0 text-[#6B1D2F] dark:text-[#E59BAE]" strokeWidth={1.75} />
           <span>{lang === 'ko' ? '소믈리에 설명' : 'Rationale'}</span>
         </button>
 
         <button
           type="button"
-          onClick={onChoose}
+          onClick={() => setActiveModal('story')}
           data-surface="accent"
-          className="btn-accent flex items-center justify-center gap-1.5 rounded-xl px-2.5 py-2.5 text-[12px] font-bold shadow-xs transition-colors"
+          className="btn-accent inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-bold shadow-xs transition-colors"
         >
-          <MapPin className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
+          <MapPin className="h-3 w-3 shrink-0" strokeWidth={1.75} />
           <span>{lang === 'ko' ? '스토리 · 포도밭' : 'Story & Map'}</span>
         </button>
       </div>
 
-      {/* Always-Visible Intuitive 5-Icon Aroma Strip */}
-      <div className="mt-3">
+      {/* Dedicated 5-Icon Aroma Strip Below Divider */}
+      <div className="mt-3 border-t border-[var(--border-subtle)] pt-3.5">
         <CompactAromaIconRow wine={wine} lang={lang} />
       </div>
 
-      {/* Clean Modal Popups for Tasting Notes / Sommelier Commentary */}
+      {/* Clean Modal Popups for Tasting Notes / Sommelier Commentary / Story & Vineyard */}
       {activeModal !== null && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-xs"
@@ -903,9 +914,13 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
                     ? lang === 'ko'
                       ? '테이스팅 노트 · 구조 밸런스 & 34종 아로마 휠'
                       : 'Tasting Notes · Structure & 34-Aroma Wheel'
-                    : lang === 'ko'
-                      ? '소믈리에 추천 이유 & 음식 시음 팁'
-                      : 'Sommelier Rationale & Tasting Tip'}
+                    : activeModal === 'story'
+                      ? lang === 'ko'
+                        ? '하늘·땅·사람 이야기 & 와이너리 포도밭 위치'
+                        : 'Heaven · Earth · Maker Story & Vineyard Map'
+                      : lang === 'ko'
+                        ? '소믈리에 추천 이유 & 음식 시음 팁'
+                        : 'Sommelier Rationale & Tasting Tip'}
                 </div>
                 <h3 className="mt-1 text-[19px] font-bold text-[var(--text-primary)]">
                   {wineName}{' '}
@@ -929,6 +944,112 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
                 <StructureBalanceChart wine={wine} lang={lang} />
                 <AromaSpectrumCard wine={wine} lang={lang} defaultExpanded={true} />
                 <ServingGuideStrip wine={wine} lang={lang} valueTier={valueTier} />
+              </div>
+            ) : activeModal === 'story' ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                  <div className="somm-sub-surface rounded-2xl p-4">
+                    <div className="flex items-center gap-2 text-[13px] font-bold text-[#6B1D2F] dark:text-[#E59BAE]">
+                      <Sun className="h-4 w-4 shrink-0" strokeWidth={1.5} />
+                      <span>{t.heavenTitle}</span>
+                    </div>
+                    <p className="prose-pretty mt-2 text-[13px] leading-[1.6] text-[var(--text-primary)]">
+                      <GlossaryText
+                        text={
+                          lang === 'ko'
+                            ? wine.storytelling.heavenClimateKo
+                            : wine.storytelling.heavenClimateEn
+                        }
+                        lang={lang}
+                      />
+                    </p>
+                  </div>
+
+                  <div className="somm-sub-surface rounded-2xl p-4">
+                    <div className="flex items-center gap-2 text-[13px] font-bold text-[#6B1D2F] dark:text-[#E59BAE]">
+                      <Mountain className="h-4 w-4 shrink-0" strokeWidth={1.5} />
+                      <span>{t.earthTitle}</span>
+                    </div>
+                    <p className="prose-pretty mt-2 text-[13px] leading-[1.6] text-[var(--text-primary)]">
+                      <GlossaryText
+                        text={
+                          lang === 'ko'
+                            ? wine.storytelling.earthSoilKo
+                            : wine.storytelling.earthSoilEn
+                        }
+                        lang={lang}
+                      />
+                    </p>
+                  </div>
+
+                  <div className="somm-sub-surface rounded-2xl p-4">
+                    <div className="flex items-center gap-2 text-[13px] font-bold text-[#6B1D2F] dark:text-[#E59BAE]">
+                      <UserCheck className="h-4 w-4 shrink-0" strokeWidth={1.5} />
+                      <span>{t.humanTitle}</span>
+                    </div>
+                    <p className="prose-pretty mt-2 text-[13px] leading-[1.6] text-[var(--text-primary)]">
+                      <GlossaryText
+                        text={
+                          lang === 'ko'
+                            ? wine.storytelling.humanPhilosophyKo
+                            : wine.storytelling.humanPhilosophyEn
+                        }
+                        lang={lang}
+                      />
+                    </p>
+                  </div>
+                </div>
+
+                <div className="somm-sub-surface overflow-hidden rounded-2xl p-4">
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <MapPin
+                        className="h-4 w-4 text-[#6B1D2F] dark:text-[#E59BAE]"
+                        strokeWidth={1.5}
+                      />
+                      <div>
+                        <div className="text-[13px] font-bold text-[var(--text-primary)]">
+                          {t.wineryMapTitle}
+                        </div>
+                        <div className="text-[12px] text-[var(--text-secondary)]">
+                          {lang === 'ko' ? loc.placeLabelKo : loc.placeLabelEn}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <a
+                        href={googleEarthUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-full bg-[#6B1D2F] px-3 py-1.5 text-[11px] font-semibold text-[#FFFFFF] hover:bg-[#561524]"
+                      >
+                        <Globe className="h-3.5 w-3.5" strokeWidth={1.5} />
+                        <span>{t.openGoogleEarthBtn}</span>
+                        <ExternalLink className="h-3 w-3" strokeWidth={1.5} />
+                      </a>
+                      <a
+                        href={googleMapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-full bg-[var(--bg-secondary)] px-3 py-1.5 text-[11px] font-semibold text-[var(--text-primary)] shadow-sm"
+                      >
+                        <span>{t.openGoogleMapsBtn}</span>
+                        <ExternalLink className="h-3 w-3" strokeWidth={1.5} />
+                      </a>
+                    </div>
+                  </div>
+
+                  <div className="overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
+                    <iframe
+                      title={lang === 'ko' ? loc.placeLabelKo : loc.placeLabelEn}
+                      src={mapEmbedUrl}
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                      className="h-56 w-full border-0"
+                    />
+                  </div>
+                </div>
               </div>
             ) : (
               <div className="space-y-4">
