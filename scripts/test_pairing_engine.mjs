@@ -182,7 +182,7 @@ if (reRec.singleItems[0].wine.id === heavyRed.id) {
   throw new Error('Expected top recommendation to avoid overly tannic bottle after dislike');
 }
 if (reRec.singleItems[0].wine.category !== 'red' || reRec.singleItems[0].wine.structure.tannin > 3) {
-  throw new Error('Expected top steak recommendation after too_tannic to pivot to silky low-tannin red');
+  throw new Error('Expected top steak recommendation after too_tannic to pivot to silky low-tannin red, got: ' + reRec.singleItems.map((x) => x.wine.nameKo + ' [' + x.wine.category + ', t=' + x.wine.structure.tannin + ', ' + x.wine.venuePrice + ']').join(' | '));
 }
 
 // 7. Selective Bottle Swap preserves unchecked bottles and replaces checked bottle
@@ -241,6 +241,47 @@ if (new Set(personaPicks).size < 2) {
   throw new Error('Different sommeliers must produce distinct top recommendations: ' + personaPicks.join(', '));
 }
 
+// 9. Different budget tiers must return distinct, price-matched wine recommendations
+const budgetTiers = ['under_50', '50_100', '100_150', 'over_150'];
+const budgetTops = budgetTiers.map((tier) => {
+  const r = generatePairingRecommendation({
+    venue: v1,
+    wines: INITIAL_WINES,
+    persona: p1,
+    budgetTier: tier,
+    budgetScope: 'per_bottle',
+    selectedDishes: [
+      { id: 'd1', nameKo: '스테이크', nameEn: 'Steak', flavorTags: ['steak', 'rich'], intensity: 5, selected: true },
+    ],
+    bodyPref: 'any',
+    sweetnessPref: 'any',
+    occasion: 'date',
+    menuMode: 'alacarte',
+    courseBottleCount: 1,
+    coursePairingMode: 'ai_auto',
+    customSlots: ['sparkling', 'white', 'red'],
+    tasteProfile: DEFAULT_TASTE_PROFILE,
+  });
+  return {
+    tier,
+    top: r.singleItems[0].wine.nameKo,
+    price: r.singleItems[0].wine.venuePrice,
+    friendly: r.singleItems[0].commentaryKo,
+    expert: r.singleItems[0].expertCommentaryKo,
+    overallFriendly: r.overallNoteKo,
+    overallExpert: r.expertOverallNoteKo,
+  };
+});
+if (new Set(budgetTops.map((x) => x.top)).size < 3) {
+  throw new Error('Budget tiers returned identical top picks: ' + JSON.stringify(budgetTops));
+}
+if (budgetTops[0].price > 55000 || budgetTops[3].price < 145000) {
+  throw new Error('Budget pricing ceiling/floor violated: ' + JSON.stringify(budgetTops));
+}
+if (budgetTops[0].friendly === budgetTops[0].expert || budgetTops[0].overallFriendly === budgetTops[0].overallExpert) {
+  throw new Error('Friendly and expert explanations must be distinctly different');
+}
+
 export const testSummary = {
   singleTop: single.singleItems[0].wine.nameKo,
   courseAutoSeq: courseAuto.courseSequence.map((s) => s.wine.nameKo),
@@ -250,6 +291,7 @@ export const testSummary = {
   reRecTopAfterTooTannic: reRec.singleItems[0].wine.nameKo,
   nextSimilarAfterLike: nextWines.map((w) => w.nameKo),
   personaTopPicks: personaPicks,
+  budgetTops: budgetTops.map((b) => b.tier + ': ' + b.top + ' (' + b.price + ')'),
 };
 `;
 

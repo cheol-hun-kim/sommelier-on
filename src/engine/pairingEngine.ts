@@ -154,16 +154,18 @@ function scoreWineForContext(
     else score -= 45;
   }
 
-  // 2. Budget Fit
+  // 2. Budget Fit (strongly respects ceiling; softly prefers matching floor unless luxury tier)
   if (wine.venuePrice >= budgetWindow.min && wine.venuePrice <= budgetWindow.max) {
-    score += 24;
+    score += 56;
     const dist = Math.abs(wine.venuePrice - budgetWindow.ideal) / Math.max(1, budgetWindow.ideal);
-    score += Math.max(0, 8 - dist * 10);
+    score += Math.max(0, 14 - dist * 16);
   } else if (wine.venuePrice < budgetWindow.min) {
-    score += 10;
+    const underRatio = (budgetWindow.min - wine.venuePrice) / Math.max(1, budgetWindow.min);
+    const floorWeight = budgetWindow.min >= 140000 ? 55 : 8;
+    score -= floorWeight + Math.min(20, underRatio * 20);
   } else {
     const overRatio = (wine.venuePrice - budgetWindow.max) / Math.max(1, budgetWindow.max);
-    score -= Math.min(35, overRatio * 55);
+    score -= 105 + Math.min(120, overRatio * 145);
   }
 
   // 3. Dish Flavor Affinity
@@ -174,13 +176,17 @@ function scoreWineForContext(
   const intensityDiff = Math.abs(wine.structure.body - avgIntensity);
   score += Math.max(-10, 12 - intensityDiff * 4);
 
-  if (flavorTags.includes('steak') && wine.category === 'red') {
-    score += 24;
-    if (wine.structure.tannin >= 3 && !tasteProfile.affinityVector.avoidTags.includes('too_tannic')) {
-      score += 8;
-    }
-    if (tasteProfile.affinityVector.avoidTags.includes('too_tannic') && wine.structure.tannin <= 3) {
-      score += 18;
+  if (flavorTags.includes('steak')) {
+    if (wine.category === 'red') {
+      score += 48;
+      if (wine.structure.tannin >= 3 && !tasteProfile.affinityVector.avoidTags.includes('too_tannic')) {
+        score += 10;
+      }
+      if (tasteProfile.affinityVector.avoidTags.includes('too_tannic') && wine.structure.tannin <= 3) {
+        score += 32;
+      }
+    } else if (!flavorTags.includes('seafood') && wine.structure.body <= 3 && !wine.pairingAffinities.includes('steak')) {
+      score -= 22;
     }
   }
   if (flavorTags.includes('seafood') && (wine.category === 'white' || wine.category === 'sparkling') && wine.structure.acidity >= 4) {
@@ -272,14 +278,14 @@ function scoreWineForContext(
   }
 
   for (const avoid of tasteProfile.affinityVector.avoidTags) {
-    if (avoid === 'too_tannic' && wine.structure.tannin >= 4) score -= 35;
-    if (avoid === 'too_sour' && wine.structure.acidity >= 5) score -= 30;
-    if (avoid === 'too_sweet' && wine.structure.sweetness >= 3) score -= 35;
+    if (avoid === 'too_tannic' && wine.structure.tannin >= 4) score -= 125;
+    if (avoid === 'too_sour' && wine.structure.acidity >= 5) score -= 115;
+    if (avoid === 'too_sweet' && wine.structure.sweetness >= 3) score -= 125;
     if (avoid === 'too_heavy' && (wine.structure.body >= 4 || wine.aromas.secondary.includes('oak_cedar'))) {
-      score -= 28;
+      score -= 110;
     }
     if (avoid === 'overshadowed' && wine.structure.body <= 2 && avgIntensity >= 4) {
-      score -= 30;
+      score -= 105;
     }
   }
 
@@ -364,20 +370,20 @@ function buildPersonaCommentary(
   let expertEn = '';
 
   if (persona.toneStyle === 'classic_french') {
-    ko = `${dishSummaryKo}의 맛을 가장 깔끔하게 살려주는 한 병이에요. ${topAromaKo}처럼 기분 좋은 과실 향이 퍼진 뒤 입안을 상쾌하게 정리해 주어, 마지막 한 점까지 느끼함 없이 즐기실 수 있습니다.`;
-    en = `A poised match that keeps ${dishSummaryEn} tasting bright from the first bite to the last, lifting ${topAromaEn} cleanly on the finish.`;
-    expertKo = `${dishSummaryKo}의 소스 농도와 지질에 정밀하게 대칭되는 구조감을 갖췄습니다. ${wine.regionKo} 테루아에서 기인한 ${topAromaKo} 아로마와 ${secAromaKo}의 숙성 뉘앙스, 그리고 정제된 산도가 팔레트의 긴장감을 유지합니다.`;
-    expertEn = `Selected for structural precision beside ${dishSummaryEn}. ${wine.regionEn} terroir imparts focused ${topAromaEn}, layered ${secAromaEn}, and disciplined acid-tannin tension.`;
+    ko = `어렵게 생각하실 필요 없이 ${dishSummaryKo}의 맛을 제일 기분 좋게 살려주는 편한 와인이에요. 상큼한 ${topAromaKo} 향이 입안을 깔끔하게 씻어주어서, 마지막 한 입까지 전혀 느끼하지 않고 맛있게 즐기실 수 있습니다.`;
+    en = `An easygoing, bright match for ${dishSummaryEn}—fresh ${topAromaEn} notes keep every bite light and delicious right to the end.`;
+    expertKo = `[구조 및 테루아 분석] ${wine.regionKo}(${wine.varietalsKo}) 특유의 직선적 산도(${wine.structure.acidity}/5)와 정제된 타닌(${wine.structure.tannin}/5)이 ${dishSummaryKo}의 지방·소스 유화 질감과 대칭을 이룹니다. 1차 향(${topAromaKo})에서 2·3차 숙성 뉘앙스(${secAromaKo})로 이어지는 레이어가 팔레트의 긴장감을 견고히 지탱합니다.`;
+    expertEn = `[Structural & Terroir Note] ${wine.regionEn} (${wine.varietalsEn}) brings linear acidity (${wine.structure.acidity}/5) and poised phenolic tension (${wine.structure.tannin}/5) against the lipid richness of ${dishSummaryEn}, bridging primary ${topAromaEn} with ${secAromaEn}.`;
   } else if (persona.toneStyle === 'new_korean') {
-    ko = `${dishSummaryKo}처럼 깊은 감칠맛이 있는 요리에는 이렇게 부드럽게 감기는 와인이 참 편해요. 첫 모금에 퍼지는 ${topAromaKo} 향이 음식과 싸우지 않고 자연스럽게 어우러져서 처음 드시는 분도 부담 없이 좋아하실 거예요.`;
-    en = `Beside savory plates like ${dishSummaryEn}, this gentle, velvety bottle wraps around the flavors effortlessly without ever feeling harsh.`;
-    expertKo = `${dishSummaryKo}의 복합적인 감칠맛과 발효·로스팅 풍미를 포용하는 유연한 페놀 구조가 돋보입니다. ${topAromaKo}의 화사한 1차 향과 ${secAromaKo} 뉘앙스가 미각의 브릿지를 형성해 조화로운 페어링을 완성합니다.`;
-    expertEn = `Plush phenolic integration bridges roasted umami and savory glazes in ${dishSummaryEn}, pairing expressive ${topAromaEn} with supple ${secAromaEn} depth.`;
+    ko = `${dishSummaryKo}처럼 감칠맛이 짙은 요리랑 정말 잘 어울리는 부드러운 스타일이에요. 첫 모금에 포근한 ${topAromaKo} 향이 퍼지고 목 넘김이 순해서, 와인을 자주 안 드시는 분도 첫 잔부터 부담 없이 좋아하실 거예요.`;
+    en = `Warm and silky beside savory ${dishSummaryEn}, with gentle ${topAromaEn} fruit and a smooth finish anyone can enjoy immediately.`;
+    expertKo = `[감칠맛·페놀 브릿지 분석] ${wine.varietalsKo} 특유의 유연한 페놀 구조와 바디감(${wine.structure.body}/5)이 ${dishSummaryKo}의 마이야르·발효 감칠맛과 금속성 충돌 없이 결속됩니다. 발산하는 ${topAromaKo} 아로마와 숙성에서 온 ${secAromaKo} 결이 긴 여운(Finish)의 밸런스를 완성합니다.`;
+    expertEn = `[Umami & Phenolic Bridge] Pliable phenolic grain (${wine.varietalsEn}, body ${wine.structure.body}/5) embraces roasted umami and fermented glazes in ${dishSummaryEn}, linking high-toned ${topAromaEn} with ${secAromaEn} texture.`;
   } else {
-    ko = `오늘 ${occasion === 'celebration' ? '기분 좋은 자리에' : '테이블 분위기를 산뜻하게 띄우고 싶어'} 골라본 매력적인 와인입니다. 인위적인 느낌 없이 신선한 ${topAromaKo}와 ${secAromaKo} 향이 살아있어 ${dishSummaryKo}와 함께 마시면 이야기가 절로 즐거워집니다.`;
-    en = `A lively, characterful bottle to brighten the table beside ${dishSummaryEn}, brimming with fresh ${topAromaEn} and ${secAromaEn} vitality.`;
-    expertKo = `${wine.regionKo}의 지질과 미기후를 최소 개입 양조로 직관적으로 담아낸 큐베입니다. 인위적 뉴오크를 배제하고 토착 효모와 자연 산미로 ${topAromaKo} 및 ${secAromaKo} 스펙트럼을 선명히 끌어올려 ${dishSummaryKo}와 생동감 있는 대비를 이룹니다.`;
-    expertEn = `Low-intervention cuvée from ${wine.regionEn} fermented with native energy, preserving vibrant ${topAromaEn} and ${secAromaEn} tension against ${dishSummaryEn}.`;
+    ko = `${occasion === 'celebration' ? '오늘 기분 좋은 축하 자리에' : '식탁 분위기를 산뜻하게 띄우고 싶어'} 골라본 개성 있는 와인이에요. 싱그러운 ${topAromaKo}와 고소한 ${secAromaKo} 향이 살아있어 ${dishSummaryKo}와 한 잔 곁들이시면 대화가 훨씬 즐거워집니다.`;
+    en = `A lively, approachable bottle for ${dishSummaryEn}, bursting with fresh ${topAromaEn} and ${secAromaEn} charm to spark the table.`;
+    expertKo = `[저개입 양조·미네랄 프로파일] ${wine.regionKo}의 토양 미네랄리티와 토착 효모 발효에서 비롯된 선명한 생동감(산도 ${wine.structure.acidity}/5)이 특징입니다. 과도한 뉴오크 개입을 절제한 ${wine.varietalsKo} 큐베가 ${dishSummaryKo}에 신선한 산소감과 ${topAromaKo}·${secAromaKo}의 입체적 대비를 부여합니다.`;
+    expertEn = `[Low-Intervention & Mineral Profile] Native-fermented ${wine.varietalsEn} from ${wine.regionEn} delivers bright acidity (${wine.structure.acidity}/5) without heavy oak polish, creating crisp contrast against ${dishSummaryEn}.`;
   }
 
   if (hasAversionRelief) {
@@ -562,11 +568,15 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
 
   if (!isMultiBottleCourse) {
     const limit = Math.min(4, Math.max(1, venue.recommendationLimit || 3));
+    const effectiveBudgetWindow =
+      query.sourceMode === 'my_cellar'
+        ? { min: 0, max: 100000000, ideal: 250000 }
+        : budgetWindow;
     const scored = eligiblePool
       .map((wine) => {
         let s = scoreWineForContext(wine, {
           persona,
-          budgetWindow,
+          budgetWindow: effectiveBudgetWindow,
           flavorTags: allTags,
           avgIntensity,
           bodyPref,
@@ -615,14 +625,24 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
 
     const overallNoteKo =
       corkageWine
-        ? `${persona.nameKo}가 가져오신 [${corkageWine.name}]과 자연스럽게 대비·조화를 이루는 업장 와인을 우선 선정했습니다.`
+        ? `${persona.nameKo}가 가져오신 [${corkageWine.name}]과 자연스럽게 어울리도록 편하고 맛있게 즐기기 좋은 와인을 추렸습니다.`
         : menuMode === 'course'
-          ? `${persona.nameKo}의 시선으로 전채부터 메인까지 한 병으로 매끄럽게 이어지는 균형미 뛰어난 와인을 추렸습니다.`
-          : `${persona.nameKo}가 선택하신 요리들의 맛의 공통분모를 읽어, 현재 셀러에 재고가 있는 와인 중 최적의 바틀을 골랐습니다.`;
+          ? `${persona.nameKo}가 전채부터 메인까지 한 병으로 편하고 균형 있게 즐기실 수 있는 와인을 골랐습니다.`
+          : `${persona.nameKo}가 고르신 요리의 맛에 맞춰 부담 없이 즐기시기 좋은 와인을 선별했습니다.`;
     const overallNoteEn =
       menuMode === 'course'
-        ? `Curated by ${persona.nameEn}: versatile, in-stock selections capable of carrying the full tasting progression in a single bottle.`
-        : `Curated by ${persona.nameEn}: top in-stock selections tuned to the shared flavor bridge of your chosen dishes.`;
+        ? `Curated by ${persona.nameEn}: versatile, easy-to-enjoy selections that carry every course comfortably.`
+        : `Curated by ${persona.nameEn}: approachable in-stock picks tuned to the dishes on your table.`;
+    const expertOverallNoteKo =
+      corkageWine
+        ? `[소믈리에 큐레이션] 지참하신 [${corkageWine.name}]의 산도·바디 커브와 대비·보완 구조를 이루는 셀러 보틀을 예산 범위 내에서 선별했습니다.`
+        : menuMode === 'course'
+          ? `[구조·페어링 분석] 코스 전반의 풍미 강도 상승 곡선과 선택 예산 대역을 동시에 충족하는 단일 바틀 포트폴리오입니다.`
+          : `[미각·예산 정밀 매칭] 선택 요리의 핵심 향미 태그와 단백질/지방 밀도에 대응하는 최적 구조감을 설정 예산 내에서 선별했습니다.`;
+    const expertOverallNoteEn =
+      menuMode === 'course'
+        ? `[Structural Curation] Single-bottle candidates calibrated to rising course intensity within your target budget window.`
+        : `[Precision Pairing] In-stock cuvées matched to dish lipid density, aromatic bridges, and selected price tier.`;
 
     return {
       kind: 'single_or_alacarte',
@@ -636,6 +656,8 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
       totalPrice: singleItems[0]?.wine.venuePrice ?? 0,
       overallNoteKo,
       overallNoteEn,
+      expertOverallNoteKo,
+      expertOverallNoteEn,
       singleItems,
       extraGlass: pickExtraGlass(
         new Set(singleItems[0] ? [singleItems[0].wine.id] : []),
@@ -823,12 +845,27 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
             : Math.min(maxValidIdx, Math.round(ratio * maxValidIdx));
         chosen = byWeight[targetPos];
       } else {
-        // Apply Quality / Budget Allocation Focus
+        // Budget-aware Quality Allocation Focus (respects selected budget ceiling while shifting relative investment)
+        const slotBudgetWindow =
+          focusSlotIdx === null
+            ? budgetWindow
+            : i === focusSlotIdx
+              ? {
+                  min: Math.round(budgetWindow.ideal * 0.9),
+                  max: Math.round(budgetWindow.max * 1.15),
+                  ideal: budgetWindow.max,
+                }
+              : {
+                  min: Math.round(budgetWindow.min * 0.75),
+                  max: Math.max(50000, budgetWindow.ideal),
+                  ideal: Math.max(40000, Math.round((budgetWindow.min + budgetWindow.ideal) / 2)),
+                };
+
         const scoredSlot = candidates
           .map((wine) => {
-            let s = scoreWineForContext(wine, {
+            const s = scoreWineForContext(wine, {
               persona,
-              budgetWindow,
+              budgetWindow: slotBudgetWindow,
               flavorTags: segTags,
               avgIntensity: segAvgIntensity,
               bodyPref,
@@ -837,15 +874,6 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
               tasteProfile,
               forcedCategory: requestedCat,
             });
-            if (focusSlotIdx !== null) {
-              if (i === focusSlotIdx) {
-                // Elevate higher-tier bottle in the focused slot while preserving persona character
-                s += wine.venuePrice / 6000;
-              } else {
-                // Keep non-focused slots smart, harmonious, and budget-friendly
-                s -= wine.venuePrice / 7000;
-              }
-            }
             return { wine, score: s };
           })
           .sort((a, b) => b.score - a.score);
@@ -938,12 +966,20 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
 
       const descKo =
         fSlot === null
-          ? '모든 병에 예산을 고르게 배분해 처음부터 끝까지 안정적인 만족감을 드리는 구성입니다.'
-          : `${fSlot + 1}번째 ${focusedCatKo}에 예산과 비중을 집중하고, 나머지 병은 음식과 조화로운 합리적 라인업으로 맞췄습니다.`;
+          ? '모든 병에 예산을 고르게 배분해 처음부터 끝까지 편하고 안정적인 만족감을 드리는 구성입니다.'
+          : `${fSlot + 1}번째 ${focusedCatKo}에 비중을 실어 포인트를 주고, 나머지 병은 편하게 곁들이기 좋은 라인업으로 맞췄습니다.`;
       const descEn =
         fSlot === null
-          ? 'Balanced budget allocation across every bottle in the course.'
-          : `Invests flagship focus into Bottle ${fSlot + 1} (${focusedCatEn}) while pairing the remaining courses smartly.`;
+          ? 'Even budget allocation across every bottle in the course.'
+          : `Highlights Bottle ${fSlot + 1} (${focusedCatEn}) as the centerpiece while keeping the rest balanced.`;
+      const expertDescKo =
+        fSlot === null
+          ? `[균등 구조 설계] 설정하신 예산 대역 내에서 전채-중반-메인의 산도·타닌 곡선을 균일한 급간으로 배분했습니다.`
+          : `[포트폴리오 집중 설계] ${fSlot + 1}번 슬롯(${focusedCatKo})에 설정 예산 내 최상위 떼루아·숙성 잠재력 바틀을 배치하고, 인접 구간은 산도·질감 호환성 위주로 최적화했습니다.`;
+      const expertDescEn =
+        fSlot === null
+          ? `[Balanced Architecture] Distributes target budget evenly across the ascending intensity curve of all course stages.`
+          : `[Weighted Portfolio] Allocates peak terroir concentration to Bottle ${fSlot + 1} (${focusedCatEn}) within budget while balancing adjacent acid-tannin bridges.`;
 
       courseScenarios.push({
         id: `focus_slot_${fSlot ?? 'balanced'}`,
@@ -951,6 +987,8 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
         labelEn,
         focusDescKo: descKo,
         focusDescEn: descEn,
+        expertFocusDescKo: expertDescKo,
+        expertFocusDescEn: expertDescEn,
         totalPrice: sequence.reduce((s, x) => s + x.wine.venuePrice, 0),
         sequence,
       });
@@ -977,10 +1015,16 @@ export function generatePairingRecommendation(query: PairingQuery): PairingRecom
     totalPrice,
     overallNoteKo: isGlassCourse
       ? `${persona.nameKo}가 코스 흐름에 맞춰 1잔씩 부담 없이 즐기실 수 있도록 [${comboNamesKo}] 3잔 구성을 마련했습니다.`
-      : `${persona.nameKo}가 코스의 강도 곡선을 따라 취향 비중별로 선택하실 수 있는 맞춤 페어링 구성입니다.`,
+      : `${persona.nameKo}가 코스의 흐름에 맞춰 편하게 비교해 보실 수 있도록 예산별 맞춤 와인 구성을 준비했습니다.`,
     overallNoteEn: isGlassCourse
-      ? `Curated by ${persona.nameEn}: a 3-glass [${comboNamesEn}] progression paced to every course.`
-      : `Curated by ${persona.nameEn}: compare weight-focused bottle lineups tailored to tonight’s course.`,
+      ? `Curated by ${persona.nameEn}: a 3-glass [${comboNamesEn}] progression paced gently to every course.`
+      : `Curated by ${persona.nameEn}: compare weight-focused lineups tuned to your budget.`,
+    expertOverallNoteKo: isGlassCourse
+      ? `[코스 글라스 아키텍처] 아페리티프부터 메인 구간까지 [${comboNamesKo}] 순으로 산도·페놀 밀도가 점진 상승하도록 설계한 3잔 페어링입니다.`
+      : `[코스 다병 페어링 설계] 각 코스 구간의 조리법·지방 밀도에 맞춰 [${comboNamesKo}] 슬롯별 산도·타닌 밸런스를 설정 예산 범위 안에서 조율했습니다.`,
+    expertOverallNoteEn: isGlassCourse
+      ? `[By-the-Glass Progression] Designed across [${comboNamesEn}] for rising acidity-to-phenolic density.`
+      : `[Multi-Bottle Architecture] Calibrated [${comboNamesEn}] phenolic and aromatic progressions strictly aligned to your budget ceiling.`,
     courseSequence: primarySequence,
     courseScenarios,
     extraGlass: pickExtraGlass(

@@ -250,6 +250,8 @@ export interface CourseScenario {
   labelEn: string;
   focusDescKo: string;
   focusDescEn: string;
+  expertFocusDescKo?: string;
+  expertFocusDescEn?: string;
   totalPrice: number;
   sequence: CourseBottleSlotRecommendation[];
 }
@@ -267,6 +269,8 @@ export interface PairingRecommendationBundle {
   totalPrice: number;
   overallNoteKo: string;
   overallNoteEn: string;
+  expertOverallNoteKo?: string;
+  expertOverallNoteEn?: string;
   singleItems?: SingleWineRecommendation[];
   courseSequence?: CourseBottleSlotRecommendation[];
   courseScenarios?: CourseScenario[];

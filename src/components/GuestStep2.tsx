@@ -198,12 +198,20 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
               </div>
               <p className="prose-pretty mt-1 text-[15px] leading-[1.6] text-[var(--text-primary)]">
                 {activeScenario
-                  ? lang === 'ko'
-                    ? activeScenario.focusDescKo
-                    : activeScenario.focusDescEn
-                  : lang === 'ko'
-                    ? bundle.overallNoteKo
-                    : bundle.overallNoteEn}
+                  ? speechStyle === 'expert'
+                    ? lang === 'ko'
+                      ? activeScenario.expertFocusDescKo ?? activeScenario.focusDescKo
+                      : activeScenario.expertFocusDescEn ?? activeScenario.focusDescEn
+                    : lang === 'ko'
+                      ? activeScenario.focusDescKo
+                      : activeScenario.focusDescEn
+                  : speechStyle === 'expert'
+                    ? lang === 'ko'
+                      ? bundle.expertOverallNoteKo ?? bundle.overallNoteKo
+                      : bundle.expertOverallNoteEn ?? bundle.overallNoteEn
+                    : lang === 'ko'
+                      ? bundle.overallNoteKo
+                      : bundle.overallNoteEn}
               </p>
             </div>
           </div>
@@ -551,6 +559,8 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
             highlights={
               lang === 'ko' ? item.pairingPointsKo : item.pairingPointsEn
             }
+            speechStyle={speechStyle}
+            onSpeechStyleChange={onSpeechStyleChange}
             ctaLabel={contextCtaLabel}
             priceLabel={contextPriceLabel}
             onChoose={() => onSelectWineForDrinking(item.wine)}
@@ -594,6 +604,8 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
             highlights={
               lang === 'ko' ? item.pairingPointsKo : item.pairingPointsEn
             }
+            speechStyle={speechStyle}
+            onSpeechStyleChange={onSpeechStyleChange}
             ctaLabel={contextCtaLabel}
             priceLabel={contextPriceLabel}
             onChoose={() => onSelectWineForDrinking(item.wine)}
@@ -641,6 +653,8 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
                   : slot.bridgeReasonEn
             }
             tastingTip={lang === 'ko' ? slot.tastingTipKo : slot.tastingTipEn}
+            speechStyle={speechStyle}
+            onSpeechStyleChange={onSpeechStyleChange}
             ctaLabel={contextCtaLabel}
             priceLabel={contextPriceLabel}
             onChoose={() => onSelectWineForDrinking(slot.wine)}
@@ -677,6 +691,8 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
               ? bundle.extraGlass.pairingPointsKo
               : bundle.extraGlass.pairingPointsEn
           }
+          speechStyle={speechStyle}
+          onSpeechStyleChange={onSpeechStyleChange}
           ctaLabel={contextCtaLabel}
           onChoose={() => onSelectWineForDrinking(bundle.extraGlass!.wine)}
         />
@@ -705,6 +721,8 @@ interface WineCardProps {
   commentary: string;
   tastingTip?: string;
   highlights?: string[];
+  speechStyle?: SpeechStyle;
+  onSpeechStyleChange?: (style: SpeechStyle) => void;
   ctaLabel?: string;
   priceLabel?: string;
   onChoose: () => void;
@@ -724,6 +742,8 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
   commentary,
   tastingTip,
   highlights,
+  speechStyle = 'friendly',
+  onSpeechStyleChange,
   ctaLabel,
   priceLabel,
   onChoose,
@@ -1053,6 +1073,26 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
               </div>
             ) : (
               <div className="space-y-4">
+                {onSpeechStyleChange && (
+                  <div className="flex justify-end">
+                    <SlidingSwitch
+                      size="sm"
+                      value={speechStyle}
+                      options={[
+                        {
+                          value: 'friendly',
+                          label: lang === 'ko' ? '친근한 설명' : 'Friendly',
+                        },
+                        {
+                          value: 'expert',
+                          label: lang === 'ko' ? '전문적인 설명' : 'Sommelier Pro',
+                        },
+                      ]}
+                      onChange={onSpeechStyleChange}
+                    />
+                  </div>
+                )}
+
                 <p className="prose-pretty border-l-[3px] border-[#6B1D2F] pl-4 text-[15px] leading-[1.65] text-[var(--text-primary)]">
                   <GlossaryText text={commentary} lang={lang} />
                 </p>
