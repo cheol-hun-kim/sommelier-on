@@ -327,9 +327,13 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
                     </p>
                   </div>
 
-                  <p className="prose-pretty rounded-2xl bg-[var(--bg-tertiary)]/65 p-4 text-[15px] leading-[1.65] text-[var(--text-primary)]">
-                    “{lang === 'ko' ? activePersona.philosophyKo : activePersona.philosophyEn}”
-                  </p>
+                  <div className="prose-pretty rounded-2xl border-l-[3px] border-[#6B1D2F] bg-[var(--bg-tertiary)]/65 p-4 text-[15px] leading-[1.65] text-[var(--text-primary)]">
+                    “
+                    {lang === 'ko'
+                      ? activePersona.greetingKo ?? activePersona.philosophyKo
+                      : activePersona.greetingEn ?? activePersona.philosophyEn}
+                    ”
+                  </div>
 
                   <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
                     <span className="text-[12px] font-semibold text-[var(--text-secondary)]">

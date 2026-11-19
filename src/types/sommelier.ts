@@ -110,6 +110,8 @@ export interface SommelierPersona {
   credentialsEn: string;
   philosophyKo: string;
   philosophyEn: string;
+  greetingKo?: string;
+  greetingEn?: string;
   signatureRuleKo: string;
   signatureRuleEn: string;
   preferredRegions: string[];

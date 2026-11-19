@@ -4,11 +4,13 @@ import {
   ArrowRight,
   Check,
   CheckCircle2,
-  ChevronDown,
-  ChevronUp,
   Info,
+  MapPin,
+  MessageSquareText,
   RefreshCw,
   Sparkles,
+  Wine,
+  X,
 } from 'lucide-react';
 import type {
   Language,
@@ -722,8 +724,7 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
   onChoose,
 }) => {
   const t = TRANSLATIONS[lang];
-  const [notesOpen, setNotesOpen] = useState(false);
-  const [commentaryOpen, setCommentaryOpen] = useState(false);
+  const [activeModal, setActiveModal] = useState<'notes' | 'commentary' | null>(null);
   const wineName = lang === 'ko' ? wine.nameKo : wine.nameEn;
   const varietal = lang === 'ko' ? wine.varietalsKo : wine.varietalsEn;
   const region = lang === 'ko' ? wine.regionKo : wine.regionEn;
@@ -849,118 +850,143 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
         </div>
       </div>
 
-      {/* Always-Visible Intuitive 5-Icon Aroma Strip */}
-      <div className="mt-4 border-t border-[var(--border-subtle)] pt-4">
-        <CompactAromaIconRow wine={wine} lang={lang} />
-      </div>
-
-      {/* Dropdown 1 (Top): Structural Balance + 34-Descriptor Aroma Wheel + Serving Guide */}
-      <div className="mt-4 overflow-hidden rounded-2xl border border-[var(--border-subtle)]">
+      {/* 3 Compact Action Buttons Directly Above 5-Aroma Icons */}
+      <div className="mt-4 grid grid-cols-3 gap-2 border-t border-[var(--border-subtle)] pt-4">
         <button
           type="button"
-          onClick={() => setNotesOpen((prev) => !prev)}
-          className="somm-sub-surface flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:opacity-90"
+          onClick={() => setActiveModal('notes')}
+          className="somm-sub-surface flex items-center justify-center gap-1.5 rounded-xl px-2.5 py-2.5 text-[12px] font-bold text-[var(--text-primary)] transition-colors hover:opacity-85"
         >
-          <div>
-            <div className="text-[13px] font-bold text-[var(--text-primary)]">
-              {lang === 'ko'
-                ? '테이스팅 노트 · 구조 밸런스 & 1·2·3차향 아로마 휠'
-                : 'Tasting Notes · Structure & 34-Aroma Wheel'}
-            </div>
-            <div className="text-[11px] text-[var(--text-secondary)]">
-              {lang === 'ko'
-                ? '바디·산도·타닌 균형과 1·2·3차향 상세 스펙트럼, 적정 시음 온도를 확인합니다.'
-                : 'Inspect 5-axis structure, separated 1st/2nd/3rd tier aromas, and serving guide.'}
-            </div>
-          </div>
-          {notesOpen ? (
-            <ChevronUp className="h-4 w-4 shrink-0 text-[var(--text-secondary)]" strokeWidth={1.75} />
-          ) : (
-            <ChevronDown className="h-4 w-4 shrink-0 text-[var(--text-secondary)]" strokeWidth={1.75} />
-          )}
+          <Wine className="h-3.5 w-3.5 shrink-0 text-[#6B1D2F] dark:text-[#E59BAE]" strokeWidth={1.75} />
+          <span>{lang === 'ko' ? '테이스팅 노트' : 'Tasting Notes'}</span>
         </button>
 
-        {notesOpen && (
-          <div className="space-y-4 p-4">
-            <StructureBalanceChart wine={wine} lang={lang} />
-            <AromaSpectrumCard wine={wine} lang={lang} defaultExpanded={true} />
-            <ServingGuideStrip wine={wine} lang={lang} valueTier={valueTier} />
-          </div>
-        )}
-      </div>
-
-      {/* Dropdown 2 (Bottom): Sommelier Commentary & Tasting Tip */}
-      <div className="mt-3 overflow-hidden rounded-2xl border border-[var(--border-subtle)]">
         <button
           type="button"
-          onClick={() => setCommentaryOpen((prev) => !prev)}
-          className="somm-sub-surface flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:opacity-90"
+          onClick={() => setActiveModal('commentary')}
+          className="somm-sub-surface flex items-center justify-center gap-1.5 rounded-xl px-2.5 py-2.5 text-[12px] font-bold text-[var(--text-primary)] transition-colors hover:opacity-85"
         >
-          <div>
-            <div className="text-[13px] font-bold text-[var(--text-primary)]">
-              {lang === 'ko'
-                ? '소믈리에 추천 이유 & 음식 시음 팁'
-                : 'Sommelier Rationale & Tasting Tip'}
-            </div>
-            <div className="text-[11px] text-[var(--text-secondary)]">
-              {lang === 'ko'
-                ? '이 와인이 오늘 요리와 만나는 이유와 곁들이는 순서를 읽어보실 수 있습니다.'
-                : 'Read the pairing rationale, culinary bridges, and tasting sequence.'}
-            </div>
-          </div>
-          {commentaryOpen ? (
-            <ChevronUp className="h-4 w-4 shrink-0 text-[var(--text-secondary)]" strokeWidth={1.75} />
-          ) : (
-            <ChevronDown className="h-4 w-4 shrink-0 text-[var(--text-secondary)]" strokeWidth={1.75} />
-          )}
+          <MessageSquareText className="h-3.5 w-3.5 shrink-0 text-[#6B1D2F] dark:text-[#E59BAE]" strokeWidth={1.75} />
+          <span>{lang === 'ko' ? '소믈리에 설명' : 'Rationale'}</span>
         </button>
 
-        {commentaryOpen && (
-          <div className="space-y-3 border-t border-[var(--border-subtle)] p-4">
-            <p className="prose-pretty border-l-[3px] border-[#6B1D2F] pl-3.5 text-[14px] leading-[1.6] text-[var(--text-primary)]">
-              <GlossaryText text={commentary} lang={lang} />
-            </p>
-
-            {tastingTip && (
-              <div className="rounded-xl bg-[#FBF4E8]/85 px-3.5 py-2.5 text-[13px] leading-relaxed text-[#5C3D12] dark:bg-[#2B2214] dark:text-[#ECC88D]">
-                <span className="mr-1.5 font-bold">
-                  {lang === 'ko' ? '시음 팁 ·' : 'Tasting Tip ·'}
-                </span>
-                <GlossaryText text={tastingTip} lang={lang} />
-              </div>
-            )}
-
-            {highlights && highlights.length > 0 && (
-              <ul className="space-y-1 pt-1">
-                {highlights.map((pt, idx) => (
-                  <li
-                    key={idx}
-                    className="flex items-center gap-2 text-[13px] text-[var(--text-secondary)]"
-                  >
-                    <CheckCircle2
-                      className="h-3.5 w-3.5 shrink-0 text-[#6B1D2F] dark:text-[#E59BAE]"
-                      strokeWidth={1.5}
-                    />
-                    <span>{pt}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Bottle Selection / In-Drinking Guide CTA */}
-      <div className="mt-5">
         <button
           type="button"
           onClick={onChoose}
           data-surface="accent"
-          className="btn-accent w-full rounded-2xl px-5 py-3.5 text-[14px] font-semibold transition-colors"
+          className="btn-accent flex items-center justify-center gap-1.5 rounded-xl px-2.5 py-2.5 text-[12px] font-bold shadow-xs transition-colors"
         >
-          {ctaLabel ?? t.chooseWineCta}
+          <MapPin className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
+          <span>{lang === 'ko' ? '스토리 · 포도밭' : 'Story & Map'}</span>
         </button>
       </div>
+
+      {/* Always-Visible Intuitive 5-Icon Aroma Strip */}
+      <div className="mt-3">
+        <CompactAromaIconRow wine={wine} lang={lang} />
+      </div>
+
+      {/* Clean Modal Popups for Tasting Notes / Sommelier Commentary */}
+      {activeModal !== null && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-xs"
+          onClick={() => setActiveModal(null)}
+        >
+          <div
+            className="somm-card max-h-[88vh] w-full max-w-3xl overflow-y-auto rounded-3xl p-5 shadow-2xl sm:p-7"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-start justify-between gap-3 border-b border-[var(--border-subtle)] pb-4">
+              <div>
+                <div className="text-[12px] font-semibold text-[#6B1D2F] dark:text-[#E59BAE]">
+                  {activeModal === 'notes'
+                    ? lang === 'ko'
+                      ? '테이스팅 노트 · 구조 밸런스 & 34종 아로마 휠'
+                      : 'Tasting Notes · Structure & 34-Aroma Wheel'
+                    : lang === 'ko'
+                      ? '소믈리에 추천 이유 & 음식 시음 팁'
+                      : 'Sommelier Rationale & Tasting Tip'}
+                </div>
+                <h3 className="mt-1 text-[19px] font-bold text-[var(--text-primary)]">
+                  {wineName}{' '}
+                  <span className="font-semibold tabular-nums text-[var(--text-secondary)]">
+                    {wine.vintage}
+                  </span>
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveModal(null)}
+                aria-label="Close modal"
+                className="somm-sub-surface rounded-full p-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              >
+                <X className="h-4 w-4" strokeWidth={1.75} />
+              </button>
+            </div>
+
+            {activeModal === 'notes' ? (
+              <div className="space-y-4">
+                <StructureBalanceChart wine={wine} lang={lang} />
+                <AromaSpectrumCard wine={wine} lang={lang} defaultExpanded={true} />
+                <ServingGuideStrip wine={wine} lang={lang} valueTier={valueTier} />
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <p className="prose-pretty border-l-[3px] border-[#6B1D2F] pl-4 text-[15px] leading-[1.65] text-[var(--text-primary)]">
+                  <GlossaryText text={commentary} lang={lang} />
+                </p>
+
+                {tastingTip && (
+                  <div className="rounded-xl bg-[#FBF4E8]/85 px-4 py-3 text-[13px] leading-relaxed text-[#5C3D12] dark:bg-[#2B2214] dark:text-[#ECC88D]">
+                    <span className="mr-1.5 font-bold">
+                      {lang === 'ko' ? '시음 팁 ·' : 'Tasting Tip ·'}
+                    </span>
+                    <GlossaryText text={tastingTip} lang={lang} />
+                  </div>
+                )}
+
+                {highlights && highlights.length > 0 && (
+                  <ul className="space-y-1.5 pt-1">
+                    {highlights.map((pt, idx) => (
+                      <li
+                        key={idx}
+                        className="flex items-center gap-2 text-[13px] text-[var(--text-secondary)]"
+                      >
+                        <CheckCircle2
+                          className="h-3.5 w-3.5 shrink-0 text-[#6B1D2F] dark:text-[#E59BAE]"
+                          strokeWidth={1.5}
+                        />
+                        <span>{pt}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+
+            <div className="mt-6 flex flex-wrap items-center justify-end gap-2.5 border-t border-[var(--border-subtle)] pt-4">
+              <button
+                type="button"
+                onClick={() => setActiveModal(null)}
+                className="somm-sub-surface rounded-xl px-4 py-2.5 text-[13px] font-semibold text-[var(--text-primary)]"
+              >
+                {t.closeBtn}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveModal(null);
+                  onChoose();
+                }}
+                data-surface="accent"
+                className="btn-accent rounded-xl px-5 py-2.5 text-[13px] font-bold"
+              >
+                {ctaLabel ?? t.chooseWineCta}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </article>
   );
 };
