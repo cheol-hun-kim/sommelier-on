@@ -11,13 +11,17 @@ import {
   MessageSquareText,
   Mountain,
   RefreshCw,
+  RotateCcw,
   Sparkles,
   Sun,
+  ThumbsDown,
+  ThumbsUp,
   UserCheck,
   Wine,
   X,
 } from 'lucide-react';
 import type {
+  DislikeReasonTag,
   Language,
   PairingRecommendationBundle,
   SpeechStyle,
@@ -26,7 +30,13 @@ import type {
   VisitTiming,
   WineItem,
 } from '../types/sommelier';
-import { CATEGORY_LABELS, TRANSLATIONS, formatKrw } from '../i18n/translations';
+import {
+  CATEGORY_LABELS,
+  DISLIKE_REASON_LABELS,
+  TRANSLATIONS,
+  formatKrw,
+} from '../i18n/translations';
+import { getNextRecommendedWines } from '../engine/pairingEngine';
 import { GlossaryText } from './GlossaryText';
 import { SlidingSwitch } from './SlidingSwitch';
 import {
@@ -44,12 +54,15 @@ import {
 interface GuestStep2Props {
   lang: Language;
   venue: Venue;
+  allWines: WineItem[];
   visitTiming: VisitTiming;
   bundle: PairingRecommendationBundle;
   speechStyle: SpeechStyle;
   onSpeechStyleChange: (style: SpeechStyle) => void;
   onBack: () => void;
-  onSelectWineForDrinking: (wine: WineItem) => void;
+  onLikeWine: (wine: WineItem, memo?: string) => void;
+  onDislikeWine: (wine: WineItem, reasons: DislikeReasonTag[], memo?: string) => void;
+  onReRecommend: () => void;
   onSwapWines: (activeScenarioIdx: number, wineIdsToSwap: string[]) => void;
   onCreateReservation: (input: {
     guestName: string;
@@ -63,12 +76,15 @@ interface GuestStep2Props {
 export const GuestStep2: React.FC<GuestStep2Props> = ({
   lang,
   venue,
+  allWines,
   visitTiming,
   bundle,
   speechStyle,
   onSpeechStyleChange,
   onBack,
-  onSelectWineForDrinking,
+  onLikeWine,
+  onDislikeWine,
+  onReRecommend,
   onSwapWines,
   onCreateReservation,
 }) => {
@@ -103,13 +119,6 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
     activeScenario?.sequence ?? bundle.courseSequence ?? [];
   const activeTotalPrice =
     activeScenario?.totalPrice ?? bundle.totalPrice;
-
-  const contextCtaLabel =
-    visitTiming === 'pre_visit'
-      ? lang === 'ko'
-        ? '이 와인의 스토리 · 포도밭 미리 살펴보기'
-        : 'Preview Wine Story & Vineyard'
-      : t.chooseWineCta;
 
   const contextPriceLabel =
     bundle.sourceMode === 'my_cellar'
@@ -561,9 +570,12 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
             }
             speechStyle={speechStyle}
             onSpeechStyleChange={onSpeechStyleChange}
-            ctaLabel={contextCtaLabel}
             priceLabel={contextPriceLabel}
-            onChoose={() => onSelectWineForDrinking(item.wine)}
+            allWines={allWines}
+            venueId={venue.id}
+            onLikeWine={onLikeWine}
+            onDislikeWine={onDislikeWine}
+            onReRecommend={onReRecommend}
           />
         ))}
 
@@ -606,9 +618,12 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
             }
             speechStyle={speechStyle}
             onSpeechStyleChange={onSpeechStyleChange}
-            ctaLabel={contextCtaLabel}
             priceLabel={contextPriceLabel}
-            onChoose={() => onSelectWineForDrinking(item.wine)}
+            allWines={allWines}
+            venueId={venue.id}
+            onLikeWine={onLikeWine}
+            onDislikeWine={onDislikeWine}
+            onReRecommend={onReRecommend}
           />
         ))}
 
@@ -655,9 +670,12 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
             tastingTip={lang === 'ko' ? slot.tastingTipKo : slot.tastingTipEn}
             speechStyle={speechStyle}
             onSpeechStyleChange={onSpeechStyleChange}
-            ctaLabel={contextCtaLabel}
             priceLabel={contextPriceLabel}
-            onChoose={() => onSelectWineForDrinking(slot.wine)}
+            allWines={allWines}
+            venueId={venue.id}
+            onLikeWine={onLikeWine}
+            onDislikeWine={onDislikeWine}
+            onReRecommend={onReRecommend}
           />
         ))}
 
@@ -693,8 +711,11 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
           }
           speechStyle={speechStyle}
           onSpeechStyleChange={onSpeechStyleChange}
-          ctaLabel={contextCtaLabel}
-          onChoose={() => onSelectWineForDrinking(bundle.extraGlass!.wine)}
+          allWines={allWines}
+          venueId={venue.id}
+          onLikeWine={onLikeWine}
+          onDislikeWine={onDislikeWine}
+          onReRecommend={onReRecommend}
         />
       )}
 
@@ -710,6 +731,8 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
 interface WineCardProps {
   lang: Language;
   wine: WineItem;
+  allWines: WineItem[];
+  venueId: string;
   badgeLabel: string;
   courseSegmentTitle?: string;
   courseDishes?: string[];
@@ -723,14 +746,17 @@ interface WineCardProps {
   highlights?: string[];
   speechStyle?: SpeechStyle;
   onSpeechStyleChange?: (style: SpeechStyle) => void;
-  ctaLabel?: string;
   priceLabel?: string;
-  onChoose: () => void;
+  onLikeWine: (wine: WineItem, memo?: string) => void;
+  onDislikeWine: (wine: WineItem, reasons: DislikeReasonTag[], memo?: string) => void;
+  onReRecommend: () => void;
 }
 
 const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
   lang,
   wine,
+  allWines,
+  venueId,
   badgeLabel,
   courseSegmentTitle,
   courseDishes,
@@ -744,12 +770,19 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
   highlights,
   speechStyle = 'friendly',
   onSpeechStyleChange,
-  ctaLabel,
   priceLabel,
-  onChoose,
+  onLikeWine,
+  onDislikeWine,
+  onReRecommend,
 }) => {
   const t = TRANSLATIONS[lang];
-  const [activeModal, setActiveModal] = useState<'notes' | 'commentary' | 'story' | null>(null);
+  const [activeModal, setActiveModal] = useState<'notes' | 'commentary' | 'story' | 'feedback' | null>(null);
+  const [feedbackState, setFeedbackState] = useState<'idle' | 'liked' | 'disliking' | 'disliked_saved'>('idle');
+  const [selectedReasons, setSelectedReasons] = useState<DislikeReasonTag[]>([]);
+  const [memoInput, setMemoInput] = useState('');
+
+  const nextSuggestions =
+    feedbackState === 'liked' ? getNextRecommendedWines(wine, allWines, venueId) : [];
   const wineName = lang === 'ko' ? wine.nameKo : wine.nameEn;
   const varietal = lang === 'ko' ? wine.varietalsKo : wine.varietalsEn;
   const region = lang === 'ko' ? wine.regionKo : wine.regionEn;
@@ -881,7 +914,7 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
         </div>
       </div>
 
-      {/* 3 Compact Pill Buttons Positioned Right-Aligned Above the Divider */}
+      {/* 4 Compact Pill Buttons Positioned Right-Aligned Above the Divider */}
       <div className="mt-3 flex flex-wrap items-center justify-end gap-1.5">
         <button
           type="button"
@@ -904,11 +937,32 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
         <button
           type="button"
           onClick={() => setActiveModal('story')}
+          className="somm-sub-surface inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-bold text-[var(--text-primary)] transition-colors hover:opacity-85"
+        >
+          <MapPin className="h-3 w-3 shrink-0 text-[#6B1D2F] dark:text-[#E59BAE]" strokeWidth={1.75} />
+          <span>{lang === 'ko' ? '스토리 · 포도밭' : 'Story & Map'}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveModal('feedback')}
           data-surface="accent"
           className="btn-accent inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-bold shadow-xs transition-colors"
         >
-          <MapPin className="h-3 w-3 shrink-0" strokeWidth={1.75} />
-          <span>{lang === 'ko' ? '스토리 · 포도밭' : 'Story & Map'}</span>
+          <ThumbsUp className="h-3 w-3 shrink-0" strokeWidth={1.75} />
+          <span>
+            {feedbackState === 'liked'
+              ? lang === 'ko'
+                ? '평가됨 (좋아요)'
+                : 'Rated (Liked)'
+              : feedbackState === 'disliked_saved'
+                ? lang === 'ko'
+                  ? '취향 반영됨'
+                  : 'Adjusted'
+                : lang === 'ko'
+                  ? '시음 평가'
+                  : 'Rate Wine'}
+          </span>
         </button>
       </div>
 
@@ -938,9 +992,11 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
                       ? lang === 'ko'
                         ? '하늘·땅·사람 이야기 & 와이너리 포도밭 위치'
                         : 'Heaven · Earth · Maker Story & Vineyard Map'
-                      : lang === 'ko'
-                        ? '소믈리에 추천 이유 & 음식 시음 팁'
-                        : 'Sommelier Rationale & Tasting Tip'}
+                      : activeModal === 'feedback'
+                        ? t.feedbackTitle
+                        : lang === 'ko'
+                          ? '소믈리에 추천 이유 & 음식 시음 팁'
+                          : 'Sommelier Rationale & Tasting Tip'}
                 </div>
                 <h3 className="mt-1 text-[19px] font-bold text-[var(--text-primary)]">
                   {wineName}{' '}
@@ -1071,6 +1127,161 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
                   </div>
                 </div>
               </div>
+            ) : activeModal === 'feedback' ? (
+              <div className="space-y-4">
+                <p className="text-[13px] text-[var(--text-secondary)]">
+                  {t.feedbackSubtitle}
+                </p>
+
+                {feedbackState === 'idle' && (
+                  <div className="space-y-3">
+                    <input
+                      type="text"
+                      value={memoInput}
+                      onChange={(e) => setMemoInput(e.target.value)}
+                      placeholder={
+                        lang === 'ko'
+                          ? '한 줄 시음 메모 남기기 (선택, 예: 전복 요리와 산미가 딱 맞았어요)'
+                          : 'Optional tasting note (e.g., bright acidity cut cleanly through butter sauce)'
+                      }
+                      className="w-full rounded-2xl bg-[var(--bg-tertiary)] px-4 py-3 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[#6B1D2F]"
+                    />
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onLikeWine(wine, memoInput.trim() || undefined);
+                          setFeedbackState('liked');
+                        }}
+                        className="somm-sub-surface flex items-center justify-center gap-2 rounded-2xl px-5 py-4 text-[15px] font-bold text-[var(--text-primary)] transition-all hover:opacity-90"
+                      >
+                        <ThumbsUp className="h-4 w-4" strokeWidth={1.5} />
+                        <span>{t.likeBtn}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setFeedbackState('disliking')}
+                        className="somm-sub-surface flex items-center justify-center gap-2 rounded-2xl px-5 py-4 text-[15px] font-bold text-[var(--text-primary)] transition-all hover:opacity-90"
+                      >
+                        <ThumbsDown className="h-4 w-4" strokeWidth={1.5} />
+                        <span>{t.dislikeBtn}</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {feedbackState === 'liked' && (
+                  <div className="space-y-4">
+                    <div className="rounded-2xl bg-[#F5EBEF] p-4 dark:bg-[#2E181F]">
+                      <div className="text-[14px] font-bold text-[#6B1D2F] dark:text-[#F4B8C6]">
+                        {t.likeSuccessTitle}
+                      </div>
+                      <p className="prose-pretty mt-1 text-[13px] text-[var(--text-primary)]">
+                        {t.likeSuccessDesc}
+                      </p>
+                    </div>
+
+                    {nextSuggestions.length > 0 && (
+                      <div>
+                        <h4 className="mb-2.5 text-[14px] font-bold text-[var(--text-primary)]">
+                          {t.nextWineRecommendationsTitle}
+                        </h4>
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          {nextSuggestions.map((nw) => (
+                            <div
+                              key={nw.id}
+                              className="somm-sub-surface rounded-2xl p-4"
+                            >
+                              <div className="text-[11px] font-semibold text-[#6B1D2F] dark:text-[#E59BAE]">
+                                {CATEGORY_LABELS[nw.category][lang === 'ko' ? 'shortKo' : 'shortEn']}
+                              </div>
+                              <div className="mt-0.5 text-[14px] font-bold text-[var(--text-primary)]">
+                                {lang === 'ko' ? nw.nameKo : nw.nameEn}
+                              </div>
+                              <div className="mt-1 text-[12px] tabular-nums text-[var(--text-secondary)]">
+                                {lang === 'ko' ? nw.regionKo : nw.regionEn} ·{' '}
+                                {formatKrw(nw.venuePrice, lang)}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {feedbackState === 'disliking' && (
+                  <div className="space-y-4">
+                    <div className="text-[14px] font-semibold text-[var(--text-primary)]">
+                      {t.dislikePromptTitle}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {(Object.keys(DISLIKE_REASON_LABELS) as DislikeReasonTag[]).map((tag) => {
+                        const active = selectedReasons.includes(tag);
+                        return (
+                          <button
+                            key={tag}
+                            type="button"
+                            onClick={() =>
+                              setSelectedReasons((prev) =>
+                                prev.includes(tag)
+                                  ? prev.filter((r) => r !== tag)
+                                  : [...prev, tag]
+                              )
+                            }
+                            data-surface={active ? 'accent' : undefined}
+                            className={`rounded-full px-3.5 py-2 text-[13px] font-semibold transition-colors ${
+                              active
+                                ? 'btn-accent'
+                                : 'somm-sub-surface text-[var(--text-primary)]'
+                            }`}
+                          >
+                            {DISLIKE_REASON_LABELS[tag][lang]}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <button
+                      type="button"
+                      disabled={selectedReasons.length === 0}
+                      onClick={() => {
+                        onDislikeWine(wine, selectedReasons, memoInput.trim() || undefined);
+                        setFeedbackState('disliked_saved');
+                      }}
+                      data-surface="accent"
+                      className="btn-accent w-full rounded-2xl px-5 py-3 text-[14px] font-bold disabled:opacity-45"
+                    >
+                      {t.dislikeSubmitBtn}
+                    </button>
+                  </div>
+                )}
+
+                {feedbackState === 'disliked_saved' && (
+                  <div className="space-y-4">
+                    <div className="rounded-2xl bg-[var(--bg-tertiary)] p-4">
+                      <div className="text-[14px] font-bold text-[var(--text-primary)]">
+                        {t.dislikeSavedTitle}
+                      </div>
+                      <p className="prose-pretty mt-1 text-[13px] text-[var(--text-secondary)]">
+                        {t.dislikeSavedDesc}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveModal(null);
+                        onReRecommend();
+                      }}
+                      data-surface="accent"
+                      className="btn-accent inline-flex w-full items-center justify-center gap-2 rounded-2xl px-5 py-3 text-[14px] font-bold"
+                    >
+                      <RotateCcw className="h-4 w-4" strokeWidth={1.5} />
+                      <span>{t.reRecommendWithProfileBtn}</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : (
               <div className="space-y-4">
                 {onSpeechStyleChange && (
@@ -1129,20 +1340,9 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
               <button
                 type="button"
                 onClick={() => setActiveModal(null)}
-                className="somm-sub-surface rounded-xl px-4 py-2.5 text-[13px] font-semibold text-[var(--text-primary)]"
+                className="somm-sub-surface rounded-xl px-5 py-2.5 text-[13px] font-semibold text-[var(--text-primary)]"
               >
                 {t.closeBtn}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveModal(null);
-                  onChoose();
-                }}
-                data-surface="accent"
-                className="btn-accent rounded-xl px-5 py-2.5 text-[13px] font-bold"
-              >
-                {ctaLabel ?? t.chooseWineCta}
               </button>
             </div>
           </div>

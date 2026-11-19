@@ -461,13 +461,6 @@ export function App() {
     setRecommendationBundle(nextBundle);
   };
 
-  const handleSelectWineForDrinking = (wine: WineItem) => {
-    setStats(recordOrderIntentStats(selectedPersonaId));
-    setActiveDrinkingWine(wine);
-    setGuestStep(3);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
   const logJournalFeedback = (
     wine: WineItem,
     rating: 'like' | 'dislike',
@@ -505,6 +498,7 @@ export function App() {
     const nextProfile = applyLikeToTasteProfile(tasteProfile, wine);
     setTasteProfile(nextProfile);
     saveTasteProfile(nextProfile);
+    recordOrderIntentStats(selectedPersonaId);
     setStats(recordFeedbackStats('like', [], selectedPersonaId));
     logJournalFeedback(wine, 'like', undefined, memo);
   };
@@ -918,6 +912,7 @@ export function App() {
           <GuestStep2
             lang={lang}
             venue={activeVenue}
+            allWines={wines}
             visitTiming={visitTiming}
             bundle={recommendationBundle}
             speechStyle={speechStyle}
@@ -926,7 +921,13 @@ export function App() {
               setGuestStep(1);
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
-            onSelectWineForDrinking={handleSelectWineForDrinking}
+            onLikeWine={handleLikeWine}
+            onDislikeWine={handleDislikeWine}
+            onReRecommend={() => {
+              const latest = loadTasteProfile();
+              setTasteProfile(latest);
+              runRecommendation(latest);
+            }}
             onSwapWines={handleSwapWinesInStep2}
             onCreateReservation={handleCreateReservation}
           />
