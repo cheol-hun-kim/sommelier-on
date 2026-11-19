@@ -27,6 +27,10 @@ export const SOMMELIER_PERSONAS: SommelierPersona[] = [
     preferredRegions: ['Bourgogne', 'Champagne', 'Bordeaux', 'Piemonte', 'Loire'],
     preferredCategories: { sparkling: 10, white: 8, red: 9, dessert: 6 },
     toneStyle: 'classic_french',
+    tierKo: '마스터 등급',
+    tierEn: 'Master Tier',
+    monthlyFeeLabelKo: '월 169,000원',
+    monthlyFeeLabelEn: 'KRW 169,000 / mo',
   },
   {
     id: 'new_korean',
@@ -47,6 +51,10 @@ export const SOMMELIER_PERSONAS: SommelierPersona[] = [
     preferredRegions: ['Bourgogne', 'Oregon', 'Alsace', 'Rhône', 'Mosel'],
     preferredCategories: { white: 10, rose_orange: 9, red: 8, sparkling: 7 },
     toneStyle: 'new_korean',
+    tierKo: '시그니처 등급',
+    tierEn: 'Signature Tier',
+    monthlyFeeLabelKo: '월 119,000원',
+    monthlyFeeLabelEn: 'KRW 119,000 / mo',
   },
   {
     id: 'natural_explorer',
@@ -67,6 +75,10 @@ export const SOMMELIER_PERSONAS: SommelierPersona[] = [
     preferredRegions: ['Loire', 'Jura', 'Etna', 'Friuli', 'Beaujolais'],
     preferredCategories: { rose_orange: 12, sparkling: 9, white: 8, red: 7 },
     toneStyle: 'natural_explorer',
+    tierKo: '스탠다드 등급',
+    tierEn: 'Standard Tier',
+    monthlyFeeLabelKo: '월 79,000원',
+    monthlyFeeLabelEn: 'KRW 79,000 / mo',
   },
 ];
 

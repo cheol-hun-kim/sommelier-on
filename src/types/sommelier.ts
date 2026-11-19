@@ -115,6 +115,10 @@ export interface SommelierPersona {
   preferredRegions: string[];
   preferredCategories: Partial<Record<WineCategory, number>>;
   toneStyle: 'classic_french' | 'new_korean' | 'natural_explorer';
+  tierKo?: string;
+  tierEn?: string;
+  monthlyFeeLabelKo?: string;
+  monthlyFeeLabelEn?: string;
 }
 
 export interface RegisteredDish {

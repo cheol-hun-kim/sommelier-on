@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import { Flame, Thermometer, Wine } from 'lucide-react';
 import type { AromaKey, Language, ValueTier, WineItem } from '../types/sommelier';
 import { AROMA_LABELS, GLASS_LABELS, TRANSLATIONS } from '../i18n/translations';
+import {
+  DETAILED_AROMA_CATALOG,
+  deriveDetailedWheelForWine,
+} from '../data/aromaWheelData';
 import { AromaVectorIcon, GlassSilhouetteIcon } from './icons/WineVectors';
 
 /* ============================================================================
@@ -318,165 +322,211 @@ export const StructureBalanceChart: React.FC<{
 };
 
 /* ============================================================================
-   3. Botanical Aroma Grid + Expandable 1·2·3차 Aroma Spectrum Wheel (Image 3 & 5)
+   3. Compact 5-Icon Aroma Strip (Always Visible on Card Header)
+      + Full 34-Descriptor Concentric Aroma Wheel (Reference Image 3 Right Page)
    ============================================================================ */
-export const AromaSpectrumCard: React.FC<{
+export const CompactAromaIconRow: React.FC<{
   wine: WineItem;
   lang: Language;
 }> = ({ wine, lang }) => {
-  const t = TRANSLATIONS[lang];
-  const [expanded, setExpanded] = useState(false);
-
   const coreAromas: AromaKey[] = Array.from(
     new Set([...wine.aromas.primary, ...wine.aromas.secondary, ...wine.aromas.tertiary])
   ).slice(0, 5);
 
-  const tiers = [
+  return (
+    <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
+      {coreAromas.map((aromaKey) => (
+        <div
+          key={aromaKey}
+          className="somm-sub-surface flex flex-col items-center justify-center rounded-xl px-1.5 py-2 text-center"
+        >
+          <AromaVectorIcon aroma={aromaKey} size={26} />
+          <span className="mt-1 line-clamp-2 text-[10px] font-medium leading-tight text-[var(--text-primary)]">
+            {AROMA_LABELS[aromaKey][lang]}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+export const AromaSpectrumCard: React.FC<{
+  wine: WineItem;
+  lang: Language;
+  defaultExpanded?: boolean;
+}> = ({ wine, lang, defaultExpanded = true }) => {
+  const t = TRANSLATIONS[lang];
+  const [expanded, setExpanded] = useState(defaultExpanded);
+  const wheel = deriveDetailedWheelForWine(wine);
+
+  const tierBlocks = [
     {
       id: 'primary',
-      title: t.aromaTier1,
+      title: lang === 'ko' ? '1차향 · 과일 · 꽃 · 허브' : '1st Tier · Primary Fruit & Floral',
       color: '#6B1D2F',
       bgClass: 'bg-[#F5EBEF] dark:bg-[#2E181F]',
-      items: wine.aromas.primary,
+      items: wheel.primaryActive,
     },
     {
       id: 'secondary',
-      title: t.aromaTier2,
-      color: '#B8863B',
+      title: lang === 'ko' ? '2차향 · 오크 · 효모 · 발효' : '2nd Tier · Oak & Fermentation',
+      color: '#B8762E',
       bgClass: 'bg-[#FBF4E8] dark:bg-[#2B2214]',
-      items: wine.aromas.secondary,
+      items: wheel.secondaryActive,
     },
     {
       id: 'tertiary',
-      title: t.aromaTier3,
-      color: '#5A504C',
+      title: lang === 'ko' ? '3차향 · 숙성 · 토양 · 미네랄' : '3rd Tier · Aging & Terroir',
+      color: '#586468',
       bgClass: 'somm-sub-surface',
-      items: wine.aromas.tertiary,
+      items: wheel.tertiaryActive,
     },
   ];
+
+  const totalSlices = DETAILED_AROMA_CATALOG.length;
+  const cx = 180;
+  const cy = 180;
 
   return (
     <div className="somm-sub-surface rounded-2xl p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <span className="text-[13px] font-semibold text-[var(--text-primary)]">
-          {t.aromaTitle}
-        </span>
-        <button
-          type="button"
-          onClick={() => setExpanded((prev) => !prev)}
-          className="text-[12px] font-semibold text-[#6B1D2F] underline underline-offset-4 dark:text-[#E59BAE]"
-        >
-          {expanded ? t.aromaCollapseBtn : t.aromaExpandBtn}
-        </button>
-      </div>
-
-      {/* Horizontal 5-column botanical icon strip (like Reference Image 3 & 5) */}
-      <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
-        {coreAromas.map((aromaKey) => (
-          <div
-            key={aromaKey}
-            className="flex flex-col items-center rounded-xl bg-[var(--bg-secondary)] px-2 py-2.5 text-center shadow-sm"
+        <div>
+          <span className="text-[13px] font-semibold text-[var(--text-primary)]">
+            {lang === 'ko'
+              ? `상세 시음 노트 · 아로마 휠 (${totalSlices}종 스펙트럼)`
+              : `Detailed Aroma Wheel (${totalSlices} Descriptors)`}
+          </span>
+          <p className="mt-0.5 text-[11px] text-[var(--text-secondary)]">
+            {lang === 'ko'
+              ? '1차(원재료) · 2차(양조/오크) · 3차(숙성/떼루아) 향이 겹치지 않게 구분되어 있습니다.'
+              : 'Primary, secondary fermentation/oak, and tertiary aging notes separated cleanly.'}
+          </p>
+        </div>
+        {!defaultExpanded && (
+          <button
+            type="button"
+            onClick={() => setExpanded((prev) => !prev)}
+            className="text-[12px] font-semibold text-[#6B1D2F] underline underline-offset-4 dark:text-[#E59BAE]"
           >
-            <AromaVectorIcon aroma={aromaKey} size={32} />
-            <span className="mt-1.5 text-[11px] font-medium leading-tight text-[var(--text-primary)]">
-              {AROMA_LABELS[aromaKey][lang]}
-            </span>
-          </div>
-        ))}
+            {expanded ? t.aromaCollapseBtn : t.aromaExpandBtn}
+          </button>
+        )}
       </div>
 
-      {/* Expanded 1·2·3차 Aroma Concentric Wheel & Tier Breakdown */}
       {expanded && (
-        <div className="mt-4 border-t border-[var(--border-subtle)] pt-4">
-          <div className="grid gap-4 md:grid-cols-[160px_1fr] md:items-center">
-            {/* Mini Concentric 1·2·3차 Wheel (inspired by Image 5 bottom wheel) */}
-            <svg viewBox="0 0 160 160" className="mx-auto h-36 w-36" aria-hidden="true">
-              {/* Outer ring: 3차 향 */}
-              <circle
-                cx="80"
-                cy="80"
-                r="70"
-                fill="none"
-                stroke="#8B7E74"
-                strokeWidth="16"
-                strokeDasharray="135 305"
-                strokeDashoffset="-15"
-                opacity="0.35"
-              />
-              {/* Middle ring: 2차 향 */}
-              <circle
-                cx="80"
-                cy="80"
-                r="50"
-                fill="none"
-                stroke="#B8863B"
-                strokeWidth="16"
-                strokeDasharray="155 200"
-                strokeDashoffset="-60"
-                opacity="0.6"
-              />
-              {/* Inner ring: 1차 향 */}
-              <circle
-                cx="80"
-                cy="80"
-                r="30"
-                fill="none"
-                stroke="#6B1D2F"
-                strokeWidth="16"
-                strokeDasharray="140 80"
-                opacity="0.85"
-              />
-              <circle cx="80" cy="80" r="17" fill="var(--bg-secondary)" />
+        <div className="grid gap-5 lg:grid-cols-[300px_1fr] lg:items-center">
+          {/* Concentric 34-Slice Sommelier Aroma Wheel SVG (Image 3 Right Page Style) */}
+          <div className="mx-auto w-full max-w-[300px]">
+            <svg
+              viewBox="0 0 360 360"
+              className="h-auto w-full"
+              role="img"
+              aria-label={t.aromaTitle}
+            >
+              {/* Subtle base ring guides */}
+              <circle cx={cx} cy={cy} r={162} fill="none" stroke="var(--border-subtle)" strokeWidth="1" />
+              <circle cx={cx} cy={cy} r={104} fill="none" stroke="var(--border-subtle)" strokeWidth="1" />
+
+              {DETAILED_AROMA_CATALOG.map((item, idx) => {
+                const sliceAngle = 360 / totalSlices;
+                const a0 = idx * sliceAngle;
+                const a1 = a0 + sliceAngle - 0.8;
+                const midAngle = a0 + sliceAngle / 2;
+                const isActive = wheel.activeIds.has(item.id);
+                const rInner = item.tier === 'primary' ? 56 : item.tier === 'secondary' ? 68 : 80;
+                const rOuter = 112;
+                const segPath = createDonutSegmentPath(cx, cy, rInner, rOuter, a0, a1);
+                const dotPos = polarToCartesian(cx, cy, 118, midAngle);
+                const labelPos = polarToCartesian(cx, cy, 124, midAngle);
+                const flipText = midAngle > 180;
+                const textRot = flipText ? midAngle + 90 : midAngle - 90;
+
+                return (
+                  <g key={item.id}>
+                    <path
+                      d={segPath}
+                      fill={item.color}
+                      opacity={isActive ? 0.92 : 0.14}
+                    />
+                    {isActive && (
+                      <circle cx={dotPos.x} cy={dotPos.y} r="2.2" fill={item.color} />
+                    )}
+                    <text
+                      x={labelPos.x}
+                      y={labelPos.y}
+                      textAnchor={flipText ? 'end' : 'start'}
+                      dominantBaseline="middle"
+                      fontSize={isActive ? '7.2' : '6.1'}
+                      fontWeight={isActive ? '700' : '400'}
+                      fill={isActive ? 'var(--text-primary)' : 'var(--text-secondary)'}
+                      opacity={isActive ? 1 : 0.55}
+                      transform={`rotate(${textRot}, ${labelPos.x}, ${labelPos.y})`}
+                    >
+                      {lang === 'ko' ? item.labelKo : item.labelEn}
+                    </text>
+                  </g>
+                );
+              })}
+
+              {/* Center Hub */}
+              <circle cx={cx} cy={cy} r="48" fill="var(--bg-secondary)" stroke="var(--border-subtle)" strokeWidth="1" />
               <text
-                x="80"
-                y="78"
+                x={cx}
+                y={cy - 6}
                 textAnchor="middle"
-                fontSize="8"
+                fontSize="11"
                 fontWeight="700"
                 fill="var(--text-primary)"
               >
-                1·2·3
+                {lang === 'ko' ? '아로마 휠' : 'AROMA WHEEL'}
               </text>
               <text
-                x="80"
-                y="88"
+                x={cx}
+                y={cy + 9}
                 textAnchor="middle"
-                fontSize="7"
+                fontSize="8.5"
                 fill="var(--text-secondary)"
               >
-                AROMA
+                {`${wheel.activeIds.size} / ${totalSlices}`}
               </text>
             </svg>
+          </div>
 
-            <div className="space-y-2.5">
-              {tiers.map((tier) => (
-                <div
-                  key={tier.id}
-                  className={`rounded-xl px-3 py-2.5 ${tier.bgClass}`}
-                >
-                  <div className="mb-1.5 flex items-center gap-2">
+          {/* 3 Non-overlapping Tier Breakdown Panels */}
+          <div className="space-y-2.5">
+            {tierBlocks.map((tier) => (
+              <div key={tier.id} className={`rounded-xl px-3.5 py-2.5 ${tier.bgClass}`}>
+                <div className="mb-1.5 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
                     <span
-                      className="h-2 w-2 rounded-full"
+                      className="h-2.5 w-2.5 rounded-full"
                       style={{ backgroundColor: tier.color }}
                     />
-                    <span className="text-[12px] font-semibold text-[var(--text-primary)]">
+                    <span className="text-[12px] font-bold text-[var(--text-primary)]">
                       {tier.title}
                     </span>
                   </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {tier.items.map((a) => (
-                      <span
-                        key={a}
-                        className="inline-flex items-center gap-1 rounded-full bg-[var(--bg-secondary)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-primary)]"
-                      >
-                        <AromaVectorIcon aroma={a} size={16} />
-                        <span>{AROMA_LABELS[a][lang]}</span>
-                      </span>
-                    ))}
-                  </div>
+                  <span className="text-[11px] font-semibold tabular-nums text-[var(--text-secondary)]">
+                    {tier.items.length}
+                    {lang === 'ko' ? '종' : ''}
+                  </span>
                 </div>
-              ))}
-            </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {tier.items.map((desc) => (
+                    <span
+                      key={desc.id}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-[var(--bg-secondary)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-primary)] shadow-xs"
+                    >
+                      <span
+                        className="h-1.5 w-1.5 rounded-full"
+                        style={{ backgroundColor: desc.color }}
+                      />
+                      <span>{lang === 'ko' ? desc.labelKo : desc.labelEn}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

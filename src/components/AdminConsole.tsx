@@ -53,6 +53,7 @@ interface AdminConsoleProps {
   reservations: WineReservation[];
   onUpdateReservationStatus: (id: string, status: WineReservation['status']) => void;
   onUpdateRecommendationLimit: (venueId: string, limit: number) => void;
+  onSelectDefaultPersona: (venueId: string, personaId: string) => void;
   onUpdateVenueLogo: (venueId: string, logoUrl: string | undefined) => void;
   onOpenGuestTable: (venueId: string, table: string) => void;
   onAiKeyUpdated: () => void;
@@ -74,6 +75,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
   reservations,
   onUpdateReservationStatus,
   onUpdateRecommendationLimit,
+  onSelectDefaultPersona,
   onUpdateVenueLogo,
   onOpenGuestTable,
   onAiKeyUpdated,
@@ -683,6 +685,87 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
           {addedToast ? 'OK · Cellar Updated' : t.adminAddWineBtn}
         </button>
       </form>
+
+      {/* 3A. Registered Sommelier Tier Selection (Venue Subscription Plan) */}
+      <section className="somm-card rounded-3xl p-5 sm:p-7">
+        <div className="mb-4">
+          <h2 className="text-[17px] font-bold text-[var(--text-primary)]">
+            {lang === 'ko'
+              ? '우리 업장 전담 소믈리에 등록 · 등급 설정'
+              : 'Registered Venue Sommelier & Service Tier'}
+          </h2>
+          <p className="mt-0.5 text-[12px] text-[var(--text-secondary)]">
+            {lang === 'ko'
+              ? '등록하신 전담 소믈리에의 사진과 이력이 손님 화면 첫 페이지에 바로 소개되며, 등급에 따라 업장 이용 플랜이 달라집니다.'
+              : 'Your designated sommelier opens the guest experience with their credentials and signature pairing style.'}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          {personas.map((p) => {
+            const active = venue.defaultPersonaId === p.id;
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => onSelectDefaultPersona(venue.id, p.id)}
+                className={`flex flex-col justify-between rounded-2xl p-4 text-left transition-all ${
+                  active ? 'somm-card-selected' : 'somm-sub-surface hover:opacity-90'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="rounded-full bg-[#6B1D2F] px-2.5 py-0.5 text-[10px] font-bold text-[#FFFFFF]">
+                      {lang === 'ko' ? p.tierKo ?? '시그니처' : p.tierEn ?? 'Signature'}
+                    </span>
+                    <span className="text-[12px] font-bold tabular-nums text-[#6B1D2F] dark:text-[#F4B8C6]">
+                      {lang === 'ko'
+                        ? p.monthlyFeeLabelKo ?? '월 119,000원'
+                        : p.monthlyFeeLabelEn ?? 'KRW 119,000 / mo'}
+                    </span>
+                  </div>
+                  <div className="mt-3 flex items-center gap-3">
+                    <SommelierAvatar personaId={p.id} size={44} />
+                    <div>
+                      <div className="text-[14px] font-bold text-[var(--text-primary)]">
+                        {lang === 'ko' ? p.nameKo : p.nameEn}
+                      </div>
+                      <div className="text-[11px] text-[var(--text-secondary)]">
+                        {lang === 'ko' ? p.genreKo : p.genreEn}
+                      </div>
+                    </div>
+                  </div>
+                  <p className="prose-pretty mt-2.5 text-[12px] leading-relaxed text-[var(--text-secondary)]">
+                    {lang === 'ko' ? p.credentialsKo : p.credentialsEn}
+                  </p>
+                </div>
+
+                <div className="mt-3 flex items-center justify-between border-t border-[var(--border-subtle)] pt-2.5 text-[11px] font-semibold">
+                  <span className="text-[var(--text-secondary)]">
+                    {p.yearsExp}
+                    {lang === 'ko' ? '년 경력' : ' yrs exp'}
+                  </span>
+                  <span
+                    className={
+                      active
+                        ? 'text-[#6B1D2F] dark:text-[#F4B8C6]'
+                        : 'text-[var(--text-secondary)]'
+                    }
+                  >
+                    {active
+                      ? lang === 'ko'
+                        ? '현재 등록됨'
+                        : 'Active Host'
+                      : lang === 'ko'
+                        ? '이 소믈리에로 등록'
+                        : 'Assign Host'}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
       {/* 3B. Pre-Visit Wine Reservations (Hold Requests) */}
       <section className="somm-card rounded-3xl p-5 sm:p-7">

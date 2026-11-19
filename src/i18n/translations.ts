@@ -196,7 +196,7 @@ export const TRANSLATIONS: Record<Language, Translations> = {
   ko: {
     brandName: '소믈리에온',
     brandShort: 'SommOn',
-    tagline: '지금 이 테이블의 셀러에서 가장 완벽한 한 병을 깨웁니다',
+    tagline: '모두의 테이블이 전담 소믈리에의 안목을 누립니다',
     modeGuest: '손님 화면',
     modeAdmin: '업장 관리',
     themeIvory: '아이보리',
@@ -207,7 +207,7 @@ export const TRANSLATIONS: Record<Language, Translations> = {
     venueSelectorLabel: '업장 전환',
 
     step1Title: '오늘의 페어링 설계',
-    step1Subtitle: '함께하실 요리와 예산, 그리고 선호하시는 소믈리에의 시선을 선택해 주세요.',
+    step1Subtitle: '오늘 식사에 어울리는 한 병을 한 단계씩 편안하게 찾아드립니다.',
     sommelierSectionTitle: '오늘의 소믈리에 선택',
     sommelierSectionDesc: '페르소나마다 산지 해석과 페어링 기준, 설명의 어조가 달라집니다.',
     viewProfile: '프로필 보기',
@@ -255,7 +255,7 @@ export const TRANSLATIONS: Record<Language, Translations> = {
     occasionLabel: '오늘 자리의 성격',
     tasteProfileActiveBanner: '누적된 취향노트가 반영되어 선호 아로마와 기피 요소를 자동 조정합니다.',
     tasteProfileResetBtn: '취향노트 초기화',
-    ctaRecommend: '소믈리에 추천받기',
+    ctaRecommend: '와인 추천 받기',
     ctaRecommendDisabledHint: '요리를 최소 1가지 이상 선택하거나 입력해 주세요.',
 
     step2BackBtn: '조건 다시 설정',
@@ -372,7 +372,7 @@ export const TRANSLATIONS: Record<Language, Translations> = {
   en: {
     brandName: 'Sommelier On',
     brandShort: 'SommOn',
-    tagline: 'Awakening the right bottle from this table’s cellar',
+    tagline: 'A dedicated sommelier’s intuition at every table',
     modeGuest: 'Guest View',
     modeAdmin: 'Venue Admin',
     themeIvory: 'Warm Ivory',
@@ -383,7 +383,7 @@ export const TRANSLATIONS: Record<Language, Translations> = {
     venueSelectorLabel: 'Switch Venue',
 
     step1Title: 'Compose Tonight’s Pairing',
-    step1Subtitle: 'Choose your sommelier persona, budget range, and the dishes arriving at your table.',
+    step1Subtitle: 'Discover your bottle one comfortable step at a time.',
     sommelierSectionTitle: 'Select Today’s Sommelier',
     sommelierSectionDesc: 'Each verified sommelier brings a distinct regional lens, pairing rule, and voice.',
     viewProfile: 'View Profile',
@@ -431,7 +431,7 @@ export const TRANSLATIONS: Record<Language, Translations> = {
     occasionLabel: 'Tonight’s Occasion',
     tasteProfileActiveBanner: 'Your cumulative Taste Note is active — preferred aromas and sensitivities are weighted.',
     tasteProfileResetBtn: 'Reset Taste Note',
-    ctaRecommend: 'Get Sommelier Pairing',
+    ctaRecommend: 'Get Wine Recommendations',
     ctaRecommendDisabledHint: 'Please select or enter at least one dish to tailor the pairing.',
 
     step2BackBtn: 'Adjust Preferences',

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { AdminConsole } from './components/AdminConsole';
 import { GuestJournalModal } from './components/GuestJournalModal';
-import { GuestStep1 } from './components/GuestStep1';
+import { GuestStep1, type Step1Page } from './components/GuestStep1';
 import { GuestStep2 } from './components/GuestStep2';
 import { GuestStep3 } from './components/GuestStep3';
 import { HeaderBar } from './components/HeaderBar';
@@ -108,6 +108,7 @@ export function App() {
 
   // Guest Flow State
   const [guestStep, setGuestStep] = useState<1 | 2 | 3>(1);
+  const [step1Page, setStep1Page] = useState<Step1Page>(1);
   const [selectedPersonaId, setSelectedPersonaId] = useState<string>(
     activeVenue.defaultPersonaId
   );
@@ -553,6 +554,19 @@ export function App() {
     });
   };
 
+  const handleSelectDefaultPersona = (venueId: string, personaId: string) => {
+    setVenues((prev) => {
+      const next = prev.map((v) =>
+        v.id === venueId ? { ...v, defaultPersonaId: personaId } : v
+      );
+      saveVenues(next);
+      return next;
+    });
+    if (venueId === activeVenue.id) {
+      setSelectedPersonaId(personaId);
+    }
+  };
+
   const handleTogglePreVisitVenueList = (venueId: string, allow: boolean) => {
     setVenues((prev) => {
       const next = prev.map((v) =>
@@ -767,11 +781,15 @@ export function App() {
       {/* Tablet-First Side Edge Page Navigation Arrows */}
       {appMode === 'guest' && (
         <>
-          {guestStep > 1 && (
+          {(guestStep > 1 || (guestStep === 1 && step1Page > 1)) && (
             <button
               type="button"
               onClick={() => {
-                setGuestStep((prev) => (prev === 3 ? 2 : 1));
+                if (guestStep === 1) {
+                  setStep1Page((prev) => Math.max(1, prev - 1) as Step1Page);
+                } else {
+                  setGuestStep((prev) => (prev === 3 ? 2 : 1));
+                }
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
               aria-label={lang === 'ko' ? '이전 페이지' : 'Previous step'}
@@ -780,12 +798,20 @@ export function App() {
               <ChevronLeft className="h-5 w-5" strokeWidth={1.75} />
             </button>
           )}
-          {((guestStep === 1 && recommendationBundle) ||
-            (guestStep === 2 && activeDrinkingWine)) && (
+          {((guestStep === 1 && (step1Page < 7 || Boolean(recommendationBundle))) ||
+            (guestStep === 2 && Boolean(activeDrinkingWine))) && (
             <button
               type="button"
               onClick={() => {
-                setGuestStep((prev) => (prev === 1 ? 2 : 3));
+                if (guestStep === 1) {
+                  if (step1Page < 7) {
+                    setStep1Page((prev) => Math.min(7, prev + 1) as Step1Page);
+                  } else if (recommendationBundle) {
+                    setGuestStep(2);
+                  }
+                } else {
+                  setGuestStep(3);
+                }
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
               aria-label={lang === 'ko' ? '다음 페이지' : 'Next step'}
@@ -804,8 +830,9 @@ export function App() {
             venue={activeVenue}
             personas={personas}
             selectedPersonaId={selectedPersonaId}
-            onSelectPersona={setSelectedPersonaId}
             onInspectPersona={setInspectedPersona}
+            step1Page={step1Page}
+            onStep1PageChange={setStep1Page}
             budgetTier={budgetTier}
             onBudgetTierChange={setBudgetTier}
             customBudgetManWon={customBudgetManWon}
@@ -813,9 +840,6 @@ export function App() {
             budgetScope={budgetScope}
             onBudgetScopeChange={setBudgetScope}
             corkageOnly={corkageOnly}
-            onCorkageOnlyChange={(v) =>
-              handleWineSourceModeChange(v ? 'corkage_direct' : 'venue_cellar')
-            }
             visitTiming={visitTiming}
             onVisitTimingChange={handleVisitTimingChange}
             wineSourceMode={wineSourceMode}
@@ -875,7 +899,6 @@ export function App() {
             venue={activeVenue}
             visitTiming={visitTiming}
             bundle={recommendationBundle}
-            personas={personas}
             speechStyle={speechStyle}
             onSpeechStyleChange={setSpeechStyle}
             onBack={() => {
@@ -883,10 +906,6 @@ export function App() {
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             onSelectWineForDrinking={handleSelectWineForDrinking}
-            onSwitchPersona={(nextPersonaId) => {
-              setSelectedPersonaId(nextPersonaId);
-              runRecommendation(undefined, nextPersonaId, true);
-            }}
             onSwapWines={handleSwapWinesInStep2}
             onCreateReservation={handleCreateReservation}
           />
@@ -936,6 +955,7 @@ export function App() {
             reservations={reservations.filter((r) => r.venueId === activeVenue.id)}
             onUpdateReservationStatus={handleUpdateReservationStatus}
             onUpdateRecommendationLimit={handleUpdateRecommendationLimit}
+            onSelectDefaultPersona={handleSelectDefaultPersona}
             onUpdateVenueLogo={handleUpdateVenueLogo}
             onOpenGuestTable={(vId, tb) => {
               handleVenueChange(vId);

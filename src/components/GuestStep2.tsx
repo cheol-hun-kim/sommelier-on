@@ -4,6 +4,8 @@ import {
   ArrowRight,
   Check,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   Info,
   RefreshCw,
   Sparkles,
@@ -11,7 +13,6 @@ import {
 import type {
   Language,
   PairingRecommendationBundle,
-  SommelierPersona,
   SpeechStyle,
   ValueTier,
   Venue,
@@ -28,6 +29,7 @@ import {
 } from './icons/WineVectors';
 import {
   AromaSpectrumCard,
+  CompactAromaIconRow,
   ServingGuideStrip,
   StructureBalanceChart,
 } from './TastingInfographics';
@@ -37,12 +39,10 @@ interface GuestStep2Props {
   venue: Venue;
   visitTiming: VisitTiming;
   bundle: PairingRecommendationBundle;
-  personas: SommelierPersona[];
   speechStyle: SpeechStyle;
   onSpeechStyleChange: (style: SpeechStyle) => void;
   onBack: () => void;
   onSelectWineForDrinking: (wine: WineItem) => void;
-  onSwitchPersona: (personaId: string) => void;
   onSwapWines: (activeScenarioIdx: number, wineIdsToSwap: string[]) => void;
   onCreateReservation: (input: {
     guestName: string;
@@ -58,12 +58,10 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
   venue,
   visitTiming,
   bundle,
-  personas,
   speechStyle,
   onSpeechStyleChange,
   onBack,
   onSelectWineForDrinking,
-  onSwitchPersona,
   onSwapWines,
   onCreateReservation,
 }) => {
@@ -215,37 +213,18 @@ export const GuestStep2: React.FC<GuestStep2Props> = ({
           )}
         </div>
 
-        {/* In-Place Sommelier Switcher + Selective Bottle Swap Trigger */}
+        {/* Registered Venue Sommelier Credential + Selective Bottle Swap Trigger */}
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border-subtle)] pt-4">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="mr-1 text-[11px] font-semibold text-[var(--text-secondary)]">
-              {lang === 'ko' ? '다른 소믈리에:' : 'Switch Sommelier:'}
+          <div className="text-[12px] text-[var(--text-secondary)]">
+            <span className="font-semibold text-[var(--text-primary)]">
+              {lang === 'ko' ? bundle.persona.titleKo : bundle.persona.titleEn}
             </span>
-            {personas.map((p) => {
-              const isCurrent = p.id === bundle.persona.id;
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => {
-                    if (!isCurrent) {
-                      setSwapMode(false);
-                      setSelectedSwapIds([]);
-                      onSwitchPersona(p.id);
-                    }
-                  }}
-                  data-surface={isCurrent ? 'accent' : undefined}
-                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-semibold transition-colors ${
-                    isCurrent
-                      ? 'btn-accent'
-                      : 'somm-sub-surface text-[var(--text-primary)] hover:opacity-85'
-                  }`}
-                >
-                  <SommelierAvatar personaId={p.id} size={18} />
-                  <span>{lang === 'ko' ? p.nameKo : p.nameEn}</span>
-                </button>
-              );
-            })}
+            <span className="mx-1.5">·</span>
+            <span>
+              {lang === 'ko'
+                ? bundle.persona.credentialsKo
+                : bundle.persona.credentialsEn}
+            </span>
           </div>
 
           {!isEmpty && bundle.kind !== 'corkage_only' && (
@@ -743,6 +722,8 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
   onChoose,
 }) => {
   const t = TRANSLATIONS[lang];
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [commentaryOpen, setCommentaryOpen] = useState(false);
   const wineName = lang === 'ko' ? wine.nameKo : wine.nameEn;
   const varietal = lang === 'ko' ? wine.varietalsKo : wine.varietalsEn;
   const region = lang === 'ko' ? wine.regionKo : wine.regionEn;
@@ -868,47 +849,105 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
         </div>
       </div>
 
-      {/* Sommelier Persona Narrative (with tappable wine glossary terms) */}
-      <div className="mt-5 rounded-2xl border-l-[3px] border-[#6B1D2F] bg-[var(--bg-tertiary)]/55 px-4 py-3.5">
-        <p className="prose-pretty text-[15px] leading-[1.6] text-[var(--text-primary)]">
-          <GlossaryText text={commentary} lang={lang} />
-        </p>
+      {/* Always-Visible Intuitive 5-Icon Aroma Strip */}
+      <div className="mt-4 border-t border-[var(--border-subtle)] pt-4">
+        <CompactAromaIconRow wine={wine} lang={lang} />
+      </div>
 
-        {tastingTip && (
-          <div className="mt-3 rounded-xl bg-[#FBF4E8]/85 px-3.5 py-2.5 text-[13px] leading-relaxed text-[#5C3D12] dark:bg-[#2B2214] dark:text-[#ECC88D]">
-            <span className="mr-1.5 font-bold">
-              {lang === 'ko' ? '시음 팁 ·' : 'Tasting Tip ·'}
-            </span>
-            <GlossaryText text={tastingTip} lang={lang} />
+      {/* Dropdown 1 (Top): Structural Balance + 34-Descriptor Aroma Wheel + Serving Guide */}
+      <div className="mt-4 overflow-hidden rounded-2xl border border-[var(--border-subtle)]">
+        <button
+          type="button"
+          onClick={() => setNotesOpen((prev) => !prev)}
+          className="somm-sub-surface flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:opacity-90"
+        >
+          <div>
+            <div className="text-[13px] font-bold text-[var(--text-primary)]">
+              {lang === 'ko'
+                ? '테이스팅 노트 · 구조 밸런스 & 1·2·3차향 아로마 휠'
+                : 'Tasting Notes · Structure & 34-Aroma Wheel'}
+            </div>
+            <div className="text-[11px] text-[var(--text-secondary)]">
+              {lang === 'ko'
+                ? '바디·산도·타닌 균형과 1·2·3차향 상세 스펙트럼, 적정 시음 온도를 확인합니다.'
+                : 'Inspect 5-axis structure, separated 1st/2nd/3rd tier aromas, and serving guide.'}
+            </div>
+          </div>
+          {notesOpen ? (
+            <ChevronUp className="h-4 w-4 shrink-0 text-[var(--text-secondary)]" strokeWidth={1.75} />
+          ) : (
+            <ChevronDown className="h-4 w-4 shrink-0 text-[var(--text-secondary)]" strokeWidth={1.75} />
+          )}
+        </button>
+
+        {notesOpen && (
+          <div className="space-y-4 p-4">
+            <StructureBalanceChart wine={wine} lang={lang} />
+            <AromaSpectrumCard wine={wine} lang={lang} defaultExpanded={true} />
+            <ServingGuideStrip wine={wine} lang={lang} valueTier={valueTier} />
           </div>
         )}
+      </div>
 
-        {highlights && highlights.length > 0 && (
-          <ul className="mt-2.5 space-y-1">
-            {highlights.map((pt, idx) => (
-              <li
-                key={idx}
-                className="flex items-center gap-2 text-[13px] text-[var(--text-secondary)]"
-              >
-                <CheckCircle2
-                  className="h-3.5 w-3.5 shrink-0 text-[#6B1D2F] dark:text-[#E59BAE]"
-                  strokeWidth={1.5}
-                />
-                <span>{pt}</span>
-              </li>
-            ))}
-          </ul>
+      {/* Dropdown 2 (Bottom): Sommelier Commentary & Tasting Tip */}
+      <div className="mt-3 overflow-hidden rounded-2xl border border-[var(--border-subtle)]">
+        <button
+          type="button"
+          onClick={() => setCommentaryOpen((prev) => !prev)}
+          className="somm-sub-surface flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:opacity-90"
+        >
+          <div>
+            <div className="text-[13px] font-bold text-[var(--text-primary)]">
+              {lang === 'ko'
+                ? '소믈리에 추천 이유 & 음식 시음 팁'
+                : 'Sommelier Rationale & Tasting Tip'}
+            </div>
+            <div className="text-[11px] text-[var(--text-secondary)]">
+              {lang === 'ko'
+                ? '이 와인이 오늘 요리와 만나는 이유와 곁들이는 순서를 읽어보실 수 있습니다.'
+                : 'Read the pairing rationale, culinary bridges, and tasting sequence.'}
+            </div>
+          </div>
+          {commentaryOpen ? (
+            <ChevronUp className="h-4 w-4 shrink-0 text-[var(--text-secondary)]" strokeWidth={1.75} />
+          ) : (
+            <ChevronDown className="h-4 w-4 shrink-0 text-[var(--text-secondary)]" strokeWidth={1.75} />
+          )}
+        </button>
+
+        {commentaryOpen && (
+          <div className="space-y-3 border-t border-[var(--border-subtle)] p-4">
+            <p className="prose-pretty border-l-[3px] border-[#6B1D2F] pl-3.5 text-[14px] leading-[1.6] text-[var(--text-primary)]">
+              <GlossaryText text={commentary} lang={lang} />
+            </p>
+
+            {tastingTip && (
+              <div className="rounded-xl bg-[#FBF4E8]/85 px-3.5 py-2.5 text-[13px] leading-relaxed text-[#5C3D12] dark:bg-[#2B2214] dark:text-[#ECC88D]">
+                <span className="mr-1.5 font-bold">
+                  {lang === 'ko' ? '시음 팁 ·' : 'Tasting Tip ·'}
+                </span>
+                <GlossaryText text={tastingTip} lang={lang} />
+              </div>
+            )}
+
+            {highlights && highlights.length > 0 && (
+              <ul className="space-y-1 pt-1">
+                {highlights.map((pt, idx) => (
+                  <li
+                    key={idx}
+                    className="flex items-center gap-2 text-[13px] text-[var(--text-secondary)]"
+                  >
+                    <CheckCircle2
+                      className="h-3.5 w-3.5 shrink-0 text-[#6B1D2F] dark:text-[#E59BAE]"
+                      strokeWidth={1.5}
+                    />
+                    <span>{pt}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         )}
-      </div>
-
-      {/* Visualized Tasting Note & Serving Guide Infographics */}
-      <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <StructureBalanceChart wine={wine} lang={lang} />
-        <AromaSpectrumCard wine={wine} lang={lang} />
-      </div>
-
-      <div className="mt-4">
-        <ServingGuideStrip wine={wine} lang={lang} valueTier={valueTier} />
       </div>
 
       {/* Bottle Selection / In-Drinking Guide CTA */}
