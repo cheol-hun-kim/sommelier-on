@@ -44,7 +44,7 @@ import { analyzeWineLabelImage } from '../services/aiService';
 import { SommelierAvatar, VenueLogo } from './icons/WineVectors';
 import { SlidingSwitch } from './SlidingSwitch';
 
-export type Step1Page = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+export type Step1Page = 1 | 2 | 3 | 4 | 5 | 6;
 
 interface GuestStep1Props {
   lang: Language;
@@ -106,6 +106,7 @@ interface GuestStep1Props {
   onResetTasteProfile: () => void;
   hasAnyDishSelected: boolean;
   onSubmitRecommend: () => void;
+  onInstantCorkageSubmit: (bottle: CorkageBottle) => Promise<void>;
 }
 
 const SLOT_CATEGORIES: WineCategory[] = [
@@ -119,11 +120,10 @@ const SLOT_CATEGORIES: WineCategory[] = [
 const WIZARD_STEPS: Array<{ page: Step1Page; ko: string; en: string }> = [
   { page: 1, ko: '소믈리에', en: 'Host' },
   { page: 2, ko: '방문 시점', en: 'Timing' },
-  { page: 3, ko: '예산', en: 'Budget' },
-  { page: 4, ko: '요리', en: 'Dishes' },
-  { page: 5, ko: '주문·병 수', en: 'Format' },
-  { page: 6, ko: '조합', en: 'Style' },
-  { page: 7, ko: '콜키지·추천', en: 'Source' },
+  { page: 3, ko: '요리', en: 'Dishes' },
+  { page: 4, ko: '주문·예산', en: 'Budget & Size' },
+  { page: 5, ko: '조합', en: 'Style' },
+  { page: 6, ko: '출처·추천', en: 'Source' },
 ];
 
 export const GuestStep1: React.FC<GuestStep1Props> = ({
@@ -181,16 +181,30 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
   onResetTasteProfile,
   hasAnyDishSelected,
   onSubmitRecommend,
+  onInstantCorkageSubmit,
 }) => {
   const t = TRANSLATIONS[lang];
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const corkageFileRef = useRef<HTMLInputElement | null>(null);
+  const instantCorkageFileRef = useRef<HTMLInputElement | null>(null);
+
   const [courseListExpanded, setCourseListExpanded] = useState(false);
   const [isScanningCorkage, setIsScanningCorkage] = useState(false);
   const [newCellarName, setNewCellarName] = useState('');
   const [newCellarCat, setNewCellarCat] = useState<WineCategory>('red');
   const [newCellarVintage, setNewCellarVintage] = useState('2020');
   const [isAddingCellar, setIsAddingCellar] = useState(false);
+
+  // Instant Corkage-Only Popup Modal (triggered directly from Page 1)
+  const [corkageModalOpen, setCorkageModalOpen] = useState(false);
+  const [instantBottle, setInstantBottle] = useState<CorkageBottle>({
+    name: '',
+    category: 'red',
+    body: 3,
+    slotPosition: 'late',
+  });
+  const [isScanningInstant, setIsScanningInstant] = useState(false);
+  const [isSubmittingInstant, setIsSubmittingInstant] = useState(false);
 
   const activePersona =
     personas.find((p) => p.id === (venue.defaultPersonaId || selectedPersonaId)) ??
@@ -252,7 +266,7 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
         </div>
       )}
 
-      {/* 7-Step Wizard Progress Strip */}
+      {/* 6-Step Wizard Progress Strip */}
       <nav
         aria-label={lang === 'ko' ? '추천 진행 단계' : 'Wizard steps'}
         className="somm-card flex items-center gap-1.5 overflow-x-auto rounded-2xl p-2"
@@ -266,7 +280,7 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
               type="button"
               onClick={() => goPage(st.page)}
               data-surface={isCurrent ? 'accent' : undefined}
-              className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-[12px] font-semibold transition-all ${
+              className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3.5 py-2 text-[12px] font-semibold transition-all ${
                 isCurrent
                   ? 'btn-accent shadow-sm'
                   : isDone
@@ -285,7 +299,7 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
       <section className="somm-card flex min-h-[380px] flex-col justify-between rounded-3xl p-6 sm:p-8">
         <div>
           {/* ============================================================
-              PAGE 1: Registered Venue Sommelier Showcase
+              PAGE 1: Dedicated Sommelier Self-Introduction + Quick Corkage Entry
              ============================================================ */}
           {step1Page === 1 && (
             <div className="space-y-6">
@@ -327,12 +341,15 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
                     </p>
                   </div>
 
-                  <div className="prose-pretty rounded-2xl border-l-[3px] border-[#6B1D2F] bg-[var(--bg-tertiary)]/65 p-4 text-[15px] leading-[1.65] text-[var(--text-primary)]">
-                    “
-                    {lang === 'ko'
-                      ? activePersona.greetingKo ?? activePersona.philosophyKo
-                      : activePersona.greetingEn ?? activePersona.philosophyEn}
-                    ”
+                  {/* Warm First-Person Hospitality Greeting */}
+                  <div className="rounded-2xl border-l-[3px] border-[#6B1D2F] bg-[var(--bg-tertiary)]/65 p-4 text-left">
+                    <p className="prose-pretty text-[15px] leading-[1.68] text-[var(--text-primary)]">
+                      “
+                      {lang === 'ko'
+                        ? activePersona.greetingKo ?? activePersona.philosophyKo
+                        : activePersona.greetingEn ?? activePersona.philosophyEn}
+                      ”
+                    </p>
                   </div>
 
                   <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
@@ -354,11 +371,11 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
           )}
 
           {/* ============================================================
-              PAGE 2: Visit Timing (Pre-Visit vs On-Site — 2 Spacious Buttons)
+              PAGE 2: Visit Timing (Pre-Visit vs On-Site)
              ============================================================ */}
           {step1Page === 2 && (
             <div className="space-y-6">
-              <div className="text-center sm:text-left">
+              <div>
                 <h2 className="text-[22px] font-bold text-[var(--text-primary)]">
                   {lang === 'ko'
                     ? '언제 즐기실 와인을 찾고 계신가요?'
@@ -410,7 +427,7 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
                       }`}
                     >
                       {lang === 'ko'
-                        ? '방문 전 업장 와인을 추천받아 예약하거나, 내 셀러 · 와인샵에서 가져갈 와인을 맞춰봅니다.'
+                        ? '방문 전 업장 와인을 예약하거나, 내 셀러 · 방문 예정 와인샵에서 가져갈 와인을 고릅니다.'
                         : 'Reserve venue bottles ahead, or pick the right bottle from your home cellar or a wine shop.'}
                     </p>
                   </div>
@@ -454,8 +471,8 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
                       }`}
                     >
                       {lang === 'ko'
-                        ? '현재 테이블에서 업장 보유 와인을 추천받거나, 지참하신 콜키지 와인을 분석합니다.'
-                        : 'Pair live in-stock venue wines or analyze a corkage bottle you brought tonight.'}
+                        ? '오늘 드실 요리에 맞춰 업장 셀러에서 바로 즐길 최적의 와인을 추천받습니다.'
+                        : 'Pair live in-stock venue wines tuned to the dishes at your table tonight.'}
                     </p>
                   </div>
                 </button>
@@ -464,109 +481,9 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
           )}
 
           {/* ============================================================
-              PAGE 3: Budget Setting
+              PAGE 3: Dishes First! (Moved Before Budget & Bottle Count)
              ============================================================ */}
           {step1Page === 3 && (
-            <div className="space-y-6">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-[22px] font-bold text-[var(--text-primary)]">
-                    {t.budgetSectionTitle}
-                  </h2>
-                  <p className="mt-1 text-[14px] text-[var(--text-secondary)]">
-                    {lang === 'ko'
-                      ? '편하신 예산 구간을 선택하시거나 직접 금액을 입력해 주세요.'
-                      : 'Choose a comfortable budget tier or type an exact target amount.'}
-                  </p>
-                </div>
-
-                <SlidingSwitch
-                  size="sm"
-                  value={budgetScope}
-                  options={[
-                    { value: 'per_bottle', label: t.budgetPerBottle },
-                    { value: 'total', label: t.budgetTotal },
-                  ]}
-                  onChange={onBudgetScopeChange}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {(Object.keys(BUDGET_LABELS) as BudgetTier[]).map((tier) => {
-                  const active = !hasCustomBudget && tier === budgetTier;
-                  return (
-                    <button
-                      key={tier}
-                      type="button"
-                      onClick={() => {
-                        onCustomBudgetManWonChange('');
-                        onBudgetTierChange(tier);
-                      }}
-                      data-surface={active ? 'accent' : undefined}
-                      className={`rounded-2xl px-4 py-4 text-[15px] font-bold tabular-nums transition-all ${
-                        active
-                          ? 'btn-accent shadow-sm'
-                          : 'somm-sub-surface text-[var(--text-primary)] hover:opacity-85'
-                      }`}
-                    >
-                      {BUDGET_LABELS[tier][lang]}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Direct Custom Budget Input (clean numeric box, zero overlapping arrows) */}
-              <div className="flex flex-wrap items-center gap-3 pt-1">
-                <div className="flex items-center gap-2.5 rounded-2xl bg-[var(--bg-tertiary)] px-4 py-3">
-                  <span className="text-[13px] font-semibold text-[var(--text-secondary)]">
-                    {lang === 'ko' ? '예산 직접 입력' : 'Custom Amount'}
-                  </span>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={customBudgetManWon}
-                    onChange={(e) => {
-                      const digitsOnly = e.target.value.replace(/[^0-9]/g, '');
-                      onCustomBudgetManWonChange(digitsOnly);
-                    }}
-                    placeholder={lang === 'ko' ? '예: 150' : 'e.g. 150'}
-                    className="w-20 bg-transparent text-right text-[16px] font-bold tabular-nums text-[var(--text-primary)] placeholder:font-normal placeholder:text-[var(--text-muted)] focus:outline-none"
-                  />
-                  <span className="text-[14px] font-semibold text-[var(--text-primary)]">
-                    {lang === 'ko' ? '만 원' : '× ₩10K'}
-                  </span>
-                  {hasCustomBudget && (
-                    <button
-                      type="button"
-                      onClick={() => onCustomBudgetManWonChange('')}
-                      aria-label="Clear custom budget"
-                      className="rounded-full p-1 text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]"
-                    >
-                      <X className="h-4 w-4" strokeWidth={1.5} />
-                    </button>
-                  )}
-                </div>
-
-                {hasCustomBudget && (
-                  <span className="text-[13px] font-semibold tabular-nums text-[#6B1D2F] dark:text-[#E59BAE]">
-                    {formatKrw(customBudgetNum * 10000, lang)}{' '}
-                    {budgetScope === 'total'
-                      ? lang === 'ko'
-                        ? '(전체 합산 기준)'
-                        : '(Total)'
-                      : lang === 'ko'
-                        ? '(1병 기준)'
-                        : '(Per Bottle)'}
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* ============================================================
-              PAGE 4: Dishes Selection (Course / À la Carte / Photo Upload)
-             ============================================================ */}
-          {step1Page === 4 && (
             <div className="space-y-5">
               <div>
                 <h2 className="text-[22px] font-bold text-[var(--text-primary)]">
@@ -618,7 +535,6 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
                   </div>
                 )}
 
-              {/* Course Menu Preview */}
               {isCourseActive && !isAnalyzingMenu && (
                 <div className="somm-sub-surface space-y-3 rounded-2xl p-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -677,7 +593,6 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
                 </div>
               )}
 
-              {/* Specific / À la Carte Dishes Selection + Photo Upload */}
               {(!isCourseActive || pairingScope === 'dishes') && (
                 <div className="space-y-4">
                   <div>
@@ -821,135 +736,218 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
           )}
 
           {/* ============================================================
-              PAGE 5: Pour Format & Bottle Count
+              PAGE 4: Merged Bottle Count / Format + Budget Range
              ============================================================ */}
-          {step1Page === 5 && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-[22px] font-bold text-[var(--text-primary)]">
-                  {t.courseServeFormatLabel}
-                </h2>
-                <p className="mt-1 text-[14px] text-[var(--text-secondary)]">
-                  {lang === 'ko'
-                    ? '오늘 테이블에서 즐기실 와인의 잔/병 방식과 수량을 정해 주세요.'
-                    : 'Choose pouring format and number of bottles for your meal.'}
-                </p>
-              </div>
+          {step1Page === 4 && (
+            <div className="space-y-7">
+              {/* Part A: Format & Bottle Count */}
+              <div className="space-y-3.5">
+                <div>
+                  <h2 className="text-[20px] font-bold text-[var(--text-primary)]">
+                    {lang === 'ko'
+                      ? '와인 수량 및 예산 한 번에 설정하기'
+                      : 'Bottle Count & Budget'}
+                  </h2>
+                  <p className="mt-0.5 text-[13px] text-[var(--text-secondary)]">
+                    {lang === 'ko'
+                      ? '드실 병 수와 원하시는 예산 범위를 함께 정해 주세요.'
+                      : 'Set how many bottles to pair and your target price range.'}
+                  </p>
+                </div>
 
-              {isCourseActive ? (
-                <div className="space-y-5">
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <button
-                      type="button"
-                      onClick={() => onCourseServeFormatChange('glass')}
-                      data-surface={courseServeFormat === 'glass' ? 'accent' : undefined}
-                      className={`rounded-2xl p-5 text-left transition-all ${
-                        courseServeFormat === 'glass'
-                          ? 'btn-accent shadow-sm'
-                          : 'somm-sub-surface text-[var(--text-primary)]'
-                      }`}
-                    >
-                      <div className="text-[16px] font-bold">{t.courseFormatGlassTitle}</div>
-                      <div
-                        className={`mt-1 text-[12px] leading-snug ${
+                {isCourseActive ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => onCourseServeFormatChange('glass')}
+                        data-surface={courseServeFormat === 'glass' ? 'accent' : undefined}
+                        className={`rounded-2xl p-3.5 text-left transition-all ${
                           courseServeFormat === 'glass'
-                            ? 'text-white/90'
-                            : 'text-[var(--text-secondary)]'
+                            ? 'btn-accent shadow-sm'
+                            : 'somm-sub-surface text-[var(--text-primary)]'
                         }`}
                       >
-                        {t.courseFormatGlassDesc}
-                      </div>
-                    </button>
+                        <div className="text-[14px] font-bold">{t.courseFormatGlassTitle}</div>
+                        <div
+                          className={`mt-0.5 text-[11px] leading-snug ${
+                            courseServeFormat === 'glass'
+                              ? 'text-white/90'
+                              : 'text-[var(--text-secondary)]'
+                          }`}
+                        >
+                          {t.courseFormatGlassDesc}
+                        </div>
+                      </button>
 
-                    <button
-                      type="button"
-                      onClick={() => onCourseServeFormatChange('bottle')}
-                      data-surface={courseServeFormat === 'bottle' ? 'accent' : undefined}
-                      className={`rounded-2xl p-5 text-left transition-all ${
-                        courseServeFormat === 'bottle'
-                          ? 'btn-accent shadow-sm'
-                          : 'somm-sub-surface text-[var(--text-primary)]'
-                      }`}
-                    >
-                      <div className="text-[16px] font-bold">{t.courseFormatBottleTitle}</div>
-                      <div
-                        className={`mt-1 text-[12px] leading-snug ${
+                      <button
+                        type="button"
+                        onClick={() => onCourseServeFormatChange('bottle')}
+                        data-surface={courseServeFormat === 'bottle' ? 'accent' : undefined}
+                        className={`rounded-2xl p-3.5 text-left transition-all ${
                           courseServeFormat === 'bottle'
-                            ? 'text-white/90'
-                            : 'text-[var(--text-secondary)]'
+                            ? 'btn-accent shadow-sm'
+                            : 'somm-sub-surface text-[var(--text-primary)]'
                         }`}
                       >
-                        {t.courseFormatBottleDesc}
-                      </div>
-                    </button>
-                  </div>
+                        <div className="text-[14px] font-bold">{t.courseFormatBottleTitle}</div>
+                        <div
+                          className={`mt-0.5 text-[11px] leading-snug ${
+                            courseServeFormat === 'bottle'
+                              ? 'text-white/90'
+                              : 'text-[var(--text-secondary)]'
+                          }`}
+                        >
+                          {t.courseFormatBottleDesc}
+                        </div>
+                      </button>
+                    </div>
 
-                  {courseServeFormat === 'bottle' && (
-                    <div className="somm-sub-surface space-y-4 rounded-2xl p-5">
-                      <div className="text-[14px] font-bold text-[var(--text-primary)]">
-                        {t.courseBottleCountLabel}
-                      </div>
-                      <div className="grid grid-cols-4 gap-2.5">
-                        {([1, 2, 3, 4] as CourseBottleCount[]).map((num) => {
-                          const active = courseBottleCount === num;
-                          return (
-                            <button
-                              key={num}
-                              type="button"
-                              onClick={() => onCourseBottleCountChange(num)}
-                              data-surface={active ? 'accent' : undefined}
-                              className={`rounded-2xl py-3.5 text-[15px] font-bold tabular-nums transition-all ${
-                                active
-                                  ? 'btn-accent shadow-sm'
-                                  : 'bg-[var(--bg-secondary)] text-[var(--text-primary)]'
-                              }`}
-                            >
-                              {num}
-                              {lang === 'ko' ? t.courseBottleUnit : ` ${t.courseBottleUnit}`}
-                            </button>
-                          );
-                        })}
-                      </div>
+                    {courseServeFormat === 'bottle' && (
+                      <div className="somm-sub-surface flex flex-wrap items-center justify-between gap-3 rounded-2xl p-3.5">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="mr-1 text-[13px] font-semibold text-[var(--text-primary)]">
+                            {t.courseBottleCountLabel}:
+                          </span>
+                          {([1, 2, 3, 4] as CourseBottleCount[]).map((num) => {
+                            const active = courseBottleCount === num;
+                            return (
+                              <button
+                                key={num}
+                                type="button"
+                                onClick={() => onCourseBottleCountChange(num)}
+                                data-surface={active ? 'accent' : undefined}
+                                className={`rounded-xl px-3.5 py-2 text-[13px] font-bold tabular-nums transition-all ${
+                                  active
+                                    ? 'btn-accent shadow-sm'
+                                    : 'bg-[var(--bg-secondary)] text-[var(--text-primary)]'
+                                }`}
+                              >
+                                {num}
+                                {lang === 'ko' ? t.courseBottleUnit : ` ${t.courseBottleUnit}`}
+                              </button>
+                            );
+                          })}
+                        </div>
 
-                      <div className="pt-1">
                         <button
                           type="button"
                           onClick={() => onIncludeExtraGlassChange(!includeExtraGlass)}
                           data-surface={includeExtraGlass ? 'accent' : undefined}
-                          className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-[13px] font-semibold transition-colors ${
+                          className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition-colors ${
                             includeExtraGlass
                               ? 'btn-accent'
                               : 'bg-[var(--bg-secondary)] text-[var(--text-primary)]'
                           }`}
                         >
-                          {includeExtraGlass && <Check className="h-4 w-4" strokeWidth={2} />}
+                          {includeExtraGlass && <Check className="h-3.5 w-3.5" strokeWidth={2} />}
                           <span>{t.courseExtraGlassToggle}</span>
                         </button>
                       </div>
-                    </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="somm-sub-surface rounded-2xl px-4 py-3 text-[13px] text-[var(--text-secondary)]">
+                    {lang === 'ko'
+                      ? '선택하신 단품 요리에 맞춘 바틀 추천으로 진행됩니다.'
+                      : 'Curated single-bottle options matched to your selected dishes.'}
+                  </div>
+                )}
+              </div>
+
+              {/* Part B: Budget Range (10만원 이하 / 10~20만원 / 20~30만원 / 30~40만원 + 직접입력) */}
+              <div className="space-y-3 border-t border-[var(--border-subtle)] pt-5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-[15px] font-bold text-[var(--text-primary)]">
+                    {t.budgetSectionTitle}
+                  </span>
+                  <SlidingSwitch
+                    size="sm"
+                    value={budgetScope}
+                    options={[
+                      { value: 'per_bottle', label: t.budgetPerBottle },
+                      { value: 'total', label: t.budgetTotal },
+                    ]}
+                    onChange={onBudgetScopeChange}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+                  {(Object.keys(BUDGET_LABELS) as BudgetTier[]).map((tier) => {
+                    const active = !hasCustomBudget && tier === budgetTier;
+                    return (
+                      <button
+                        key={tier}
+                        type="button"
+                        onClick={() => {
+                          onCustomBudgetManWonChange('');
+                          onBudgetTierChange(tier);
+                        }}
+                        data-surface={active ? 'accent' : undefined}
+                        className={`rounded-2xl px-3.5 py-3.5 text-[14px] font-bold tabular-nums transition-all ${
+                          active
+                            ? 'btn-accent shadow-sm'
+                            : 'somm-sub-surface text-[var(--text-primary)] hover:opacity-85'
+                        }`}
+                      >
+                        {BUDGET_LABELS[tier][lang]}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3 pt-1">
+                  <div className="flex items-center gap-2 rounded-2xl bg-[var(--bg-tertiary)] px-4 py-2.5">
+                    <span className="text-[13px] font-semibold text-[var(--text-secondary)]">
+                      {lang === 'ko' ? '직접 입력' : 'Custom'}
+                    </span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={customBudgetManWon}
+                      onChange={(e) => {
+                        const digitsOnly = e.target.value.replace(/[^0-9]/g, '');
+                        onCustomBudgetManWonChange(digitsOnly);
+                      }}
+                      placeholder={lang === 'ko' ? '예: 25' : 'e.g. 25'}
+                      className="w-16 bg-transparent text-right text-[15px] font-bold tabular-nums text-[var(--text-primary)] placeholder:font-normal placeholder:text-[var(--text-muted)] focus:outline-none"
+                    />
+                    <span className="text-[13px] font-semibold text-[var(--text-primary)]">
+                      {lang === 'ko' ? '만 원' : '× ₩10K'}
+                    </span>
+                    {hasCustomBudget && (
+                      <button
+                        type="button"
+                        onClick={() => onCustomBudgetManWonChange('')}
+                        aria-label="Clear custom budget"
+                        className="rounded-full p-0.5 text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]"
+                      >
+                        <X className="h-3.5 w-3.5" strokeWidth={1.5} />
+                      </button>
+                    )}
+                  </div>
+
+                  {hasCustomBudget && (
+                    <span className="text-[13px] font-semibold tabular-nums text-[#6B1D2F] dark:text-[#E59BAE]">
+                      {formatKrw(customBudgetNum * 10000, lang)}{' '}
+                      {budgetScope === 'total'
+                        ? lang === 'ko'
+                          ? '(전체 합산 기준)'
+                          : '(Total)'
+                        : lang === 'ko'
+                          ? '(1병 기준)'
+                          : '(Per Bottle)'}
+                    </span>
                   )}
                 </div>
-              ) : (
-                <div className="somm-sub-surface space-y-4 rounded-2xl p-5">
-                  <div className="text-[15px] font-bold text-[var(--text-primary)]">
-                    {lang === 'ko'
-                      ? '선택하신 요리 중심의 단품 바틀 구성이 적용됩니다'
-                      : 'Curated bottle selections tuned to your chosen dishes'}
-                  </div>
-                  <p className="text-[13px] leading-relaxed text-[var(--text-secondary)]">
-                    {lang === 'ko'
-                      ? '업장 설정 추천 수에 맞춰 요리의 풍미를 가장 잘 살리는 대표 바틀들을 비교해 드립니다. 원하시면 이전 요리 단계에서 코스 전체 페어링으로 전환하실 수도 있습니다.'
-                      : 'We will compare the top-matching bottles from the selected cellar for your plates.'}
-                  </p>
-                </div>
-              )}
+              </div>
             </div>
           )}
 
           {/* ============================================================
-              PAGE 6: Recommended vs Custom Combination
+              PAGE 5: Recommended vs Custom Combination
              ============================================================ */}
-          {step1Page === 6 && (
+          {step1Page === 5 && (
             <div className="space-y-6">
               <div>
                 <h2 className="text-[22px] font-bold text-[var(--text-primary)]">
@@ -1017,10 +1015,7 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
                       {Array.from({ length: courseBottleCount }).map((_, idx) => {
                         const chosenCat = customSlots[idx] ?? 'white';
                         return (
-                          <div
-                            key={idx}
-                            className="somm-sub-surface rounded-2xl p-4"
-                          >
+                          <div key={idx} className="somm-sub-surface rounded-2xl p-4">
                             <div className="mb-2 text-[13px] font-semibold text-[var(--text-primary)]">
                               {idx + 1}
                               {lang === 'ko'
@@ -1062,7 +1057,7 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
                   </div>
                   <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--text-secondary)]">
                     {lang === 'ko'
-                      ? '2병 이상 코스 바틀을 선택하실 경우, 여기서 병별 주종(예: 샴페인→화이트→레드 또는 화이트→화이트→레드)을 직접 고르거나 집중 시나리오를 비교하실 수 있습니다.'
+                      ? '2병 이상 코스 바틀을 선택하실 경우, 여기서 병별 주종(예: 샴페인→화이트→레드)을 직접 지정하실 수 있습니다.'
                       : 'When ordering 2+ course bottles, custom slot selection is available right here.'}
                   </p>
                 </div>
@@ -1071,28 +1066,28 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
           )}
 
           {/* ============================================================
-              PAGE 7: Corkage / Wine Source + Final CTA ("와인 추천 받기")
+              PAGE 6: Clean Wine Source / Corkage Step + Final CTA ("와인 추천 받기")
              ============================================================ */}
-          {step1Page === 7 && (
+          {step1Page === 6 && (
             <div className="space-y-6">
               <div>
                 <h2 className="text-[22px] font-bold text-[var(--text-primary)]">
                   {visitTiming === 'pre_visit'
                     ? lang === 'ko'
-                      ? '와인 출처 및 콜키지 계획 설정'
-                      : 'Wine Source & Pre-Visit Corkage'
+                      ? '어디에서 와인을 고르시겠어요?'
+                      : 'Choose Where to Select Your Wines'
                     : lang === 'ko'
-                      ? '콜키지(지참 와인) 이용 여부'
-                      : 'Corkage (BYOB) Option'}
+                      ? '업장 와인 및 콜키지 여부'
+                      : 'Cellar Selection & Corkage Option'}
                 </h2>
                 <p className="mt-1 text-[14px] text-[var(--text-secondary)]">
                   {visitTiming === 'pre_visit'
                     ? lang === 'ko'
-                      ? '업장 와인을 미리 예약하시거나, 내 셀러 · 방문 예정 와인샵의 리스트에서 와인을 추천받을 수 있습니다.'
-                      : 'Choose whether to preview & hold venue bottles, pair from your home cellar, or pick from a partner wine shop.'
+                      ? '업장 와인을 미리 예약하시거나, 콜키지로 가져가실 와인을 내 셀러 · 방문 와인샵 중에서 고르실 수 있습니다.'
+                      : 'Reserve venue bottles ahead, or pick a BYOB bottle from your home cellar or partner wine shop.'
                     : lang === 'ko'
-                      ? '업장 와인만 추천받으시거나, 가져오신 콜키지 와인을 함께 반영하실 수 있습니다.'
-                      : 'Order solely from the restaurant cellar or factor in a bottle you brought with you.'}
+                      ? '업장 셀러 와인만 추천받으시거나, 가져오신 콜키지 와인을 함께 반영하실 수 있습니다.'
+                      : 'Recommend purely from the venue cellar or harmonize with a corkage bottle you brought.'}
                 </p>
               </div>
 
@@ -1145,7 +1140,10 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
 
                     <button
                       type="button"
-                      onClick={() => onWineSourceModeChange('my_cellar')}
+                      onClick={() => {
+                        onWineSourceModeChange('my_cellar');
+                        onCorkageWineChange(null);
+                      }}
                       data-surface={wineSourceMode === 'my_cellar' ? 'accent' : undefined}
                       className={`rounded-2xl p-4 text-left transition-all ${
                         wineSourceMode === 'my_cellar'
@@ -1154,7 +1152,7 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
                       }`}
                     >
                       <div className="text-[14px] font-bold">
-                        {lang === 'ko' ? '내 셀러에서 추천' : 'From My Cellar'}
+                        {lang === 'ko' ? '내 셀러에서 추천 (콜키지)' : 'From My Cellar (BYOB)'}
                       </div>
                       <p
                         className={`mt-1 text-[11px] leading-snug ${
@@ -1164,14 +1162,17 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
                         }`}
                       >
                         {lang === 'ko'
-                          ? `보유 중인 내 와인(${personalCellar.length}병) 중 골라줍니다.`
-                          : `Curate from your own ${personalCellar.length} bottles.`}
+                          ? `집 셀러(${personalCellar.length}병)에서 가져갈 최적의 와인을 추천합니다.`
+                          : `Pick the best BYOB bottle from your ${personalCellar.length} cellar wines.`}
                       </p>
                     </button>
 
                     <button
                       type="button"
-                      onClick={() => onWineSourceModeChange('wine_shop')}
+                      onClick={() => {
+                        onWineSourceModeChange('wine_shop');
+                        onCorkageWineChange(null);
+                      }}
                       data-surface={wineSourceMode === 'wine_shop' ? 'accent' : undefined}
                       className={`rounded-2xl p-4 text-left transition-all ${
                         wineSourceMode === 'wine_shop'
@@ -1180,7 +1181,7 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
                       }`}
                     >
                       <div className="text-[14px] font-bold">
-                        {lang === 'ko' ? '방문 와인샵에서 추천' : 'Partner Wine Shop'}
+                        {lang === 'ko' ? '와인샵에서 구매 (콜키지)' : 'Partner Wine Shop (BYOB)'}
                       </div>
                       <p
                         className={`mt-1 text-[11px] leading-snug ${
@@ -1190,8 +1191,8 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
                         }`}
                       >
                         {lang === 'ko'
-                          ? '들르실 와인샵 재고와 연동해 추천합니다.'
-                          : 'Pick directly from a partner shop’s stock.'}
+                          ? '들르실 와인샵 재고에서 업장 음식에 맞는 와인을 고릅니다.'
+                          : 'Choose a BYOB bottle directly from a partner shop’s stock.'}
                       </p>
                     </button>
                   </div>
@@ -1357,7 +1358,7 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
                       }`}
                     >
                       {lang === 'ko'
-                        ? '업장 셀러 와인으로 추천받거나 콜키지 1병을 함께 병행합니다.'
+                        ? '업장 셀러 와인으로 추천받거나 지참 콜키지 1병을 함께 반영합니다.'
                         : 'Curated venue bottles, optionally paired alongside 1 corkage bottle.'}
                     </p>
                   </button>
@@ -1388,24 +1389,19 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
                 </div>
               )}
 
-              {/* Corkage Bottle Input (either Corkage-Only OR Optional alongside Venue Cellar) */}
-              {(corkageOnly || wineSourceMode === 'venue_cellar') && (
+              {/* Corkage Bottle Input ONLY when Venue Cellar is active ON-SITE (not in Pre-Visit My Cellar / Wine Shop!) */}
+              {(corkageOnly ||
+                (wineSourceMode === 'venue_cellar' && visitTiming === 'on_site')) && (
                 <div className="somm-sub-surface space-y-3 rounded-2xl p-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <div className="text-[14px] font-bold text-[var(--text-primary)]">
-                        {corkageOnly
-                          ? lang === 'ko'
-                            ? '가져오신 콜키지 와인 정보 입력'
-                            : 'Your Corkage Bottle Details'
-                          : visitTiming === 'pre_visit'
-                            ? lang === 'ko'
-                              ? '함께 가져가실 콜키지 계획이 있으신가요? (선택)'
-                              : 'Also Bringing a Corkage Bottle? (Optional)'
-                            : lang === 'ko'
-                              ? '가져오신 콜키지 와인도 함께 맞추시겠어요? (선택)'
-                              : 'Factor in a Corkage Bottle Too? (Optional)'}
-                      </div>
+                    <div className="text-[14px] font-bold text-[var(--text-primary)]">
+                      {corkageOnly
+                        ? lang === 'ko'
+                          ? '가져오신 콜키지 와인 정보 입력'
+                          : 'Your Corkage Bottle Details'
+                        : lang === 'ko'
+                          ? '가져오신 콜키지 와인도 함께 맞추시겠어요? (선택)'
+                          : 'Factor in a Corkage Bottle Too? (Optional)'}
                     </div>
 
                     {!corkageOnly && (
@@ -1575,7 +1571,7 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
         </div>
 
         {/* Bottom Wizard Navigation Bar */}
-        <div className="mt-8 flex items-center justify-between gap-3 border-t border-[var(--border-subtle)] pt-5">
+        <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border-subtle)] pt-5">
           {step1Page > 1 ? (
             <button
               type="button"
@@ -1587,36 +1583,227 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
             </button>
           ) : (
             <div className="text-[12px] font-semibold tabular-nums text-[var(--text-secondary)]">
-              1 / 7
+              1 / 6
             </div>
           )}
 
-          <div className="text-[12px] font-semibold tabular-nums text-[var(--text-secondary)]">
-            {step1Page > 1 ? `${step1Page} / 7` : ''}
-          </div>
+          {step1Page > 1 && (
+            <div className="text-[12px] font-semibold tabular-nums text-[var(--text-secondary)]">
+              {`${step1Page} / 6`}
+            </div>
+          )}
 
-          {step1Page < 7 && (
+          {step1Page === 1 ? (
+            <div className="flex flex-wrap items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setCorkageModalOpen(true)}
+                className="somm-sub-surface inline-flex items-center gap-1.5 rounded-full px-4 py-2.5 text-[13px] font-bold text-[#6B1D2F] hover:opacity-85 dark:text-[#F4B8C6]"
+              >
+                <Camera className="h-4 w-4" strokeWidth={1.75} />
+                <span>{lang === 'ko' ? '콜키지만 즐길게요' : 'Corkage Only'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => goPage(2)}
+                data-surface="accent"
+                className="btn-accent inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-[13px] font-bold shadow-sm"
+              >
+                <span>{lang === 'ko' ? '와인 추천받기' : 'Recommend Wine'}</span>
+                <ArrowRight className="h-4 w-4" strokeWidth={1.75} />
+              </button>
+            </div>
+          ) : step1Page < 6 ? (
             <button
               type="button"
               onClick={() => goPage((step1Page + 1) as Step1Page)}
               data-surface="accent"
               className="btn-accent inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-[13px] font-bold shadow-sm"
             >
-              <span>
-                {step1Page === 1
-                  ? lang === 'ko'
-                    ? '안내 시작하기'
-                    : 'Start Guide'
-                  : lang === 'ko'
-                    ? '다음 단계'
-                    : 'Next'}
-              </span>
+              <span>{lang === 'ko' ? '다음 단계' : 'Next'}</span>
               <ArrowRight className="h-4 w-4" strokeWidth={1.75} />
             </button>
+          ) : (
+            <div className="w-16" />
           )}
-          {step1Page === 7 && <div className="w-16" />}
         </div>
       </section>
+
+      {/* Instant Corkage-Only Analysis Popup (Triggered from Page 1 "콜키지만 즐길게요") */}
+      {corkageModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-xs"
+          onClick={() => setCorkageModalOpen(false)}
+        >
+          <div
+            className="somm-card w-full max-w-lg space-y-4 rounded-3xl p-5 shadow-2xl sm:p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3 border-b border-[var(--border-subtle)] pb-3.5">
+              <div>
+                <div className="text-[12px] font-semibold text-[#6B1D2F] dark:text-[#E59BAE]">
+                  {lang === 'ko' ? '콜키지 와인 바로 분석' : 'Instant Corkage Analysis'}
+                </div>
+                <h3 className="mt-0.5 text-[19px] font-bold text-[var(--text-primary)]">
+                  {lang === 'ko'
+                    ? '가져오신 와인 라벨을 찍거나 입력해 주세요'
+                    : 'Snap or Enter Your Corkage Bottle'}
+                </h3>
+                <p className="mt-1 text-[12px] text-[var(--text-secondary)]">
+                  {lang === 'ko'
+                    ? '와인 정보를 확인한 즉시 테이스팅 노트, 포도밭 스토리, 가장 잘 어울리는 이 업장의 요리를 바로 안내해 드립니다.'
+                    : 'Immediately reveals full tasting notes, vineyard map, and best matching dishes at this restaurant.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCorkageModalOpen(false)}
+                aria-label="Close modal"
+                className="somm-sub-surface rounded-full p-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              >
+                <X className="h-4 w-4" strokeWidth={1.75} />
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-2.5 sm:flex-row">
+              <input
+                type="text"
+                value={instantBottle.name}
+                onChange={(e) =>
+                  setInstantBottle({ ...instantBottle, name: e.target.value })
+                }
+                placeholder={
+                  lang === 'ko'
+                    ? '와인 이름 입력 (예: 살롱 1996, 오퍼스 원)'
+                    : 'Wine name (e.g., Salon 1996)'
+                }
+                className="flex-1 rounded-xl bg-[var(--bg-tertiary)] px-3.5 py-3 text-[14px] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[#6B1D2F]"
+              />
+              <input
+                ref={instantCorkageFileRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = '';
+                  if (!file) return;
+                  setIsScanningInstant(true);
+                  try {
+                    const scanned = await analyzeWineLabelImage(file);
+                    const nextBottle: CorkageBottle = {
+                      name: lang === 'ko' ? scanned.nameKo : scanned.nameEn,
+                      nameEn: scanned.nameEn,
+                      producer: scanned.producer,
+                      vintage: scanned.vintage,
+                      varietalsKo: scanned.varietalsKo,
+                      varietalsEn: scanned.varietalsEn,
+                      regionKo: scanned.regionKo,
+                      regionEn: scanned.regionEn,
+                      countryCode: scanned.countryCode,
+                      category: scanned.category,
+                      body: scanned.structure.body,
+                      structure: scanned.structure,
+                      aromas: scanned.aromas,
+                      slotPosition:
+                        scanned.category === 'sparkling'
+                          ? 'early'
+                          : scanned.category === 'white'
+                            ? 'middle'
+                            : 'late',
+                    };
+                    setInstantBottle(nextBottle);
+                    setIsSubmittingInstant(true);
+                    await onInstantCorkageSubmit(nextBottle);
+                    setCorkageModalOpen(false);
+                  } finally {
+                    setIsScanningInstant(false);
+                    setIsSubmittingInstant(false);
+                  }
+                }}
+              />
+              <button
+                type="button"
+                disabled={isScanningInstant || isSubmittingInstant}
+                onClick={() => instantCorkageFileRef.current?.click()}
+                data-surface="accent"
+                className="btn-accent inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl px-4 py-3 text-[13px] font-bold shadow-xs"
+              >
+                <Camera className="h-4 w-4" strokeWidth={1.75} />
+                <span>
+                  {isScanningInstant
+                    ? lang === 'ko'
+                      ? '라벨 인식 중...'
+                      : 'Scanning...'
+                    : lang === 'ko'
+                      ? '사진 찍어 바로 분석'
+                      : 'Snap Label & Analyze'}
+                </span>
+              </button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[12px] font-semibold text-[var(--text-secondary)]">
+                {lang === 'ko' ? '주종:' : 'Style:'}
+              </span>
+              {SLOT_CATEGORIES.map((cat) => {
+                const active = instantBottle.category === cat;
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setInstantBottle({ ...instantBottle, category: cat })}
+                    data-surface={active ? 'accent' : undefined}
+                    className={`rounded-full px-3 py-1 text-[12px] font-semibold ${
+                      active
+                        ? 'btn-accent'
+                        : 'somm-sub-surface text-[var(--text-primary)]'
+                    }`}
+                  >
+                    {CATEGORY_LABELS[cat][lang === 'ko' ? 'shortKo' : 'shortEn']}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex flex-wrap items-center justify-end gap-2.5 border-t border-[var(--border-subtle)] pt-4">
+              <button
+                type="button"
+                onClick={() => setCorkageModalOpen(false)}
+                className="somm-sub-surface rounded-xl px-4 py-2.5 text-[13px] font-semibold text-[var(--text-primary)]"
+              >
+                {t.closeBtn}
+              </button>
+              <button
+                type="button"
+                disabled={!instantBottle.name.trim() || isSubmittingInstant}
+                onClick={async () => {
+                  if (!instantBottle.name.trim()) return;
+                  setIsSubmittingInstant(true);
+                  try {
+                    await onInstantCorkageSubmit(instantBottle);
+                    setCorkageModalOpen(false);
+                  } finally {
+                    setIsSubmittingInstant(false);
+                  }
+                }}
+                data-surface="accent"
+                className="btn-accent rounded-xl px-5 py-2.5 text-[13px] font-bold disabled:opacity-45"
+              >
+                {isSubmittingInstant
+                  ? lang === 'ko'
+                    ? '분석 중...'
+                    : 'Analyzing...'
+                  : lang === 'ko'
+                    ? '와인 설명 · 궁합 바로 보기'
+                    : 'View Wine Notes & Dish Matches'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

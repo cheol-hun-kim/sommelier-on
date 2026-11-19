@@ -27,7 +27,7 @@ const single = generatePairingRecommendation({
   venue: v1,
   wines: INITIAL_WINES,
   persona: p1,
-  budgetTier: '100_150',
+  budgetTier: '100_200',
   budgetScope: 'per_bottle',
   selectedDishes: [
     { id: 'd1', nameKo: '스테이크', nameEn: 'Steak', flavorTags: ['steak', 'rich'], intensity: 5, selected: true },
@@ -51,7 +51,7 @@ const courseAuto = generatePairingRecommendation({
   venue: v1,
   wines: INITIAL_WINES,
   persona: p1,
-  budgetTier: '100_150',
+  budgetTier: '100_200',
   budgetScope: 'per_bottle',
   selectedDishes: SAMPLE_MENU_COURSE.dishes,
   bodyPref: 'any',
@@ -73,7 +73,7 @@ const white3 = generatePairingRecommendation({
   venue: v1,
   wines: INITIAL_WINES,
   persona: SOMMELIER_PERSONAS[1],
-  budgetTier: '50_100',
+  budgetTier: 'under_100',
   budgetScope: 'per_bottle',
   selectedDishes: SAMPLE_MENU_COURSE.dishes,
   bodyPref: 'any',
@@ -103,7 +103,7 @@ const spk3 = generatePairingRecommendation({
   venue: v1,
   wines: INITIAL_WINES,
   persona: p1,
-  budgetTier: '100_150',
+  budgetTier: '100_200',
   budgetScope: 'per_bottle',
   selectedDishes: SAMPLE_MENU_COURSE.dishes,
   bodyPref: 'any',
@@ -133,7 +133,7 @@ const v2Rec = generatePairingRecommendation({
   venue: v2,
   wines: INITIAL_WINES,
   persona: SOMMELIER_PERSONAS[1],
-  budgetTier: '100_150',
+  budgetTier: '100_200',
   budgetScope: 'per_bottle',
   selectedDishes: [
     { id: 'h1', nameKo: '한우 갈비', nameEn: 'Galbi', flavorTags: ['steak', 'korean_umami'], intensity: 5, selected: true },
@@ -164,7 +164,7 @@ const reRec = generatePairingRecommendation({
   venue: v1,
   wines: INITIAL_WINES,
   persona: p1,
-  budgetTier: '100_150',
+  budgetTier: '100_200',
   budgetScope: 'per_bottle',
   selectedDishes: [
     { id: 'd1', nameKo: '스테이크', nameEn: 'Steak', flavorTags: ['steak'], intensity: 5, selected: true },
@@ -195,7 +195,7 @@ const swappedCourse = swapSpecificWinesInBundle(
     venue: v1,
     wines: INITIAL_WINES,
     persona: p1,
-    budgetTier: '100_150',
+    budgetTier: '100_200',
     budgetScope: 'per_bottle',
     selectedDishes: SAMPLE_MENU_COURSE.dishes,
     bodyPref: 'any',
@@ -222,7 +222,7 @@ const personaPicks = SOMMELIER_PERSONAS.map((pers) =>
     venue: v1,
     wines: INITIAL_WINES,
     persona: pers,
-    budgetTier: '100_150',
+    budgetTier: '100_200',
     budgetScope: 'per_bottle',
     selectedDishes: [
       { id: 'd1', nameKo: '채끝 스테이크 & 버섯 리조또', nameEn: 'Steak & Risotto', flavorTags: ['steak', 'truffle', 'umami'], intensity: 4, selected: true },
@@ -242,7 +242,7 @@ if (new Set(personaPicks).size < 2) {
 }
 
 // 9. Different budget tiers must return distinct, price-matched wine recommendations
-const budgetTiers = ['under_50', '50_100', '100_150', 'over_150'];
+const budgetTiers = ['under_100', '100_200', '200_300', '300_400'];
 const budgetTops = budgetTiers.map((tier) => {
   const r = generatePairingRecommendation({
     venue: v1,
@@ -272,10 +272,10 @@ const budgetTops = budgetTiers.map((tier) => {
     overallExpert: r.expertOverallNoteKo,
   };
 });
-if (new Set(budgetTops.map((x) => x.top)).size < 3) {
-  throw new Error('Budget tiers returned identical top picks: ' + JSON.stringify(budgetTops));
+if (new Set(budgetTops.map((x) => x.top)).size < 4) {
+  throw new Error('Budget tiers returned overlapping top picks: ' + JSON.stringify(budgetTops));
 }
-if (budgetTops[0].price > 55000 || budgetTops[3].price < 145000) {
+if (budgetTops[0].price > 105000 || budgetTops[3].price < 295000) {
   throw new Error('Budget pricing ceiling/floor violated: ' + JSON.stringify(budgetTops));
 }
 if (budgetTops[0].friendly === budgetTops[0].expert || budgetTops[0].overallFriendly === budgetTops[0].overallExpert) {

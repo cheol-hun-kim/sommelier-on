@@ -152,7 +152,7 @@ export interface Venue {
   courseMenu?: ParsedMenuDish[];
 }
 
-export type BudgetTier = 'under_50' | '50_100' | '100_150' | 'over_150';
+export type BudgetTier = 'under_100' | '100_200' | '200_300' | '300_400';
 export type BudgetScope = 'per_bottle' | 'total';
 export type BodyPref = 'any' | 'light' | 'medium' | 'full';
 export type SweetnessPref = 'any' | 'dry' | 'off_dry';

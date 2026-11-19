@@ -556,10 +556,10 @@ export const CATEGORY_LABELS: Record<WineCategory, { ko: string; en: string; sho
 };
 
 export const BUDGET_LABELS: Record<BudgetTier, { ko: string; en: string }> = {
-  under_50: { ko: '5만 원 이하', en: 'Under ₩50K' },
-  '50_100': { ko: '5~10만 원', en: '₩50K–100K' },
-  '100_150': { ko: '10~15만 원', en: '₩100K–150K' },
-  over_150: { ko: '15만 원 이상', en: '₩150K+' },
+  under_100: { ko: '10만 원 이하', en: 'Under ₩100K' },
+  '100_200': { ko: '10~20만 원', en: '₩100K–200K' },
+  '200_300': { ko: '20~30만 원', en: '₩200K–300K' },
+  '300_400': { ko: '30~40만 원', en: '₩300K–400K' },
 };
 
 export const BODY_LABELS: Record<BodyPref, { ko: string; en: string }> = {

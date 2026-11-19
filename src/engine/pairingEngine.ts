@@ -90,10 +90,10 @@ function getBudgetWindow(
   customBudgetWon?: number | null
 ): { min: number; max: number; ideal: number } {
   const baseMap: Record<BudgetTier, { min: number; max: number; ideal: number }> = {
-    under_50: { min: 0, max: 55000, ideal: 45000 },
-    '50_100': { min: 48000, max: 105000, ideal: 78000 },
-    '100_150': { min: 98000, max: 155000, ideal: 128000 },
-    over_150: { min: 145000, max: 450000, ideal: 185000 },
+    under_100: { min: 0, max: 105000, ideal: 78000 },
+    '100_200': { min: 98000, max: 205000, ideal: 148000 },
+    '200_300': { min: 195000, max: 305000, ideal: 248000 },
+    '300_400': { min: 295000, max: 420000, ideal: 348000 },
   };
   const base =
     customBudgetWon && customBudgetWon > 0
@@ -161,8 +161,9 @@ function scoreWineForContext(
     score += Math.max(0, 14 - dist * 16);
   } else if (wine.venuePrice < budgetWindow.min) {
     const underRatio = (budgetWindow.min - wine.venuePrice) / Math.max(1, budgetWindow.min);
-    const floorWeight = budgetWindow.min >= 140000 ? 55 : 8;
-    score -= floorWeight + Math.min(20, underRatio * 20);
+    const floorWeight =
+      budgetWindow.min >= 180000 ? 75 : budgetWindow.min >= 140000 ? 55 : 8;
+    score -= floorWeight + Math.min(70, underRatio * (budgetWindow.min >= 140000 ? 75 : 20));
   } else {
     const overRatio = (wine.venuePrice - budgetWindow.max) / Math.max(1, budgetWindow.max);
     score -= 105 + Math.min(120, overRatio * 145);
@@ -178,15 +179,15 @@ function scoreWineForContext(
 
   if (flavorTags.includes('steak')) {
     if (wine.category === 'red') {
-      score += 48;
+      score += 52;
       if (wine.structure.tannin >= 3 && !tasteProfile.affinityVector.avoidTags.includes('too_tannic')) {
         score += 10;
       }
       if (tasteProfile.affinityVector.avoidTags.includes('too_tannic') && wine.structure.tannin <= 3) {
-        score += 32;
+        score += 42;
       }
-    } else if (!flavorTags.includes('seafood') && wine.structure.body <= 3 && !wine.pairingAffinities.includes('steak')) {
-      score -= 22;
+    } else if (!flavorTags.includes('seafood')) {
+      score -= wine.pairingAffinities.includes('steak') ? 22 : 38;
     }
   }
   if (flavorTags.includes('seafood') && (wine.category === 'white' || wine.category === 'sparkling') && wine.structure.acidity >= 4) {

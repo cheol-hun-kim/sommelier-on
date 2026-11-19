@@ -116,7 +116,7 @@ export function App() {
   const [inspectedPersona, setInspectedPersona] =
     useState<SommelierPersona | null>(null);
 
-  const [budgetTier, setBudgetTier] = useState<BudgetTier>('50_100');
+  const [budgetTier, setBudgetTier] = useState<BudgetTier>('100_200');
   const [customBudgetManWon, setCustomBudgetManWon] = useState('');
   const [budgetScope, setBudgetScope] = useState<BudgetScope>('per_bottle');
   const [visitTiming, setVisitTiming] = useState<VisitTiming>('on_site');
@@ -423,6 +423,26 @@ export function App() {
       setGuestStep(2);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+  };
+
+  const runInstantCorkage = async (bottle: CorkageBottle) => {
+    const pId = activeVenue.defaultPersonaId || selectedPersonaId;
+    const persona = personas.find((p) => p.id === pId) ?? personas[0];
+    setWineSourceMode('corkage_direct');
+    setCorkageOnly(true);
+    const enriched = await enrichCorkageBottle(bottle);
+    setCorkageWine(enriched);
+    const bundle = generateCorkageOnlyRecommendation({
+      venue: activeVenue,
+      persona,
+      corkage: enriched,
+      tasteProfile,
+    });
+    setSwappedExcludedIds([]);
+    setStats(recordRecommendationStats([], pId));
+    setRecommendationBundle(bundle);
+    setGuestStep(2);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleSwapWinesInStep2 = (
@@ -798,14 +818,14 @@ export function App() {
               <ChevronLeft className="h-5 w-5" strokeWidth={1.75} />
             </button>
           )}
-          {((guestStep === 1 && (step1Page < 7 || Boolean(recommendationBundle))) ||
+          {((guestStep === 1 && (step1Page < 6 || Boolean(recommendationBundle))) ||
             (guestStep === 2 && Boolean(activeDrinkingWine))) && (
             <button
               type="button"
               onClick={() => {
                 if (guestStep === 1) {
-                  if (step1Page < 7) {
-                    setStep1Page((prev) => Math.min(7, prev + 1) as Step1Page);
+                  if (step1Page < 6) {
+                    setStep1Page((prev) => Math.min(6, prev + 1) as Step1Page);
                   } else if (recommendationBundle) {
                     setGuestStep(2);
                   }
@@ -890,6 +910,7 @@ export function App() {
             onResetTasteProfile={() => setTasteProfile(resetTasteProfile())}
             hasAnyDishSelected={hasAnyDishSelected}
             onSubmitRecommend={() => runRecommendation()}
+            onInstantCorkageSubmit={runInstantCorkage}
           />
         )}
 
