@@ -17,6 +17,7 @@ import {
   X,
 } from 'lucide-react';
 import { SommelierAvatar, VenueLogo } from './icons/WineVectors';
+import { validateImageFile } from '../utils/fileValidation';
 import type {
   Language,
   PairingSessionStats,
@@ -110,6 +111,9 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
     },
   });
   const [addedToast, setAddedToast] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [pinFailCount, setPinFailCount] = useState(0);
+  const [pinLockedUntil, setPinLockedUntil] = useState<number>(0);
 
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [selectedQrTable, setSelectedQrTable] = useState(venue.tables[0] ?? '7');
@@ -122,15 +126,32 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
 
   const handlePinSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (Date.now() < pinLockedUntil) {
+      setPinError(true);
+      return;
+    }
     if (pinInput.trim() === venue.adminPin) {
       setPinError(false);
+      setPinFailCount(0);
+      setPinLockedUntil(0);
       onUnlock();
     } else {
+      const nextFails = pinFailCount + 1;
+      setPinFailCount(nextFails);
+      if (nextFails >= 5) {
+        setPinLockedUntil(Date.now() + 30_000);
+      }
       setPinError(true);
     }
   };
 
   const handleLabelUpload = async (file: File) => {
+    const check = validateImageFile(file, 10 * 1024 * 1024);
+    if (!check.valid) {
+      setUploadError(check.error ?? '허용되지 않는 이미지 파일입니다.');
+      return;
+    }
+    setUploadError(null);
     setIsScanningLabel(true);
     try {
       const scanned = await analyzeWineLabelImage(file);
@@ -455,18 +476,24 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
           <input
             ref={logoFileRef}
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif"
             className="hidden"
             onChange={(e) => {
               const file = e.target.files?.[0];
+              e.target.value = '';
               if (!file) return;
+              const check = validateImageFile(file, 2 * 1024 * 1024);
+              if (!check.valid) {
+                setUploadError(check.error ?? '허용되지 않는 이미지 파일입니다.');
+                return;
+              }
+              setUploadError(null);
               const reader = new FileReader();
               reader.onload = () => {
                 const dataUrl = String(reader.result ?? '');
                 if (dataUrl) onUpdateVenueLogo(venue.id, dataUrl);
               };
               reader.readAsDataURL(file);
-              e.target.value = '';
             }}
           />
           <button
@@ -489,6 +516,11 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
             </button>
           )}
         </div>
+        {uploadError && (
+          <p className="text-[12px] font-medium text-[#9B2C2C] dark:text-[#FCA5A5]">
+            {uploadError}
+          </p>
+        )}
       </div>
 
       {/* 3. Wine Intake & AI Label Scan Card (matching Reference Image 4) */}
@@ -509,7 +541,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
           <input
             ref={labelFileRef}
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif"
             capture="environment"
             className="hidden"
             onChange={(e) => {

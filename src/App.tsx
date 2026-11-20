@@ -18,6 +18,7 @@ import {
 } from './engine/pairingEngine';
 import { CATEGORY_LABELS, formatKrw } from './i18n/translations';
 import { analyzeMenuImage, enrichCorkageBottle } from './services/aiService';
+import { validateImageFile } from './utils/fileValidation';
 import {
   addJournalEntry,
   addReservation,
@@ -146,6 +147,7 @@ export function App() {
     null
   );
   const [isAnalyzingMenu, setIsAnalyzingMenu] = useState(false);
+  const [menuUploadError, setMenuUploadError] = useState<string | null>(null);
   const [pairingScope, setPairingScope] = useState<'course' | 'dishes'>(() =>
     activeVenue.venueType === 'course' ? 'course' : 'dishes'
   );
@@ -255,6 +257,12 @@ export function App() {
   };
 
   const handleUploadMenuPhoto = async (file: File) => {
+    const check = validateImageFile(file, 10 * 1024 * 1024);
+    if (!check.valid) {
+      setMenuUploadError(check.error ?? '허용되지 않는 이미지 파일입니다.');
+      return;
+    }
+    setMenuUploadError(null);
     setIsAnalyzingMenu(true);
     try {
       const result = await analyzeMenuImage(file);
@@ -838,6 +846,11 @@ export function App() {
       )}
 
       <main className="no-print">
+        {menuUploadError && (
+          <div className="mb-4 rounded-2xl border border-[#E07A5F]/40 bg-[#FFF5F2] px-4 py-3 text-[13px] font-medium text-[#9B2C2C] dark:border-[#E07A5F]/35 dark:bg-[#2A1618] dark:text-[#FCA5A5]">
+            {menuUploadError}
+          </div>
+        )}
         {appMode === 'guest' && guestStep === 1 && (
           <GuestStep1
             lang={lang}

@@ -650,7 +650,7 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept="image/*"
+                      accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif"
                       capture="environment"
                       className="hidden"
                       onChange={(e) => {
