@@ -370,21 +370,42 @@ function buildPersonaCommentary(
   let expertKo = '';
   let expertEn = '';
 
+  const acidityDescKo =
+    wine.structure.acidity >= 4
+      ? `날카롭고 맑은 직선적 산도(${wine.structure.acidity}/5)`
+      : `원만하고 균형 잡힌 산도(${wine.structure.acidity}/5)`;
+  const tanninDescKo =
+    wine.structure.tannin >= 4
+      ? `밀도 높은 벨벳 타닌(${wine.structure.tannin}/5)`
+      : wine.structure.tannin >= 2
+        ? `입안에 부드럽게 녹아드는 매끄러운 타닌(${wine.structure.tannin}/5)`
+        : '타닌 부담 없이 깨끗한 질감';
+  const decantNoteKo =
+    wine.serving.decantMinutes > 0
+      ? `글라스에 따른 뒤 약 ${wine.serving.decantMinutes}분 전후로 산소와 만나면 갇혀 있던 ${secAromaKo} 결이 활짝 피어나며 입안의 질감이 한결 부드러워집니다.`
+      : `별도의 긴 디캔팅 없이 첫 잔부터 ${topAromaKo} 아로마가 선명히 열리며, ${wine.serving.tempMin}~${wine.serving.tempMax}℃에서 한 모금씩 온도가 올라갈수록 ${secAromaKo} 여운이 깊게 이어집니다.`;
+  const pairingMechKo =
+    wine.category === 'red' && (dishTags.includes('steak') || dishTags.includes('rich'))
+      ? `고기 근섬유와 마블링의 지방이 와인의 타닌 및 폴리페놀과 구강 내에서 결합하면서 떫은 수렴감은 즉시 누그러지고, 반대로 고기의 기름기는 산도와 구조감이 깔끔하게 절단해 주어 다음 한 점의 감칠맛을 극대화합니다.`
+      : wine.category === 'sparkling'
+        ? `수백만 개의 미세 기포와 높은 산도가 혀 위의 유분과 크림·버터 막을 물리적으로 씻어내는 "팔레트 클렌징" 효과를 발휘해, ${dishSummaryKo}의 섬세한 단맛과 풍미를 첫 입처럼 또렷하게 되살립니다.`
+        : `와인의 산도·바디감(${wine.structure.body}/5) 곡선이 ${dishSummaryKo} 소스의 농도와 정확히 평형을 이루어, 어느 한쪽이 맛을 덮어버리지 않고 재료 본연의 아미노산 감칠맛과 ${topAromaKo} 향이 겹쳐지는 상승작용을 빚어냅니다.`;
+
   if (persona.toneStyle === 'classic_french') {
     ko = `어렵게 생각하실 필요 없이 ${dishSummaryKo}의 맛을 제일 기분 좋게 살려주는 편한 와인이에요. 상큼한 ${topAromaKo} 향이 입안을 깔끔하게 씻어주어서, 마지막 한 입까지 전혀 느끼하지 않고 맛있게 즐기실 수 있습니다.`;
     en = `An easygoing, bright match for ${dishSummaryEn}—fresh ${topAromaEn} notes keep every bite light and delicious right to the end.`;
-    expertKo = `[구조 및 테루아 분석] ${wine.regionKo}(${wine.varietalsKo}) 특유의 직선적 산도(${wine.structure.acidity}/5)와 정제된 타닌(${wine.structure.tannin}/5)이 ${dishSummaryKo}의 지방·소스 유화 질감과 대칭을 이룹니다. 1차 향(${topAromaKo})에서 2·3차 숙성 뉘앙스(${secAromaKo})로 이어지는 레이어가 팔레트의 긴장감을 견고히 지탱합니다.`;
-    expertEn = `[Structural & Terroir Note] ${wine.regionEn} (${wine.varietalsEn}) brings linear acidity (${wine.structure.acidity}/5) and poised phenolic tension (${wine.structure.tannin}/5) against the lipid richness of ${dishSummaryEn}, bridging primary ${topAromaEn} with ${secAromaEn}.`;
+    expertKo = `[맛과 질감 프로파일] ${acidityDescKo}와 ${tanninDescKo}, 그리고 바디감(${wine.structure.body}/5)이 정밀한 삼각형 구도를 그립니다. 혀끝에 닿는 첫인상은 ${topAromaKo}의 선명한 과실·시트러스 결로 시작해, 중반부로 넘어가면서 밀도 높은 ${secAromaKo} 텍스처가 팔레트를 촘촘히 채우고 긴 여운을 남깁니다.\n\n[음식과의 궁합 메커니즘] ${pairingMechKo}\n\n[시음 호흡 & 온도 변화] ${decantNoteKo}`;
+    expertEn = `[Palate Structure & Texture] Linear acidity (${wine.structure.acidity}/5), poise in phenolic grip (tannin ${wine.structure.tannin}/5), and medium-to-rich weight (body ${wine.structure.body}/5) open with crisp ${topAromaEn} before folding into layered ${secAromaEn} length.\n\n[Culinary Pairing Mechanics] Perfectly counterbalances lipid richness and sauce viscosity in ${dishSummaryEn}, cleansing the mid-palate cleanly so savory umami resonates without fatigue.\n\n[Glass Evolution] Most expressive poured at ${wine.serving.tempMin}–${wine.serving.tempMax}°C; progressive aeration unlocks deeper secondary harmony.`;
   } else if (persona.toneStyle === 'new_korean') {
     ko = `${dishSummaryKo}처럼 감칠맛이 짙은 요리랑 정말 잘 어울리는 부드러운 스타일이에요. 첫 모금에 포근한 ${topAromaKo} 향이 퍼지고 목 넘김이 순해서, 와인을 자주 안 드시는 분도 첫 잔부터 부담 없이 좋아하실 거예요.`;
     en = `Warm and silky beside savory ${dishSummaryEn}, with gentle ${topAromaEn} fruit and a smooth finish anyone can enjoy immediately.`;
-    expertKo = `[감칠맛·페놀 브릿지 분석] ${wine.varietalsKo} 특유의 유연한 페놀 구조와 바디감(${wine.structure.body}/5)이 ${dishSummaryKo}의 마이야르·발효 감칠맛과 금속성 충돌 없이 결속됩니다. 발산하는 ${topAromaKo} 아로마와 숙성에서 온 ${secAromaKo} 결이 긴 여운(Finish)의 밸런스를 완성합니다.`;
-    expertEn = `[Umami & Phenolic Bridge] Pliable phenolic grain (${wine.varietalsEn}, body ${wine.structure.body}/5) embraces roasted umami and fermented glazes in ${dishSummaryEn}, linking high-toned ${topAromaEn} with ${secAromaEn} texture.`;
+    expertKo = `[미각 밸런스 & 질감] 거친 각을 깎아낸 듯 매끄러운 질감(${tanninDescKo})과 포근한 바디감(${wine.structure.body}/5) 위에 ${acidityDescKo}가 기둥을 세워 줍니다. ${topAromaKo}의 화사한 첫 향 뒤로 ${secAromaKo}의 고소하고 둥근 여운이 길게 남아 미각에 편안한 리듬을 만듭니다.\n\n[음식과의 감칠맛 시너지] ${pairingMechKo} 특히 숙성·구이·발효 소스에서 우러나는 깊은 감칠맛과 금속성 잡미 없이 매끄럽게 결속됩니다.\n\n[시음 호흡 & 온도 가이드] ${decantNoteKo}`;
+    expertEn = `[Palate & Mouthfeel] Supple phenolic texture (tannin ${wine.structure.tannin}/5, body ${wine.structure.body}/5) carries radiant ${topAromaEn} aromatics layered over creamy ${secAromaEn} warmth.\n\n[Umami & Sauce Harmony] Harmonizes effortlessly with caramelized reductions, fermented umami, and slow-cooked flavors in ${dishSummaryEn} with zero astringent clash.\n\n[Service Pace] Ideal between ${wine.serving.tempMin}–${wine.serving.tempMax}°C as gentle warmth lifts mid-palate silkiness.`;
   } else {
     ko = `${occasion === 'celebration' ? '오늘 기분 좋은 축하 자리에' : '식탁 분위기를 산뜻하게 띄우고 싶어'} 골라본 개성 있는 와인이에요. 싱그러운 ${topAromaKo}와 고소한 ${secAromaKo} 향이 살아있어 ${dishSummaryKo}와 한 잔 곁들이시면 대화가 훨씬 즐거워집니다.`;
     en = `A lively, approachable bottle for ${dishSummaryEn}, bursting with fresh ${topAromaEn} and ${secAromaEn} charm to spark the table.`;
-    expertKo = `[저개입 양조·미네랄 프로파일] ${wine.regionKo}의 토양 미네랄리티와 토착 효모 발효에서 비롯된 선명한 생동감(산도 ${wine.structure.acidity}/5)이 특징입니다. 과도한 뉴오크 개입을 절제한 ${wine.varietalsKo} 큐베가 ${dishSummaryKo}에 신선한 산소감과 ${topAromaKo}·${secAromaKo}의 입체적 대비를 부여합니다.`;
-    expertEn = `[Low-Intervention & Mineral Profile] Native-fermented ${wine.varietalsEn} from ${wine.regionEn} delivers bright acidity (${wine.structure.acidity}/5) without heavy oak polish, creating crisp contrast against ${dishSummaryEn}.`;
+    expertKo = `[맛의 생동감 & 아로마 구조] 인위적으로 다듬기보다 살아있는 ${acidityDescKo}와 혀끝을 스치는 짭짤한 미네랄 텍스처가 압권입니다. 한 모금 머금자마자 생동감 넘치는 ${topAromaKo}와 은은한 ${secAromaKo}가 입안 가득 입체적으로 퍼지며 지루할 틈 없는 에너지를 전달합니다.\n\n[음식과의 풍미 대비] ${pairingMechKo}\n\n[글라스 호흡 변화] ${decantNoteKo}`;
+    expertEn = `[Palate Vitality & Tension] Vivid acidity (${wine.structure.acidity}/5) and energetic mineral grip drive bright ${topAromaEn} fruit beside nuanced ${secAromaEn} complexity without heavy oak weight.\n\n[Culinary Contrast] Cuts cleanly across rich textures in ${dishSummaryEn}, lifting aromatics on the finish.\n\n[Evolution in Glass] Pour at ${wine.serving.tempMin}–${wine.serving.tempMax}°C; subtle aeration sharpens its vibrant savory edge.`;
   }
 
   if (hasAversionRelief) {

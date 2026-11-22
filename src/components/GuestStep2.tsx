@@ -1024,9 +1024,8 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
                 <WineDeepEncyclopedia
                   wine={wine}
                   lang={lang}
-                  filterIds={['heaven', 'earth', 'human']}
-                  titleKo="이 와인을 빚은 天 · 地 · 人 이야기 (빈티지 기후 · 토양 · 생산자 일대기)"
-                  titleEn="Heaven (Vintage Climate) · Earth (Terroir Soil) · Maker Lineage"
+                  titleKo="와인 스토리 · 포도밭의 모든 것 (6개 항목 상세)"
+                  titleEn="Complete Estate Story, Terroir & Vineyard Encyclopedia"
                 />
 
                 <div className="somm-sub-surface overflow-hidden rounded-2xl p-4">
@@ -1257,7 +1256,7 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
                   </div>
                 )}
 
-                <p className="prose-pretty border-l-[3px] border-[#6B1D2F] pl-4 text-[15px] leading-[1.65] text-[var(--text-primary)]">
+                <p className="prose-pretty whitespace-pre-line border-l-[3px] border-[#6B1D2F] pl-4 text-[14px] leading-[1.72] text-[var(--text-primary)]">
                   <GlossaryText text={commentary} lang={lang} />
                 </p>
 
@@ -1285,18 +1284,6 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
                       </li>
                     ))}
                   </ul>
-                )}
-
-                {speechStyle === 'expert' && (
-                  <div className="border-t border-[var(--border-subtle)] pt-3">
-                    <WineDeepEncyclopedia
-                      wine={wine}
-                      lang={lang}
-                      filterIds={['why', 'appellation', 'varietal']}
-                      titleKo="알아두기 · 와인 선정 포인트 · 산지 법규(AOC) · 포도 품종"
-                      titleEn="Why This Wine · Appellation Heritage · Varietal Mastery"
-                    />
-                  </div>
                 )}
               </div>
             )}
