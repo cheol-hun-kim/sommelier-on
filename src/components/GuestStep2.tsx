@@ -9,14 +9,11 @@ import {
   Info,
   MapPin,
   MessageSquareText,
-  Mountain,
   RefreshCw,
   RotateCcw,
   Sparkles,
-  Sun,
   ThumbsDown,
   ThumbsUp,
-  UserCheck,
   Wine,
   X,
 } from 'lucide-react';
@@ -1024,65 +1021,12 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
               </div>
             ) : activeModal === 'story' ? (
               <div className="space-y-4">
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                  <div className="somm-sub-surface rounded-2xl p-4">
-                    <div className="flex items-center gap-2 text-[13px] font-bold text-[#6B1D2F] dark:text-[#E59BAE]">
-                      <Sun className="h-4 w-4 shrink-0" strokeWidth={1.5} />
-                      <span>{t.heavenTitle}</span>
-                    </div>
-                    <p className="prose-pretty mt-2 text-[13px] leading-[1.6] text-[var(--text-primary)]">
-                      <GlossaryText
-                        text={
-                          lang === 'ko'
-                            ? wine.storytelling.heavenClimateKo
-                            : wine.storytelling.heavenClimateEn
-                        }
-                        lang={lang}
-                      />
-                    </p>
-                  </div>
-
-                  <div className="somm-sub-surface rounded-2xl p-4">
-                    <div className="flex items-center gap-2 text-[13px] font-bold text-[#6B1D2F] dark:text-[#E59BAE]">
-                      <Mountain className="h-4 w-4 shrink-0" strokeWidth={1.5} />
-                      <span>{t.earthTitle}</span>
-                    </div>
-                    <p className="prose-pretty mt-2 text-[13px] leading-[1.6] text-[var(--text-primary)]">
-                      <GlossaryText
-                        text={
-                          lang === 'ko'
-                            ? wine.storytelling.earthSoilKo
-                            : wine.storytelling.earthSoilEn
-                        }
-                        lang={lang}
-                      />
-                    </p>
-                  </div>
-
-                  <div className="somm-sub-surface rounded-2xl p-4">
-                    <div className="flex items-center gap-2 text-[13px] font-bold text-[#6B1D2F] dark:text-[#E59BAE]">
-                      <UserCheck className="h-4 w-4 shrink-0" strokeWidth={1.5} />
-                      <span>{t.humanTitle}</span>
-                    </div>
-                    <p className="prose-pretty mt-2 text-[13px] leading-[1.6] text-[var(--text-primary)]">
-                      <GlossaryText
-                        text={
-                          lang === 'ko'
-                            ? wine.storytelling.humanPhilosophyKo
-                            : wine.storytelling.humanPhilosophyEn
-                        }
-                        lang={lang}
-                      />
-                    </p>
-                  </div>
-                </div>
-
                 <WineDeepEncyclopedia
                   wine={wine}
                   lang={lang}
-                  filterIds={['producer_bio', 'region', 'appellation']}
-                  titleKo="알아두기 · 생산자 일대기 · 산지 · 원산지 등급"
-                  titleEn="Maker Lineage · Region Terroir · Appellation & Soil"
+                  filterIds={['heaven', 'earth', 'human']}
+                  titleKo="이 와인을 빚은 天 · 地 · 人 이야기 (빈티지 기후 · 토양 · 생산자 일대기)"
+                  titleEn="Heaven (Vintage Climate) · Earth (Terroir Soil) · Maker Lineage"
                 />
 
                 <div className="somm-sub-surface overflow-hidden rounded-2xl p-4">
@@ -1348,9 +1292,9 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
                     <WineDeepEncyclopedia
                       wine={wine}
                       lang={lang}
-                      filterIds={['producer_why', 'varietal', 'vintage']}
-                      titleKo="알아두기 · 와인 선정 포인트 · 품종 · 빈티지 기후"
-                      titleEn="Why This Wine · Varietal Mastery · Vintage Climate"
+                      filterIds={['why', 'appellation', 'varietal']}
+                      titleKo="알아두기 · 와인 선정 포인트 · 산지 법규(AOC) · 포도 품종"
+                      titleEn="Why This Wine · Appellation Heritage · Varietal Mastery"
                     />
                   </div>
                 )}

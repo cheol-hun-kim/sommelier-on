@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, Mountain, Sun, UserCheck } from 'lucide-react';
 import type { Language, WineItem } from '../types/sommelier';
 import { buildWineEncyclopedia } from '../data/wineEncyclopedia';
 import { GlossaryText } from './GlossaryText';
@@ -43,16 +43,25 @@ export const WineDeepEncyclopedia: React.FC<WineDeepEncyclopediaProps> = ({
         {entries.map((item) => {
           const isOpen = Boolean(expandedIds[item.id]);
           const body = lang === 'ko' ? item.bodyKo : item.bodyEn;
+          const IconComponent =
+            item.id === 'heaven'
+              ? Sun
+              : item.id === 'earth'
+                ? Mountain
+                : item.id === 'human'
+                  ? UserCheck
+                  : null;
           return (
             <div key={item.id} className="py-3.5 first:pt-2 last:pb-1">
-              <div className="text-[11px] font-bold text-[#6B1D2F] dark:text-[#E59BAE]">
-                {lang === 'ko' ? item.eyebrowKo : item.eyebrowEn}
+              <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#6B1D2F] dark:text-[#E59BAE]">
+                {IconComponent && <IconComponent className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />}
+                <span>{lang === 'ko' ? item.eyebrowKo : item.eyebrowEn}</span>
               </div>
               <h4 className="mt-0.5 text-[16px] font-bold text-[var(--text-primary)]">
                 {lang === 'ko' ? item.headingKo : item.headingEn}
               </h4>
               <p
-                className={`prose-pretty mt-1.5 text-[13px] leading-[1.68] text-[var(--text-primary)] ${
+                className={`prose-pretty mt-1.5 whitespace-pre-line text-[13px] leading-[1.7] text-[var(--text-primary)] ${
                   isOpen ? '' : 'line-clamp-3'
                 }`}
               >
@@ -69,8 +78,8 @@ export const WineDeepEncyclopedia: React.FC<WineDeepEncyclopediaProps> = ({
                       ? '접기'
                       : 'Show less'
                     : lang === 'ko'
-                      ? '더보기'
-                      : 'Read more'}
+                      ? '상세보기 (더보기)'
+                      : 'Read full story'}
                 </span>
                 {isOpen ? (
                   <ChevronUp className="h-3.5 w-3.5" strokeWidth={1.75} />
