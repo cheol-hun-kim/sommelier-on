@@ -146,7 +146,7 @@ recordGate(
 
 // GATE 8: 60-30-10 Design Tokens & Luminance-Contrast Law
 const hasDesignTokens =
-  cssCode.includes('#FAF8F6') &&
+  cssCode.includes('#EFECE3') &&
   cssCode.includes('#121011') &&
   cssCode.includes('#6B1D2F') &&
   cssCode.includes('--text-on-accent: #FFFFFF') &&
@@ -155,7 +155,7 @@ recordGate(
   8,
   '60-30-10 Palette & Universal Surface-Luminance Law',
   hasDesignTokens,
-  'Warm Ivory #FAF8F6, Dining Dark #121011, Burgundy #6B1D2F + strict #FFFFFF ink binding locked'
+  'Warm Beige #EFECE3, Dining Dark #121011, Burgundy #6B1D2F + strict #FFFFFF ink binding locked'
 );
 
 const failed = allResults.filter((r) => !r.passed);

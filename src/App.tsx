@@ -7,6 +7,7 @@ import { GuestStep2 } from './components/GuestStep2';
 import { GuestStep3 } from './components/GuestStep3';
 import { HeaderBar } from './components/HeaderBar';
 import { PersonaModal } from './components/PersonaModal';
+import { WineCatalogView } from './components/WineCatalogModal';
 import { VenueLogo } from './components/icons/WineVectors';
 import {
   applyDislikeToTasteProfile,
@@ -110,6 +111,7 @@ export function App() {
   // Guest Flow State
   const [guestStep, setGuestStep] = useState<1 | 2 | 3>(1);
   const [step1Page, setStep1Page] = useState<Step1Page>(1);
+  const [catalogOpen, setCatalogOpen] = useState(false);
   const [selectedPersonaId, setSelectedPersonaId] = useState<string>(
     activeVenue.defaultPersonaId
   );
@@ -787,7 +789,10 @@ export function App() {
         theme={theme}
         onThemeChange={setTheme}
         appMode={appMode}
-        onAppModeChange={setAppMode}
+        onAppModeChange={(m) => {
+          setAppMode(m);
+          if (m !== 'guest') setCatalogOpen(false);
+        }}
         venues={venues}
         activeVenue={activeVenue}
         onVenueChange={handleVenueChange}
@@ -798,10 +803,12 @@ export function App() {
         activeMember={activeMember}
         journalCount={journalEntries.length}
         onOpenJournal={() => setJournalModalOpen(true)}
+        catalogOpen={catalogOpen}
+        onToggleCatalog={() => setCatalogOpen((prev) => !prev)}
       />
 
       {/* Tablet-First Side Edge Page Navigation Arrows */}
-      {appMode === 'guest' && (
+      {appMode === 'guest' && !catalogOpen && (
         <>
           {(guestStep > 1 || (guestStep === 1 && step1Page > 1)) && (
             <button
@@ -851,7 +858,15 @@ export function App() {
             {menuUploadError}
           </div>
         )}
-        {appMode === 'guest' && guestStep === 1 && (
+        {appMode === 'guest' && catalogOpen && (
+          <WineCatalogView
+            lang={lang}
+            venue={activeVenue}
+            inStockWines={availableVenueWines}
+            onClose={() => setCatalogOpen(false)}
+          />
+        )}
+        {appMode === 'guest' && !catalogOpen && guestStep === 1 && (
           <GuestStep1
             lang={lang}
             venue={activeVenue}
@@ -918,10 +933,14 @@ export function App() {
             hasAnyDishSelected={hasAnyDishSelected}
             onSubmitRecommend={() => runRecommendation()}
             onInstantCorkageSubmit={runInstantCorkage}
+            onOpenCatalog={() => {
+              setCatalogOpen(true);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
           />
         )}
 
-        {appMode === 'guest' && guestStep === 2 && recommendationBundle && (
+        {appMode === 'guest' && !catalogOpen && guestStep === 2 && recommendationBundle && (
           <GuestStep2
             lang={lang}
             venue={activeVenue}

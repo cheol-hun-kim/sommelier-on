@@ -50,6 +50,7 @@ import {
   ServingGuideStrip,
   StructureBalanceChart,
 } from './TastingInfographics';
+import { WineDeepEncyclopedia } from './WineDeepEncyclopedia';
 
 interface GuestStep2Props {
   lang: Language;
@@ -1076,6 +1077,14 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
                   </div>
                 </div>
 
+                <WineDeepEncyclopedia
+                  wine={wine}
+                  lang={lang}
+                  filterIds={['producer_bio', 'region', 'appellation']}
+                  titleKo="알아두기 · 생산자 일대기 · 산지 · 원산지 등급"
+                  titleEn="Maker Lineage · Region Terroir · Appellation & Soil"
+                />
+
                 <div className="somm-sub-surface overflow-hidden rounded-2xl p-4">
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
@@ -1332,6 +1341,18 @@ const WineDetailRecommendationCard: React.FC<WineCardProps> = ({
                       </li>
                     ))}
                   </ul>
+                )}
+
+                {speechStyle === 'expert' && (
+                  <div className="border-t border-[var(--border-subtle)] pt-3">
+                    <WineDeepEncyclopedia
+                      wine={wine}
+                      lang={lang}
+                      filterIds={['producer_why', 'varietal', 'vintage']}
+                      titleKo="알아두기 · 와인 선정 포인트 · 품종 · 빈티지 기후"
+                      titleEn="Why This Wine · Varietal Mastery · Vintage Climate"
+                    />
+                  </div>
                 )}
               </div>
             )}

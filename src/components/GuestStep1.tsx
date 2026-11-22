@@ -7,6 +7,7 @@ import {
   Check,
   ChevronDown,
   ChevronUp,
+  ListFilter,
   Plus,
   RotateCcw,
   Sparkles,
@@ -107,6 +108,7 @@ interface GuestStep1Props {
   hasAnyDishSelected: boolean;
   onSubmitRecommend: () => void;
   onInstantCorkageSubmit: (bottle: CorkageBottle) => Promise<void>;
+  onOpenCatalog: () => void;
 }
 
 const SLOT_CATEGORIES: WineCategory[] = [
@@ -182,6 +184,7 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
   hasAnyDishSelected,
   onSubmitRecommend,
   onInstantCorkageSubmit,
+  onOpenCatalog,
 }) => {
   const t = TRANSLATIONS[lang];
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -1594,7 +1597,16 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
           )}
 
           {step1Page === 1 ? (
-            <div className="flex flex-wrap items-center gap-2.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={onOpenCatalog}
+                className="somm-sub-surface inline-flex items-center gap-1.5 rounded-full px-3.5 py-2.5 text-[13px] font-semibold text-[var(--text-primary)] hover:opacity-85"
+              >
+                <ListFilter className="h-4 w-4 text-[#6B1D2F] dark:text-[#E59BAE]" strokeWidth={1.75} />
+                <span>{lang === 'ko' ? '전체 와인 리스트' : 'Full Wine List'}</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => setCorkageModalOpen(true)}

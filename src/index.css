@@ -4,40 +4,40 @@
 
 /* ============================================================================
    SOMMELIER ON (소믈리에온) — GLOBAL DESIGN TOKENS & LUMINANCE-CONTRAST LAW
-   60% Warm Ivory (#FAF8F6) / Dining Dark (#121011)
-   30% Pure White (#FFFFFF) / Card Dark (#1C1819), Charcoal Ink (#1C191A)
-   10% Deep Bordeaux Burgundy (#6B1D2F), Velvet Rose (#F5EBEF), Muted Gold (#B8863B)
+   60% Warm Linen Beige (#EFECE3) / Dining Dark (#121011)
+   30% Soft Cream Parchment (#F8F5EE) / Card Dark (#1C1819), Espresso Ink (#211D18)
+   10% Deep Bordeaux Burgundy (#6B1D2F), Velvet Rose (#EFE6E4), Muted Gold (#9E7128)
    ============================================================================ */
 
 :root {
-  --bg-primary: #FAF8F6;
-  --bg-secondary: #FFFFFF;
-  --bg-tertiary: #F2EEEB;
-  --bg-card-tint: #F5EBEF;
+  --bg-primary: #EFECE3;
+  --bg-secondary: #F8F5EE;
+  --bg-tertiary: #E5DFD2;
+  --bg-card-tint: #EFE6E4;
 
-  --text-primary: #1C191A;
-  --text-secondary: #6E6568;
-  --text-muted: #8B8084;
+  --text-primary: #211D18;
+  --text-secondary: #685E54;
+  --text-muted: #8A7F74;
 
   --bg-accent: #6B1D2F;
   --bg-accent-hover: #561524;
   --text-on-accent: #FFFFFF;
   --text-on-dark: #FFFFFF;
-  --text-on-light: #1C191A;
+  --text-on-light: #211D18;
 
-  --gold-accent: #B8863B;
-  --gold-tint-bg: #FBF4E8;
-  --gold-tint-text: #7A541C;
+  --gold-accent: #9E7128;
+  --gold-tint-bg: #F6EEDB;
+  --gold-tint-text: #6E4B16;
 
-  --success-bg: #EDF5F0;
+  --success-bg: #E6EFE8;
   --success-text: #1F5B3A;
-  --danger-bg: #FDF0F2;
+  --danger-bg: #F6E6E8;
   --danger-text: #8A1E33;
 
-  --border-subtle: rgba(28, 25, 26, 0.06);
-  --shadow-card: 0 2px 12px rgba(28, 25, 26, 0.04);
-  --shadow-card-hover: 0 8px 24px rgba(28, 25, 26, 0.08);
-  --shadow-sticky: 0 -6px 24px rgba(28, 25, 26, 0.06);
+  --border-subtle: rgba(33, 29, 24, 0.08);
+  --shadow-card: 0 2px 12px rgba(33, 29, 24, 0.04);
+  --shadow-card-hover: 0 8px 24px rgba(33, 29, 24, 0.08);
+  --shadow-sticky: 0 -6px 24px rgba(33, 29, 24, 0.06);
 }
 
 [data-theme='dark'] {

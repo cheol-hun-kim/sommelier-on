@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, Moon, Store, Sun, Utensils } from 'lucide-react';
+import { BookOpen, ListFilter, Moon, Store, Sun, Utensils } from 'lucide-react';
 import type { AppMode, GuestMember, Language, ThemeMode, Venue } from '../types/sommelier';
 import { TRANSLATIONS } from '../i18n/translations';
 import { SlidingSwitch } from './SlidingSwitch';
@@ -22,6 +22,8 @@ interface HeaderBarProps {
   activeMember: GuestMember | null;
   journalCount: number;
   onOpenJournal: () => void;
+  catalogOpen: boolean;
+  onToggleCatalog: () => void;
 }
 
 export const HeaderBar: React.FC<HeaderBarProps> = ({
@@ -41,6 +43,8 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   activeMember,
   journalCount,
   onOpenJournal,
+  catalogOpen,
+  onToggleCatalog,
 }) => {
   const t = TRANSLATIONS[lang];
   const venueName = lang === 'ko' ? activeVenue.nameKo : activeVenue.nameEn;
@@ -131,6 +135,23 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {/* Full Wine List Browser Toggle (Guest Mode) */}
+            {appMode === 'guest' && (
+              <button
+                type="button"
+                onClick={onToggleCatalog}
+                data-surface={catalogOpen ? 'accent' : undefined}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-semibold shadow-sm transition-colors ${
+                  catalogOpen
+                    ? 'btn-accent'
+                    : 'bg-[var(--bg-secondary)] text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]'
+                }`}
+              >
+                <ListFilter className="h-3.5 w-3.5" strokeWidth={1.5} />
+                <span>{lang === 'ko' ? '전체 와인 리스트' : 'Wine List'}</span>
+              </button>
+            )}
+
             {/* My Tasting Journal / Member Login */}
             <button
               type="button"
