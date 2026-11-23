@@ -162,7 +162,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             <button
               type="button"
               onClick={onOpenJournal}
-              className="inline-flex items-center gap-1.5 rounded-full bg-[var(--bg-secondary)] px-3 py-1.5 text-[12px] font-semibold text-[var(--text-primary)] shadow-sm transition-colors hover:bg-[var(--bg-tertiary)]"
+              className="inline-flex items-center justify-center gap-1.5 rounded-full bg-[var(--bg-secondary)] px-3 py-1.5 text-[12px] font-semibold text-[var(--text-primary)] shadow-sm transition-colors hover:bg-[var(--bg-tertiary)] sm:min-w-[78px]"
             >
               <BookOpen className="h-3.5 w-3.5 text-[#6B1D2F] dark:text-[#E59BAE]" strokeWidth={1.5} />
               <span>
@@ -180,7 +180,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
               onClick={() => onThemeChange(theme === 'ivory' ? 'dark' : 'ivory')}
               title={theme === 'ivory' ? t.themeDark : t.themeIvory}
               aria-label={theme === 'ivory' ? t.themeDark : t.themeIvory}
-              className="inline-flex items-center gap-1.5 rounded-full bg-[var(--bg-secondary)] px-3 py-1.5 text-[12px] font-semibold text-[var(--text-primary)] shadow-sm transition-colors hover:bg-[var(--bg-tertiary)]"
+              className="inline-flex items-center justify-center gap-1.5 rounded-full bg-[var(--bg-secondary)] px-3 py-1.5 text-[12px] font-semibold text-[var(--text-primary)] shadow-sm transition-colors hover:bg-[var(--bg-tertiary)] sm:min-w-[78px]"
             >
               {theme === 'ivory' ? (
                 <Moon className="h-3.5 w-3.5" strokeWidth={1.5} />
