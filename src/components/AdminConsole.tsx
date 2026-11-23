@@ -7,6 +7,7 @@ import {
   KeyRound,
   Lock,
   Minus,
+  Pencil,
   Plus,
   Printer,
   QrCode,
@@ -14,9 +15,12 @@ import {
   Sparkles,
   ThumbsDown,
   ThumbsUp,
+  Trash2,
+  UserPlus,
   X,
 } from 'lucide-react';
 import { SommelierAvatar, VenueLogo } from './icons/WineVectors';
+import { CustomSommelierModal } from './CustomSommelierModal';
 import { validateImageFile } from '../utils/fileValidation';
 import type {
   Language,
@@ -55,6 +59,8 @@ interface AdminConsoleProps {
   onUpdateReservationStatus: (id: string, status: WineReservation['status']) => void;
   onUpdateRecommendationLimit: (venueId: string, limit: number) => void;
   onSelectDefaultPersona: (venueId: string, personaId: string) => void;
+  onSaveCustomPersona: (persona: SommelierPersona) => void;
+  onDeleteCustomPersona: (personaId: string) => void;
   onUpdateVenueLogo: (venueId: string, logoUrl: string | undefined) => void;
   onOpenGuestTable: (venueId: string, table: string) => void;
   onAiKeyUpdated: () => void;
@@ -77,6 +83,8 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
   onUpdateReservationStatus,
   onUpdateRecommendationLimit,
   onSelectDefaultPersona,
+  onSaveCustomPersona,
+  onDeleteCustomPersona,
   onUpdateVenueLogo,
   onOpenGuestTable,
   onAiKeyUpdated,
@@ -87,6 +95,8 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
 
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState(false);
+  const [customSommModalOpen, setCustomSommModalOpen] = useState(false);
+  const [editingCustomPersona, setEditingCustomPersona] = useState<SommelierPersona | null>(null);
 
   const [isScanningLabel, setIsScanningLabel] = useState(false);
   const [draft, setDraft] = useState<ScannedWineLabelDraft>({
@@ -720,28 +730,51 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
 
       {/* 3A. Registered Sommelier Tier Selection (Venue Subscription Plan) */}
       <section className="somm-card rounded-3xl p-5 sm:p-7">
-        <div className="mb-4">
-          <h2 className="text-[17px] font-bold text-[var(--text-primary)]">
-            {lang === 'ko'
-              ? '우리 업장 전담 소믈리에 등록 · 등급 설정'
-              : 'Registered Venue Sommelier & Service Tier'}
-          </h2>
-          <p className="mt-0.5 text-[12px] text-[var(--text-secondary)]">
-            {lang === 'ko'
-              ? '등록하신 전담 소믈리에의 사진과 이력이 손님 화면 첫 페이지에 바로 소개되며, 등급에 따라 업장 이용 플랜이 달라집니다.'
-              : 'Your designated sommelier opens the guest experience with their credentials and signature pairing style.'}
-          </p>
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-[17px] font-bold text-[var(--text-primary)]">
+              {lang === 'ko'
+                ? '우리 업장 전담 소믈리에 등록 · 등급 설정'
+                : 'Registered Venue Sommelier & Service Tier'}
+            </h2>
+            <p className="mt-0.5 text-[12px] text-[var(--text-secondary)]">
+              {lang === 'ko'
+                ? '등록하신 전담 소믈리에의 캐릭터와 이력이 손님 화면 첫 페이지에 바로 소개되며, 업장 소믈리에를 직접 만들 수도 있습니다.'
+                : 'Your designated sommelier opens the guest experience with their avatar, credentials, and pairing style.'}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setEditingCustomPersona(null);
+              setCustomSommModalOpen(true);
+            }}
+            data-surface="accent"
+            className="btn-accent inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[12px] font-semibold shadow-sm transition-colors"
+          >
+            <UserPlus className="h-3.5 w-3.5" strokeWidth={1.5} />
+            <span>
+              {lang === 'ko' ? '우리 업장 소믈리에 캐릭터 만들기' : 'Create Custom Sommelier'}
+            </span>
+          </button>
         </div>
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           {personas.map((p) => {
             const active = venue.defaultPersonaId === p.id;
             return (
-              <button
+              <div
                 key={p.id}
-                type="button"
+                role="button"
+                tabIndex={0}
                 onClick={() => onSelectDefaultPersona(venue.id, p.id)}
-                className={`flex flex-col justify-between rounded-2xl p-4 text-left transition-all ${
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onSelectDefaultPersona(venue.id, p.id);
+                  }
+                }}
+                className={`flex cursor-pointer flex-col justify-between rounded-2xl p-4 text-left transition-all ${
                   active ? 'somm-card-selected' : 'somm-sub-surface hover:opacity-90'
                 }`}
               >
@@ -757,7 +790,11 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                     </span>
                   </div>
                   <div className="mt-3 flex items-center gap-3">
-                    <SommelierAvatar personaId={p.id} size={44} />
+                    <SommelierAvatar
+                      personaId={p.id}
+                      avatarConfig={p.avatarConfig}
+                      size={44}
+                    />
                     <div>
                       <div className="text-[14px] font-bold text-[var(--text-primary)]">
                         {lang === 'ko' ? p.nameKo : p.nameEn}
@@ -777,23 +814,52 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                     {p.yearsExp}
                     {lang === 'ko' ? '년 경력' : ' yrs exp'}
                   </span>
-                  <span
-                    className={
-                      active
-                        ? 'text-[#6B1D2F] dark:text-[#F4B8C6]'
-                        : 'text-[var(--text-secondary)]'
-                    }
-                  >
-                    {active
-                      ? lang === 'ko'
-                        ? '현재 등록됨'
-                        : 'Active Host'
-                      : lang === 'ko'
-                        ? '이 소믈리에로 등록'
-                        : 'Assign Host'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {p.isCustom && (
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingCustomPersona(p);
+                            setCustomSommModalOpen(true);
+                          }}
+                          aria-label={lang === 'ko' ? '캐릭터 수정' : 'Edit'}
+                          className="rounded-full p-1 text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
+                        >
+                          <Pencil className="h-3.5 w-3.5" strokeWidth={1.5} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteCustomPersona(p.id);
+                          }}
+                          aria-label={lang === 'ko' ? '캐릭터 삭제' : 'Delete'}
+                          className="rounded-full p-1 text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-[#B42318]"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} />
+                        </button>
+                      </div>
+                    )}
+                    <span
+                      className={
+                        active
+                          ? 'text-[#6B1D2F] dark:text-[#F4B8C6]'
+                          : 'text-[var(--text-secondary)]'
+                      }
+                    >
+                      {active
+                        ? lang === 'ko'
+                          ? '현재 등록됨'
+                          : 'Active Host'
+                        : lang === 'ko'
+                          ? '이 소믈리에로 등록'
+                          : 'Assign Host'}
+                    </span>
+                  </div>
                 </div>
-              </button>
+              </div>
             );
           })}
         </div>
@@ -1032,7 +1098,11 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                   className="somm-sub-surface flex flex-col justify-between rounded-2xl p-4"
                 >
                   <div className="flex items-center gap-2.5">
-                    <SommelierAvatar personaId={p.id} size={36} />
+                    <SommelierAvatar
+                      personaId={p.id}
+                      avatarConfig={p.avatarConfig}
+                      size={36}
+                    />
                     <div>
                       <div className="text-[13px] font-bold text-[var(--text-primary)]">
                         {lang === 'ko' ? p.nameKo : p.nameEn}
@@ -1281,6 +1351,18 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
           </div>
         </div>
       )}
+      <CustomSommelierModal
+        open={customSommModalOpen}
+        lang={lang}
+        venueId={venue.id}
+        venueName={lang === 'ko' ? venue.nameKo : venue.nameEn}
+        editingPersona={editingCustomPersona}
+        onClose={() => {
+          setCustomSommModalOpen(false);
+          setEditingCustomPersona(null);
+        }}
+        onSave={onSaveCustomPersona}
+      />
     </div>
   );
 };

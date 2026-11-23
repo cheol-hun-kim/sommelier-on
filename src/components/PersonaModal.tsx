@@ -50,7 +50,11 @@ export const PersonaModal: React.FC<PersonaModalProps> = ({
 
         {/* Top Identity Row (matching Reference Image 1) */}
         <div className="flex items-center gap-4">
-          <SommelierAvatar personaId={persona.id} size={72} />
+          <SommelierAvatar
+            personaId={persona.id}
+            avatarConfig={persona.avatarConfig}
+            size={72}
+          />
           <div>
             <h3
               id="persona-modal-title"

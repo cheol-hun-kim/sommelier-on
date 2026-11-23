@@ -1,5 +1,5 @@
 import React from 'react';
-import type { AromaKey, GlassType, Language, WineCategory } from '../../types/sommelier';
+import type { AromaKey, AvatarConfig, GlassType, Language, WineCategory } from '../../types/sommelier';
 
 const COUNTRY_NAMES: Record<string, { ko: string; en: string }> = {
   FR: { ko: '프랑스', en: 'France' },
@@ -264,8 +264,105 @@ export const SommelierBrandEmblem: React.FC<{ className?: string }> = ({
 
 export const SommelierAvatar: React.FC<{
   personaId: string;
+  avatarConfig?: AvatarConfig;
   size?: number;
-}> = ({ personaId, size = 52 }) => {
+}> = ({ personaId, avatarConfig, size = 52 }) => {
+  if (avatarConfig) {
+    const { hairStyle, hairColor, skinTone, outfit, accessory, bgColor } = avatarConfig;
+    const outfitColors: Record<AvatarConfig['outfit'], { main: string; accent: string }> = {
+      tuxedo: { main: '#2B1C22', accent: '#FFFFFF' },
+      somm_apron: { main: '#24292E', accent: '#6B1D2F' },
+      burgundy_jacket: { main: '#6B1D2F', accent: '#FAF8F6' },
+      knit: { main: '#2D4A3E', accent: '#E8F0EC' },
+    };
+    const oc = outfitColors[outfit];
+
+    return (
+      <svg width={size} height={size} viewBox="0 0 64 64" fill="none" aria-hidden="true">
+        <circle cx="32" cy="32" r="32" fill={bgColor} />
+
+        {/* Back hair for long/bob */}
+        {hairStyle === 'long_wave' && (
+          <path d="M16 28C16 17 23 12 32 12C41 12 48 17 48 28V46H16V28Z" fill={hairColor} />
+        )}
+        {hairStyle === 'bob' && (
+          <path d="M17 28C17 17 24 12 32 12C40 12 47 17 47 28V39H17V28Z" fill={hairColor} />
+        )}
+
+        {/* Outfit / Shoulders */}
+        <path d="M12 58C14 47 21 43 32 43C43 43 50 47 52 58H12Z" fill={oc.main} />
+        {outfit === 'tuxedo' && (
+          <>
+            <path d="M27 43L32 51L37 43H27Z" fill={oc.accent} />
+            <path d="M29.5 45L32 46.8L34.5 45L32 43.8L29.5 45Z" fill="#6B1D2F" />
+          </>
+        )}
+        {outfit === 'somm_apron' && (
+          <>
+            <path d="M26 43L32 49L38 43H26Z" fill="#FAF8F6" />
+            <path d="M22 48H42L43 58H21L22 48Z" fill={oc.accent} />
+            <path d="M23 44V48M41 44V48" stroke={oc.accent} strokeWidth="1.8" />
+          </>
+        )}
+        {outfit === 'burgundy_jacket' && (
+          <path d="M26.5 43L32 49.5L37.5 43H26.5Z" fill={oc.accent} />
+        )}
+        {outfit === 'knit' && (
+          <path d="M27 43C29 45.5 35 45.5 37 43" stroke={oc.accent} strokeWidth="1.6" strokeLinecap="round" />
+        )}
+
+        {/* Sommelier pin / tastevin emblem */}
+        <circle cx="40.5" cy="51.5" r="2.2" stroke="#D9B982" strokeWidth="1.2" />
+
+        {/* Face */}
+        <circle cx="32" cy="29" r="10.3" fill={skinTone} />
+
+        {/* Front Hair Styles */}
+        {hairStyle === 'short_neat' && (
+          <path d="M20 26C20 17 25 13.5 32 13.5C39 13.5 44 17 44 26C39 22.5 25 22.5 20 26Z" fill={hairColor} />
+        )}
+        {hairStyle === 'parted' && (
+          <path d="M20 26C20 17 25 13 32 13C39 13 44 17 44 26C41 21 35 19.5 30 22.5C27 20 23 22 20 26Z" fill={hairColor} />
+        )}
+        {hairStyle === 'slick' && (
+          <path d="M20.5 25C20.5 16.5 25.5 13 32 13C38.5 13 43.5 16.5 43.5 25C41 19 23 19 20.5 25Z" fill={hairColor} />
+        )}
+        {(hairStyle === 'long_wave' || hairStyle === 'bob') && (
+          <path d="M21 25C24 19.5 36 19.5 43 25C41 18 24 18 21 25Z" fill={hairColor} />
+        )}
+
+        {/* Eyes & gentle smile */}
+        <circle cx="28.3" cy="29.3" r="1.2" fill="#1C191A" />
+        <circle cx="35.7" cy="29.3" r="1.2" fill="#1C191A" />
+        <path d="M29.5 33.6C31 34.8 33 34.8 34.5 33.6" stroke="#6E4E46" strokeWidth="1.5" strokeLinecap="round" />
+
+        {/* Accessories */}
+        {accessory === 'glasses' && (
+          <g stroke="#2A2426" strokeWidth="1.3">
+            <rect x="24.5" y="26.8" width="6.4" height="4.8" rx="1.4" />
+            <rect x="33.1" y="26.8" width="6.4" height="4.8" rx="1.4" />
+            <line x1="30.9" y1="28.8" x2="33.1" y2="28.8" />
+          </g>
+        )}
+        {accessory === 'round_glasses' && (
+          <g stroke="#8A6B3E" strokeWidth="1.3">
+            <circle cx="27.8" cy="29.2" r="3.1" />
+            <circle cx="36.2" cy="29.2" r="3.1" />
+            <line x1="30.9" y1="29.2" x2="33.1" y2="29.2" />
+          </g>
+        )}
+        {accessory === 'mustache' && (
+          <path
+            d="M27.8 32.3C29.4 31.2 31 31.6 32 32.2C33 31.6 34.6 31.2 36.2 32.3"
+            stroke={hairColor}
+            strokeWidth="1.8"
+            strokeLinecap="round"
+          />
+        )}
+      </svg>
+    );
+  }
+
   if (personaId === 'french_classic') {
     return (
       <svg width={size} height={size} viewBox="0 0 64 64" fill="none" aria-hidden="true">

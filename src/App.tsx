@@ -40,6 +40,7 @@ import {
   recordRecommendationStats,
   resetTasteProfile,
   saveActiveMember,
+  saveCustomPersonas,
   savePersonalCellar,
   saveTasteProfile,
   saveVenues,
@@ -84,7 +85,7 @@ export function App() {
 
   const [venues, setVenues] = useState<Venue[]>(() => loadVenues());
   const [wines, setWines] = useState<WineItem[]>(() => loadWines());
-  const personas = useMemo(() => loadPersonas(), []);
+  const [personas, setPersonas] = useState<SommelierPersona[]>(() => loadPersonas());
   const [tasteProfile, setTasteProfile] = useState<UserTasteProfile>(() =>
     loadTasteProfile()
   );
@@ -591,6 +592,29 @@ export function App() {
     }
   };
 
+  const handleSaveCustomPersona = (persona: SommelierPersona) => {
+    setPersonas((prev) => {
+      const exists = prev.some((p) => p.id === persona.id);
+      const next = exists
+        ? prev.map((p) => (p.id === persona.id ? persona : p))
+        : [...prev, persona];
+      saveCustomPersonas(next.filter((p) => p.isCustom));
+      return next;
+    });
+    handleSelectDefaultPersona(activeVenue.id, persona.id);
+  };
+
+  const handleDeleteCustomPersona = (personaId: string) => {
+    setPersonas((prev) => {
+      const next = prev.filter((p) => p.id !== personaId);
+      saveCustomPersonas(next.filter((p) => p.isCustom));
+      if (activeVenue.defaultPersonaId === personaId && next.length > 0) {
+        handleSelectDefaultPersona(activeVenue.id, next[0].id);
+      }
+      return next;
+    });
+  };
+
   const handleTogglePreVisitVenueList = (venueId: string, allow: boolean) => {
     setVenues((prev) => {
       const next = prev.map((v) =>
@@ -1010,6 +1034,8 @@ export function App() {
             onUpdateReservationStatus={handleUpdateReservationStatus}
             onUpdateRecommendationLimit={handleUpdateRecommendationLimit}
             onSelectDefaultPersona={handleSelectDefaultPersona}
+            onSaveCustomPersona={handleSaveCustomPersona}
+            onDeleteCustomPersona={handleDeleteCustomPersona}
             onUpdateVenueLogo={handleUpdateVenueLogo}
             onOpenGuestTable={(vId, tb) => {
               handleVenueChange(vId);

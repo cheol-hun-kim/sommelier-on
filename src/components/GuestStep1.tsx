@@ -192,6 +192,7 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
   const instantCorkageFileRef = useRef<HTMLInputElement | null>(null);
 
   const [courseListExpanded, setCourseListExpanded] = useState(false);
+  const [bioExpanded, setBioExpanded] = useState(false);
   const [isScanningCorkage, setIsScanningCorkage] = useState(false);
   const [newCellarName, setNewCellarName] = useState('');
   const [newCellarCat, setNewCellarCat] = useState<WineCategory>('red');
@@ -326,7 +327,11 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
 
               <div className="flex flex-col items-center gap-6 text-center sm:flex-row sm:items-start sm:text-left">
                 <div className="shrink-0 rounded-3xl bg-[#F5EBEF]/70 p-4 dark:bg-[#2E181F]/70">
-                  <SommelierAvatar personaId={activePersona.id} size={96} />
+                  <SommelierAvatar
+                    personaId={activePersona.id}
+                    avatarConfig={activePersona.avatarConfig}
+                    size={96}
+                  />
                 </div>
 
                 <div className="min-w-0 flex-1 space-y-3">
@@ -337,11 +342,6 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
                     <h2 className="mt-1 text-[24px] font-bold tracking-tight text-[var(--text-primary)]">
                       {lang === 'ko' ? activePersona.nameKo : activePersona.nameEn}
                     </h2>
-                    <p className="mt-1 text-[13px] font-medium text-[var(--text-secondary)]">
-                      {lang === 'ko'
-                        ? `${activePersona.credentialsKo} · 경력 ${activePersona.yearsExp}년`
-                        : `${activePersona.credentialsEn} · ${activePersona.yearsExp} Years Exp`}
-                    </p>
                   </div>
 
                   {/* Warm First-Person Hospitality Greeting */}
@@ -353,6 +353,45 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
                         : activePersona.greetingEn ?? activePersona.philosophyEn}
                       ”
                     </p>
+                  </div>
+
+                  {/* Collapsible Career & Credentials Dropdown (closed by default) */}
+                  <div className="text-left">
+                    <button
+                      type="button"
+                      onClick={() => setBioExpanded((prev) => !prev)}
+                      aria-expanded={bioExpanded}
+                      className="inline-flex w-full items-center justify-between gap-2 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-4 py-2.5 text-[13px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-tertiary)]"
+                    >
+                      <span className="inline-flex items-center gap-2">
+                        <Award className="h-4 w-4 text-[#6B1D2F] dark:text-[#E59BAE]" strokeWidth={1.5} />
+                        <span>
+                          {lang === 'ko'
+                            ? '상세 경력 및 수상 이력'
+                            : 'Career & Credentials'}
+                        </span>
+                      </span>
+                      {bioExpanded ? (
+                        <ChevronUp className="h-4 w-4 text-[var(--text-secondary)]" strokeWidth={1.5} />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 text-[var(--text-secondary)]" strokeWidth={1.5} />
+                      )}
+                    </button>
+
+                    {bioExpanded && (
+                      <div className="mt-2 space-y-2 rounded-2xl bg-[var(--bg-tertiary)]/60 p-4 text-[13px] leading-relaxed text-[var(--text-primary)]">
+                        <div className="font-semibold text-[var(--text-primary)]">
+                          {lang === 'ko'
+                            ? `${activePersona.credentialsKo} · 경력 ${activePersona.yearsExp}년`
+                            : `${activePersona.credentialsEn} · ${activePersona.yearsExp} Years Exp`}
+                        </div>
+                        <p className="prose-pretty text-[var(--text-secondary)]">
+                          {lang === 'ko'
+                            ? activePersona.signatureRuleKo
+                            : activePersona.signatureRuleEn}
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">

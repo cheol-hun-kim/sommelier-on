@@ -30,6 +30,7 @@ const STORAGE_KEYS = {
   personalCellar: 'sommon_personal_cellar_v1',
   wineShops: 'sommon_wine_shops_v1',
   reservations: 'sommon_reservations_v1',
+  customPersonas: 'sommon_custom_personas_v1',
 };
 
 export const DEFAULT_TASTE_PROFILE: UserTasteProfile = {
@@ -107,8 +108,17 @@ export function saveWines(wines: WineItem[]): void {
   void syncToSupabase('wines', wines);
 }
 
+export function loadCustomPersonas(): SommelierPersona[] {
+  return safeReadJson<SommelierPersona[]>(STORAGE_KEYS.customPersonas, []);
+}
+
+export function saveCustomPersonas(personas: SommelierPersona[]): void {
+  safeWriteJson(STORAGE_KEYS.customPersonas, personas);
+}
+
 export function loadPersonas(): SommelierPersona[] {
-  return SOMMELIER_PERSONAS;
+  const custom = loadCustomPersonas();
+  return [...SOMMELIER_PERSONAS, ...custom];
 }
 
 export function loadTasteProfile(): UserTasteProfile {

@@ -104,13 +104,6 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--bg-tertiary)] px-2.5 py-1 text-[11px] font-semibold tabular-nums text-[var(--text-primary)]">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#2E7D52]" />
-              <span>
-                {t.availableWinesPrefix} {availableCount}
-                {t.availableWinesUnit}
-              </span>
-            </span>
             {aiLiveConnected && (
               <span className="hidden rounded-full bg-[#FBF4E8] px-2 py-0.5 text-[10px] font-semibold text-[#7A541C] dark:bg-[#2B2214] dark:text-[#ECC88D] sm:inline-flex">
                 Live
@@ -149,6 +142,19 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
               >
                 <ListFilter className="h-3.5 w-3.5" strokeWidth={1.5} />
                 <span>{lang === 'ko' ? '전체 와인 리스트' : 'Wine List'}</span>
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] font-bold tabular-nums ${
+                    catalogOpen
+                      ? 'bg-white/20 text-[#FFFFFF]'
+                      : 'bg-[var(--bg-tertiary)] text-[var(--text-primary)]'
+                  }`}
+                >
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#2E7D52]" />
+                  <span>
+                    {availableCount}
+                    {t.availableWinesUnit}
+                  </span>
+                </span>
               </button>
             )}
 

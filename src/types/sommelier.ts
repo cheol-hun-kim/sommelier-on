@@ -96,6 +96,19 @@ export interface WineItem {
   pairingAffinities: string[]; // flavor tags: 'steak', 'seafood', 'truffle', 'spicy', 'cream', 'poultry', 'cheese', 'dessert', 'umami', 'charcuterie'
 }
 
+export type AvatarHairStyle = 'short_neat' | 'parted' | 'long_wave' | 'bob' | 'slick';
+export type AvatarOutfit = 'tuxedo' | 'somm_apron' | 'burgundy_jacket' | 'knit';
+export type AvatarAccessory = 'none' | 'glasses' | 'round_glasses' | 'mustache';
+
+export interface AvatarConfig {
+  hairStyle: AvatarHairStyle;
+  hairColor: string;
+  skinTone: string;
+  outfit: AvatarOutfit;
+  accessory: AvatarAccessory;
+  bgColor: string;
+}
+
 export interface SommelierPersona {
   id: string;
   nameKo: string;
@@ -121,6 +134,9 @@ export interface SommelierPersona {
   tierEn?: string;
   monthlyFeeLabelKo?: string;
   monthlyFeeLabelEn?: string;
+  avatarConfig?: AvatarConfig;
+  isCustom?: boolean;
+  venueId?: string;
 }
 
 export interface RegisteredDish {
