@@ -1,8 +1,7 @@
-import React from 'react';
-import { BookOpen, ListFilter, Moon, Store, Sun, Utensils } from 'lucide-react';
+import React, { useRef } from 'react';
+import { ArrowLeft, BookOpen, ListFilter, Moon, Sun } from 'lucide-react';
 import type { AppMode, GuestMember, Language, ThemeMode, Venue } from '../types/sommelier';
 import { TRANSLATIONS } from '../i18n/translations';
-import { SlidingSwitch } from './SlidingSwitch';
 import { SommelierBrandEmblem, VenueLogo } from './icons/WineVectors';
 
 interface HeaderBarProps {
@@ -48,96 +47,109 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
 }) => {
   const t = TRANSLATIONS[lang];
   const venueName = lang === 'ko' ? activeVenue.nameKo : activeVenue.nameEn;
+  const longPressTimerRef = useRef<number | null>(null);
+
+  const startVenueLongPress = () => {
+    if (longPressTimerRef.current) window.clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = window.setTimeout(() => {
+      onAppModeChange(appMode === 'guest' ? 'admin' : 'guest');
+    }, 1800);
+  };
+
+  const cancelVenueLongPress = () => {
+    if (longPressTimerRef.current) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
 
   return (
     <header className="no-print sticky top-0 z-30 border-b border-[var(--border-subtle)] bg-[var(--bg-primary)]/95 backdrop-blur-md">
-      <div className="mx-auto max-w-5xl px-4 py-3 sm:px-6">
-        {/* Top Meta Bar: Venue QR Context + Live In-Stock Counter + Controls */}
-        <div className="flex flex-wrap items-center justify-between gap-2 text-[12px] text-[var(--text-secondary)]">
-          <div className="flex flex-wrap items-center gap-2.5">
+      <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2.5 px-4 py-2.5 sm:px-6">
+        {/* Left: Compact Brand Lockup + Single Venue/Table Context */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div className="brand-lockup text-[20px] font-bold tracking-tight text-[#6B1D2F] dark:text-[#F0B4C2]">
+            <SommelierBrandEmblem />
+            <span>{t.brandName}</span>
+            <span className="ml-0.5 text-[11px] font-semibold tracking-wider text-[var(--text-secondary)] uppercase">
+              {t.brandShort}
+            </span>
+          </div>
+
+          <span className="hidden h-4 w-px bg-[var(--border-subtle)] sm:inline-block" aria-hidden="true" />
+
+          {/* Single Unified Venue + Table Context Pill (Long-press or double-click logo for admin) */}
+          <div
+            className="inline-flex items-center gap-1.5 rounded-full bg-[var(--bg-tertiary)]/80 py-1 pl-1.5 pr-2.5 text-[11px] font-medium text-[var(--text-secondary)]"
+            onPointerDown={startVenueLongPress}
+            onPointerUp={cancelVenueLongPress}
+            onPointerLeave={cancelVenueLongPress}
+            onDoubleClick={() => onAppModeChange(appMode === 'guest' ? 'admin' : 'guest')}
+          >
             <VenueLogo
               venueId={activeVenue.id}
               logoUrl={activeVenue.logoUrl}
               venueName={venueName}
               size="sm"
             />
-            <span className="inline-flex items-center gap-1.5 font-medium text-[var(--text-primary)]">
-              <span aria-hidden="true">·</span>
-              <span>{venueName}</span>
-              <span aria-hidden="true">·</span>
-              <span className="tabular-nums">
-                {t.tableLabel}&nbsp;{tableNo}
-              </span>
-            </span>
-
-            {/* Quick Venue / Table Switcher for Multi-Venue Pilot Testing */}
-            <div className="inline-flex items-center gap-1 rounded-full bg-[var(--bg-tertiary)] px-2 py-0.5">
-              <label htmlFor="venue-select" className="sr-only">
-                {t.venueSelectorLabel}
-              </label>
-              <select
-                id="venue-select"
-                value={activeVenue.id}
-                onChange={(e) => onVenueChange(e.target.value)}
-                className="bg-transparent text-[11px] font-medium text-[var(--text-secondary)] focus:outline-none"
-              >
-                {venues.map((v) => (
-                  <option key={v.id} value={v.id} className="bg-[var(--bg-secondary)] text-[var(--text-primary)]">
-                    {lang === 'ko' ? v.nameKo : v.nameEn}
-                  </option>
-                ))}
-              </select>
-              <span className="text-[var(--text-muted)]">/</span>
-              <select
-                aria-label={t.tableLabel}
-                value={tableNo}
-                onChange={(e) => onTableChange(e.target.value)}
-                className="bg-transparent text-[11px] font-medium tabular-nums text-[var(--text-secondary)] focus:outline-none"
-              >
-                {activeVenue.tables.map((tb) => (
-                  <option key={tb} value={tb} className="bg-[var(--bg-secondary)] text-[var(--text-primary)]">
-                    {tb}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
+            <label htmlFor="venue-select" className="sr-only">
+              {t.venueSelectorLabel}
+            </label>
+            <select
+              id="venue-select"
+              value={activeVenue.id}
+              onChange={(e) => onVenueChange(e.target.value)}
+              className="bg-transparent font-semibold text-[var(--text-primary)] focus:outline-none"
+            >
+              {venues.map((v) => (
+                <option
+                  key={v.id}
+                  value={v.id}
+                  className="bg-[var(--bg-secondary)] text-[var(--text-primary)]"
+                >
+                  {lang === 'ko' ? v.nameKo : v.nameEn}
+                </option>
+              ))}
+            </select>
+            <span className="text-[var(--text-muted)]">·</span>
+            <span className="text-[var(--text-secondary)]">{t.tableLabel}</span>
+            <select
+              aria-label={t.tableLabel}
+              value={tableNo}
+              onChange={(e) => onTableChange(e.target.value)}
+              className="bg-transparent font-semibold tabular-nums text-[var(--text-primary)] focus:outline-none"
+            >
+              {activeVenue.tables.map((tb) => (
+                <option
+                  key={tb}
+                  value={tb}
+                  className="bg-[var(--bg-secondary)] text-[var(--text-primary)]"
+                >
+                  {tb}
+                </option>
+              ))}
+            </select>
             {aiLiveConnected && (
-              <span className="hidden rounded-full bg-[#FBF4E8] px-2 py-0.5 text-[10px] font-semibold text-[#7A541C] dark:bg-[#2B2214] dark:text-[#ECC88D] sm:inline-flex">
-                Live
-              </span>
+              <span
+                className="ml-1 hidden h-1.5 w-1.5 rounded-full bg-[#2E7D52] sm:inline-block"
+                title="AI Live Connected"
+              />
             )}
           </div>
         </div>
 
-        {/* Main Brand Row: Brand Lockup + Bilingual Toggle + Theme Toggle + Mode Switcher */}
-        <div className="mt-2.5 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-col">
-            <div className="brand-lockup text-[24px] font-bold tracking-tight text-[#6B1D2F] dark:text-[#F0B4C2]">
-              <SommelierBrandEmblem />
-              <span>{t.brandName}</span>
-              <span className="ml-1 text-[12px] font-semibold tracking-wider text-[var(--text-secondary)] uppercase">
-                {t.brandShort}
-              </span>
-            </div>
-            <p className="mt-0.5 hidden text-[12px] text-[var(--text-secondary)] sm:block">
-              {t.tagline}
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Full Wine List Browser Toggle (Guest Mode) */}
-            {appMode === 'guest' && (
+        {/* Right: Primary Guest Actions + Lightweight Utilities */}
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          {appMode === 'guest' ? (
+            <>
               <button
                 type="button"
                 onClick={onToggleCatalog}
                 data-surface={catalogOpen ? 'accent' : undefined}
-                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-semibold shadow-sm transition-colors ${
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors ${
                   catalogOpen
-                    ? 'btn-accent'
-                    : 'bg-[var(--bg-secondary)] text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]'
+                    ? 'btn-accent shadow-sm'
+                    : 'bg-[var(--bg-secondary)] text-[var(--text-primary)] shadow-xs hover:bg-[var(--bg-tertiary)]'
                 }`}
               >
                 <ListFilter className="h-3.5 w-3.5" strokeWidth={1.5} />
@@ -156,88 +168,80 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
                   </span>
                 </span>
               </button>
+
+              <button
+                type="button"
+                onClick={onOpenJournal}
+                className="inline-flex items-center gap-1.5 rounded-full bg-[var(--bg-secondary)] px-3 py-1.5 text-[12px] font-semibold text-[var(--text-primary)] shadow-xs transition-colors hover:bg-[var(--bg-tertiary)]"
+              >
+                <BookOpen className="h-3.5 w-3.5 text-[#6B1D2F] dark:text-[#E59BAE]" strokeWidth={1.5} />
+                <span>
+                  {activeMember
+                    ? `${activeMember.nickname} (${journalCount})`
+                    : lang === 'ko'
+                      ? '내 미식 기록'
+                      : 'Journal'}
+                </span>
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => onAppModeChange('guest')}
+              className="inline-flex items-center gap-1.5 rounded-full bg-[#F5EBEF] px-3.5 py-1.5 text-[12px] font-semibold text-[#6B1D2F] transition-colors hover:opacity-90 dark:bg-[#2E181F] dark:text-[#F4B8C6]"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
+              <span>{lang === 'ko' ? '손님 화면으로' : 'Back to Guest'}</span>
+            </button>
+          )}
+
+          {/* Subtle Divider */}
+          <span className="mx-0.5 h-4 w-px bg-[var(--border-subtle)]" aria-hidden="true" />
+
+          {/* Icon-only Theme Toggle */}
+          <button
+            type="button"
+            onClick={() => onThemeChange(theme === 'ivory' ? 'dark' : 'ivory')}
+            title={theme === 'ivory' ? t.themeDark : t.themeIvory}
+            aria-label={theme === 'ivory' ? t.themeDark : t.themeIvory}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
+          >
+            {theme === 'ivory' ? (
+              <Moon className="h-4 w-4" strokeWidth={1.5} />
+            ) : (
+              <Sun className="h-4 w-4 text-[#ECC88D]" strokeWidth={1.5} />
             )}
+          </button>
 
-            {/* My Tasting Journal / Member Login */}
+          {/* Lightweight KR / EN Text Switch */}
+          <div
+            className="inline-flex items-center rounded-full px-1 py-0.5 text-[11px] font-semibold"
+            role="group"
+            aria-label="Language"
+          >
             <button
               type="button"
-              onClick={onOpenJournal}
-              className="inline-flex items-center justify-center gap-1.5 rounded-full bg-[var(--bg-secondary)] px-3 py-1.5 text-[12px] font-semibold text-[var(--text-primary)] shadow-sm transition-colors hover:bg-[var(--bg-tertiary)] sm:min-w-[78px]"
+              onClick={() => onLangChange('ko')}
+              className={`rounded-full px-1.5 py-0.5 transition-colors ${
+                lang === 'ko'
+                  ? 'text-[#6B1D2F] underline decoration-2 underline-offset-4 dark:text-[#F4B8C6]'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+              }`}
             >
-              <BookOpen className="h-3.5 w-3.5 text-[#6B1D2F] dark:text-[#E59BAE]" strokeWidth={1.5} />
-              <span>
-                {activeMember
-                  ? `${activeMember.nickname} (${journalCount})`
-                  : lang === 'ko'
-                    ? '내 미식 기록'
-                    : 'Journal'}
-              </span>
+              KR
             </button>
-
-            {/* Dark / Warm Ivory Mode Toggle */}
+            <span className="text-[var(--text-muted)]">/</span>
             <button
               type="button"
-              onClick={() => onThemeChange(theme === 'ivory' ? 'dark' : 'ivory')}
-              title={theme === 'ivory' ? t.themeDark : t.themeIvory}
-              aria-label={theme === 'ivory' ? t.themeDark : t.themeIvory}
-              className="inline-flex items-center justify-center gap-1.5 rounded-full bg-[var(--bg-secondary)] px-3 py-1.5 text-[12px] font-semibold text-[var(--text-primary)] shadow-sm transition-colors hover:bg-[var(--bg-tertiary)] sm:min-w-[78px]"
+              onClick={() => onLangChange('en')}
+              className={`rounded-full px-1.5 py-0.5 transition-colors ${
+                lang === 'en'
+                  ? 'text-[#6B1D2F] underline decoration-2 underline-offset-4 dark:text-[#F4B8C6]'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+              }`}
             >
-              {theme === 'ivory' ? (
-                <Moon className="h-3.5 w-3.5" strokeWidth={1.5} />
-              ) : (
-                <Sun className="h-3.5 w-3.5 text-[#ECC88D]" strokeWidth={1.5} />
-              )}
-              <span className="hidden sm:inline">
-                {theme === 'ivory' ? t.themeDark : t.themeIvory}
-              </span>
+              EN
             </button>
-
-            {/* [한국어 | EN] Equal-Width Sliding Toggle */}
-            <SlidingSwitch
-              size="sm"
-              value={lang}
-              options={[
-                { value: 'ko', label: '한국어' },
-                { value: 'en', label: 'EN' },
-              ]}
-              onChange={onLangChange}
-            />
-
-            {/* [손님 화면 | 업장 관리] Segmented Switcher */}
-            <div
-              className="inline-flex rounded-full bg-[var(--bg-secondary)] p-0.5 shadow-sm"
-              role="tablist"
-              aria-label="Workspace mode"
-            >
-              <button
-                type="button"
-                role="tab"
-                aria-selected={appMode === 'guest'}
-                onClick={() => onAppModeChange('guest')}
-                className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors ${
-                  appMode === 'guest'
-                    ? 'bg-[#F5EBEF] text-[#6B1D2F] dark:bg-[#2E181F] dark:text-[#F4B8C6]'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                }`}
-              >
-                <Utensils className="h-3.5 w-3.5" strokeWidth={1.5} />
-                <span>{t.modeGuest}</span>
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={appMode === 'admin'}
-                onClick={() => onAppModeChange('admin')}
-                className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors ${
-                  appMode === 'admin'
-                    ? 'bg-[#F5EBEF] text-[#6B1D2F] dark:bg-[#2E181F] dark:text-[#F4B8C6]'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                }`}
-              >
-                <Store className="h-3.5 w-3.5" strokeWidth={1.5} />
-                <span>{t.modeAdmin}</span>
-              </button>
-            </div>
           </div>
         </div>
       </div>

@@ -42,7 +42,7 @@ import {
   formatKrw,
 } from '../i18n/translations';
 import { analyzeWineLabelImage } from '../services/aiService';
-import { SommelierAvatar, VenueLogo } from './icons/WineVectors';
+import { SommelierAvatar } from './icons/WineVectors';
 import { SlidingSwitch } from './SlidingSwitch';
 
 export type Step1Page = 1 | 2 | 3 | 4 | 5 | 6;
@@ -232,24 +232,14 @@ export const GuestStep1: React.FC<GuestStep1Props> = ({
 
   return (
     <div className="mx-auto max-w-4xl space-y-5 px-4 py-6 safe-bottom-scroll sm:px-6">
-      {/* Page Title + Connected Venue Crest */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-[22px] font-bold tracking-tight text-[var(--text-primary)] sm:text-[24px]">
-            {t.step1Title}
-          </h1>
-          <p className="prose-pretty mt-0.5 text-[14px] leading-[1.5] text-[var(--text-secondary)]">
-            {t.step1Subtitle}
-          </p>
-        </div>
-        <div className="somm-card rounded-2xl px-3.5 py-2">
-          <VenueLogo
-            venueId={venue.id}
-            logoUrl={venue.logoUrl}
-            venueName={lang === 'ko' ? venue.nameKo : venue.nameEn}
-            size="md"
-          />
-        </div>
+      {/* Page Title */}
+      <div>
+        <h1 className="text-[22px] font-bold tracking-tight text-[var(--text-primary)] sm:text-[24px]">
+          {t.step1Title}
+        </h1>
+        <p className="prose-pretty mt-0.5 text-[14px] leading-[1.5] text-[var(--text-secondary)]">
+          {t.step1Subtitle}
+        </p>
       </div>
 
       {/* Active Taste Note Banner */}

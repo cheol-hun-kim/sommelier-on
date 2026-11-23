@@ -1050,6 +1050,31 @@ export function App() {
         )}
       </main>
 
+      {/* Minimalist Footer: Brand Tagline + Subtle Admin Entry */}
+      <footer className="no-print mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 border-t border-[var(--border-subtle)] px-4 py-5 text-[11px] text-[var(--text-secondary)] sm:px-6">
+        <span>
+          {lang === 'ko'
+            ? '소믈리에온 SOMMON · 모두의 테이블이 전담 소믈리에의 안목을 누립니다'
+            : 'SOMMON · Every table deserves a dedicated sommelier'}
+        </span>
+        <button
+          type="button"
+          onClick={() => {
+            setAppMode(appMode === 'guest' ? 'admin' : 'guest');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          className="font-medium text-[var(--text-secondary)] underline-offset-4 transition-colors hover:text-[var(--text-primary)] hover:underline"
+        >
+          {appMode === 'guest'
+            ? lang === 'ko'
+              ? '업장 관리'
+              : 'Venue Admin'
+            : lang === 'ko'
+              ? '손님 화면'
+              : 'Guest View'}
+        </button>
+      </footer>
+
       {/* Clean Printable Cellar Wine List (Triggered by Admin "인쇄용 주류 리스트") */}
       <section className="hidden print-only p-8 text-[#1C191A]">
         <div className="flex items-center justify-between border-b-2 border-[#6B1D2F] pb-3">
