@@ -29,6 +29,19 @@ export const WineDeepEncyclopedia: React.FC<WineDeepEncyclopediaProps> = ({
     setExpandedIds((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
+  const allOpen = entries.length > 0 && entries.every((e) => Boolean(expandedIds[e.id]));
+  const toggleAll = () => {
+    if (allOpen) {
+      setExpandedIds({});
+    } else {
+      const next: Record<string, boolean> = {};
+      entries.forEach((e) => {
+        next[e.id] = true;
+      });
+      setExpandedIds(next);
+    }
+  };
+
   return (
     <div className="space-y-2.5 pt-2">
       <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-2">
@@ -37,6 +50,19 @@ export const WineDeepEncyclopedia: React.FC<WineDeepEncyclopediaProps> = ({
             ? titleKo ?? `알아두기 · 전문가 심층 백과 (${entries.length}개 항목)`
             : titleEn ?? `Deep Sommelier Encyclopedia (${entries.length} Pillars)`}
         </span>
+        <button
+          type="button"
+          onClick={toggleAll}
+          className="text-[11px] font-semibold text-[#6B1D2F] underline underline-offset-4 hover:opacity-80 dark:text-[#E59BAE]"
+        >
+          {allOpen
+            ? lang === 'ko'
+              ? '모두 접기'
+              : 'Collapse all'
+            : lang === 'ko'
+              ? '모두 펼치기'
+              : 'Expand all'}
+        </button>
       </div>
 
       <div className="divide-y divide-[var(--border-subtle)]">
@@ -52,41 +78,47 @@ export const WineDeepEncyclopedia: React.FC<WineDeepEncyclopediaProps> = ({
                   ? UserCheck
                   : null;
           return (
-            <div key={item.id} className="py-3.5 first:pt-2 last:pb-1">
-              <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#6B1D2F] dark:text-[#E59BAE]">
-                {IconComponent && <IconComponent className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />}
-                <span>{lang === 'ko' ? item.eyebrowKo : item.eyebrowEn}</span>
-              </div>
-              <h4 className="mt-0.5 text-[16px] font-bold text-[var(--text-primary)]">
-                {lang === 'ko' ? item.headingKo : item.headingEn}
-              </h4>
-              <p
-                className={`prose-pretty mt-1.5 whitespace-pre-line text-[13px] leading-[1.7] text-[var(--text-primary)] ${
-                  isOpen ? '' : 'line-clamp-3'
-                }`}
-              >
-                <GlossaryText text={body} lang={lang} />
-              </p>
+            <div key={item.id} className="py-3 first:pt-2 last:pb-1">
               <button
                 type="button"
                 onClick={() => toggle(item.id)}
-                className="mt-2 inline-flex items-center gap-1 text-[12px] font-bold text-[#6B1D2F] underline underline-offset-4 hover:opacity-80 dark:text-[#E59BAE]"
+                aria-expanded={isOpen}
+                className="flex w-full items-center justify-between gap-3 text-left transition-opacity hover:opacity-85"
               >
-                <span>
-                  {isOpen
-                    ? lang === 'ko'
-                      ? '접기'
-                      : 'Show less'
-                    : lang === 'ko'
-                      ? '상세보기 (더보기)'
-                      : 'Read full story'}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#6B1D2F] dark:text-[#E59BAE]">
+                    {IconComponent && (
+                      <IconComponent className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
+                    )}
+                    <span>{lang === 'ko' ? item.eyebrowKo : item.eyebrowEn}</span>
+                  </div>
+                  <h4 className="mt-0.5 text-[15px] font-bold text-[var(--text-primary)]">
+                    {lang === 'ko' ? item.headingKo : item.headingEn}
+                  </h4>
+                </div>
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[var(--bg-tertiary)] px-2.5 py-1 text-[11px] font-semibold text-[#6B1D2F] dark:text-[#E59BAE]">
+                  <span>
+                    {isOpen
+                      ? lang === 'ko'
+                        ? '접기'
+                        : 'Hide'
+                      : lang === 'ko'
+                        ? '상세보기'
+                        : 'Details'}
+                  </span>
+                  {isOpen ? (
+                    <ChevronUp className="h-3.5 w-3.5" strokeWidth={1.75} />
+                  ) : (
+                    <ChevronDown className="h-3.5 w-3.5" strokeWidth={1.75} />
+                  )}
                 </span>
-                {isOpen ? (
-                  <ChevronUp className="h-3.5 w-3.5" strokeWidth={1.75} />
-                ) : (
-                  <ChevronDown className="h-3.5 w-3.5" strokeWidth={1.75} />
-                )}
               </button>
+
+              {isOpen && (
+                <p className="prose-pretty mt-2.5 whitespace-pre-line rounded-2xl bg-[var(--bg-tertiary)]/50 p-3.5 text-[13px] leading-[1.7] text-[var(--text-primary)]">
+                  <GlossaryText text={body} lang={lang} />
+                </p>
+              )}
             </div>
           );
         })}
