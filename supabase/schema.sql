@@ -116,6 +116,109 @@ create table if not exists public.tasting_journal_entries (
 create index if not exists idx_journal_venue on public.tasting_journal_entries (venue_id, created_at desc);
 
 -- Real-time stock safety view: strictly exposes only stock > 0 for guest queries
-create or replace view public.guest_available_wines as
+create or replace view public.guest_available_wines
+with (security_invoker = true) as
 select * from public.wines
 where stock > 0;
+
+-- Public venue catalog view: excludes admin_pin from unauthenticated/guest reads
+create or replace view public.public_venues
+with (security_invoker = true) as
+select
+  id,
+  name_ko,
+  name_en,
+  cuisine_type_ko,
+  cuisine_type_en,
+  location_ko,
+  location_en,
+  logo_url,
+  default_persona_id,
+  price_transparency_opt_in,
+  recommendation_limit,
+  tables,
+  registered_dishes,
+  created_at
+from public.venues;
+
+-- ============================================================================
+-- ROW LEVEL SECURITY (RLS) & LEAST-PRIVILEGE COLUMN ACCESS
+-- ============================================================================
+
+alter table public.venues enable row level security;
+alter table public.sommelier_personas enable row level security;
+alter table public.wines enable row level security;
+alter table public.user_taste_profiles enable row level security;
+alter table public.pairing_events enable row level security;
+alter table public.guest_members enable row level security;
+alter table public.tasting_journal_entries enable row level security;
+
+-- Protect admin_pin column on venues from direct anon/authenticated PostgREST reads
+revoke select (admin_pin) on public.venues from anon, authenticated;
+
+-- Public read-only catalog tables (writes restricted to service_role)
+drop policy if exists "Public read venues catalog" on public.venues;
+create policy "Public read venues catalog"
+  on public.venues for select
+  using (true);
+
+drop policy if exists "Service role manage venues" on public.venues;
+create policy "Service role manage venues"
+  on public.venues for all
+  using (auth.role() = 'service_role')
+  with check (auth.role() = 'service_role');
+
+drop policy if exists "Public read sommelier_personas" on public.sommelier_personas;
+create policy "Public read sommelier_personas"
+  on public.sommelier_personas for select
+  using (true);
+
+drop policy if exists "Service role manage sommelier_personas" on public.sommelier_personas;
+create policy "Service role manage sommelier_personas"
+  on public.sommelier_personas for all
+  using (auth.role() = 'service_role')
+  with check (auth.role() = 'service_role');
+
+drop policy if exists "Public read wines catalog" on public.wines;
+create policy "Public read wines catalog"
+  on public.wines for select
+  using (true);
+
+drop policy if exists "Service role manage wines" on public.wines;
+create policy "Service role manage wines"
+  on public.wines for all
+  using (auth.role() = 'service_role')
+  with check (auth.role() = 'service_role');
+
+-- Private PII & behavioral tables: revoke anon/authenticated access and lock to service_role
+revoke all on table public.user_taste_profiles from anon, authenticated;
+revoke all on table public.pairing_events from anon, authenticated;
+revoke all on table public.guest_members from anon, authenticated;
+revoke all on table public.tasting_journal_entries from anon, authenticated;
+
+drop policy if exists "Service role manage user_taste_profiles" on public.user_taste_profiles;
+create policy "Service role manage user_taste_profiles"
+  on public.user_taste_profiles for all
+  using (auth.role() = 'service_role')
+  with check (auth.role() = 'service_role');
+
+drop policy if exists "Service role manage pairing_events" on public.pairing_events;
+create policy "Service role manage pairing_events"
+  on public.pairing_events for all
+  using (auth.role() = 'service_role')
+  with check (auth.role() = 'service_role');
+
+drop policy if exists "Service role manage guest_members" on public.guest_members;
+create policy "Service role manage guest_members"
+  on public.guest_members for all
+  using (auth.role() = 'service_role')
+  with check (auth.role() = 'service_role');
+
+drop policy if exists "Service role manage tasting_journal_entries" on public.tasting_journal_entries;
+create policy "Service role manage tasting_journal_entries"
+  on public.tasting_journal_entries for all
+  using (auth.role() = 'service_role')
+  with check (auth.role() = 'service_role');
+
+alter default privileges in schema public
+revoke all on tables from anon, authenticated;

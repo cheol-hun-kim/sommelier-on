@@ -158,6 +158,35 @@ recordGate(
   'Warm Beige #EFECE3, Dining Dark #121011, Burgundy #6B1D2F + strict #FFFFFF ink binding locked'
 );
 
+// GATE 9: Supabase Schema RLS & Security-Invoker Guard
+const schemaSqlPath = path.join(ROOT, 'supabase', 'schema.sql');
+const schemaSql = fs.readFileSync(schemaSqlPath, 'utf8');
+const declaredTables = Array.from(
+  schemaSql.matchAll(/create\s+table\s+(?:if\s+not\s+exists\s+)?public\.([a-zA-Z0-9_]+)/gi)
+).map((m) => m[1].toLowerCase());
+const tablesMissingRls = declaredTables.filter(
+  (t) => !new RegExp(`alter\\s+table\\s+public\\.${t}\\s+enable\\s+row\\s+level\\s+security`, 'i').test(schemaSql)
+);
+const declaredViews = Array.from(
+  schemaSql.matchAll(/create\s+(?:or\s+replace\s+)?view\s+public\.([a-zA-Z0-9_]+)([\s\S]*?)as\s+select/gi)
+);
+const viewsMissingInvoker = declaredViews
+  .filter((m) => !/security_invoker\s*=\s*true/i.test(m[2]))
+  .map((m) => m[1]);
+const revokesAdminPin = /revoke\s+select\s*\(\s*admin_pin\s*\)\s+on\s+public\.venues/i.test(schemaSql);
+recordGate(
+  9,
+  'Supabase Schema RLS & Security-Invoker Guard',
+  declaredTables.length >= 7 &&
+    tablesMissingRls.length === 0 &&
+    declaredViews.length >= 2 &&
+    viewsMissingInvoker.length === 0 &&
+    revokesAdminPin,
+  tablesMissingRls.length === 0 && viewsMissingInvoker.length === 0 && revokesAdminPin
+    ? `${declaredTables.length} tables with RLS, ${declaredViews.length} security_invoker views, admin_pin column revoked`
+    : `Missing RLS: [${tablesMissingRls.join(', ')}], Views w/o security_invoker: [${viewsMissingInvoker.join(', ')}], admin_pin revoked: ${revokesAdminPin}`
+);
+
 const failed = allResults.filter((r) => !r.passed);
 console.log(`\nSummary: ${allResults.length - failed.length}/${allResults.length} QA Gates passed.`);
 if (failed.length > 0) {
