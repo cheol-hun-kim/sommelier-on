@@ -353,6 +353,30 @@ export function saveGeminiApiKey(key: string): void {
   }
 }
 
+export function readPinLockState(venueId: string): { fails: number; lockedUntil: number } {
+  const parsed = safeReadJson<{ fails?: number; lockedUntil?: number }>(
+    `sommelier_on_pin_lockout_${venueId}`,
+    {}
+  );
+  return {
+    fails: typeof parsed.fails === 'number' ? parsed.fails : 0,
+    lockedUntil: typeof parsed.lockedUntil === 'number' ? parsed.lockedUntil : 0,
+  };
+}
+
+export function writePinLockState(venueId: string, fails: number, lockedUntil: number): void {
+  const key = `sommelier_on_pin_lockout_${venueId}`;
+  try {
+    if (fails === 0 && lockedUntil === 0) {
+      window.localStorage.removeItem(key);
+    } else {
+      safeWriteJson(key, { fails, lockedUntil });
+    }
+  } catch {
+    // Ignore storage quota issues
+  }
+}
+
 export function parseQrContextFromUrl(venues: Venue[]): {
   venueId: string;
   tableNo: string;

@@ -19,7 +19,7 @@ import {
 } from './engine/pairingEngine';
 import { CATEGORY_LABELS, formatKrw } from './i18n/translations';
 import { analyzeMenuImage, enrichCorkageBottle } from './services/aiService';
-import { validateImageFile } from './utils/fileValidation';
+import { validateImageFile, validateImageFileSignature } from './utils/fileValidation';
 import {
   addJournalEntry,
   addReservation,
@@ -263,6 +263,11 @@ export function App() {
     const check = validateImageFile(file, 10 * 1024 * 1024);
     if (!check.valid) {
       setMenuUploadError(check.error ?? '허용되지 않는 이미지 파일입니다.');
+      return;
+    }
+    const sigCheck = await validateImageFileSignature(file);
+    if (!sigCheck.valid) {
+      setMenuUploadError(sigCheck.error ?? '허용되지 않는 이미지 형식입니다.');
       return;
     }
     setMenuUploadError(null);

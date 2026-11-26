@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   BarChart3,
   Camera,
@@ -21,7 +21,32 @@ import {
 } from 'lucide-react';
 import { SommelierAvatar, VenueLogo } from './icons/WineVectors';
 import { CustomSommelierModal } from './CustomSommelierModal';
-import { validateImageFile } from '../utils/fileValidation';
+import { validateImageFile, validateImageFileSignature } from '../utils/fileValidation';
+
+function constantTimeEqual(a: string, b: string): boolean {
+  const maxLen = Math.max(a.length, b.length);
+  let diff = a.length ^ b.length;
+  for (let i = 0; i < maxLen; i++) {
+    diff |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
+  }
+  return diff === 0;
+}
+
+async function verifyPinWithSaltedHash(venueId: string, provided: string, expectedPin: string): Promise<boolean> {
+  const left = `${venueId}:${provided}`;
+  const right = `${venueId}:${expectedPin}`;
+  if (typeof window !== 'undefined' && window.crypto?.subtle) {
+    const enc = new TextEncoder();
+    const [d1, d2] = await Promise.all([
+      window.crypto.subtle.digest('SHA-256', enc.encode(left)),
+      window.crypto.subtle.digest('SHA-256', enc.encode(right)),
+    ]);
+    const h1 = Array.from(new Uint8Array(d1)).map((b) => b.toString(16).padStart(2, '0')).join('');
+    const h2 = Array.from(new Uint8Array(d2)).map((b) => b.toString(16).padStart(2, '0')).join('');
+    return constantTimeEqual(h1, h2);
+  }
+  return constantTimeEqual(left, right);
+}
 import type {
   Language,
   PairingSessionStats,
@@ -39,7 +64,12 @@ import {
   formatKrw,
 } from '../i18n/translations';
 import { analyzeWineLabelImage, type ScannedWineLabelDraft } from '../services/aiService';
-import { getGeminiApiKey, saveGeminiApiKey } from '../services/storageService';
+import {
+  getGeminiApiKey,
+  readPinLockState,
+  saveGeminiApiKey,
+  writePinLockState,
+} from '../services/storageService';
 import { SAMPLE_LABEL_SCAN_PRESET } from '../data/seedData';
 
 interface AdminConsoleProps {
@@ -122,8 +152,17 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
   });
   const [addedToast, setAddedToast] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [pinFailCount, setPinFailCount] = useState(0);
-  const [pinLockedUntil, setPinLockedUntil] = useState<number>(0);
+  const [pinFailCount, setPinFailCount] = useState(() => readPinLockState(venue.id).fails);
+  const [pinLockedUntil, setPinLockedUntil] = useState<number>(() => readPinLockState(venue.id).lockedUntil);
+  const [pinLockMessage, setPinLockMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const persisted = readPinLockState(venue.id);
+    setPinFailCount(persisted.fails);
+    setPinLockedUntil(persisted.lockedUntil);
+    setPinLockMessage(null);
+    setPinError(false);
+  }, [venue.id]);
 
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [selectedQrTable, setSelectedQrTable] = useState(venue.tables[0] ?? '7');
@@ -134,23 +173,47 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
   const availableCount = venueWines.filter((w) => w.stock > 0).length;
   const soldOutCount = totalCount - availableCount;
 
-  const handlePinSubmit = (e: React.FormEvent) => {
+  const handlePinSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (Date.now() < pinLockedUntil) {
+    const now = Date.now();
+    const latest = readPinLockState(venue.id);
+    const activeLockedUntil = Math.max(pinLockedUntil, latest.lockedUntil);
+    const activeFails = Math.max(pinFailCount, latest.fails);
+
+    if (now < activeLockedUntil) {
+      const remainSec = Math.ceil((activeLockedUntil - now) / 1000);
+      setPinLockedUntil(activeLockedUntil);
+      setPinLockMessage(
+        lang === 'ko'
+          ? `보안을 위해 잠금되었습니다. ${remainSec}초 후 다시 시도해 주세요.`
+          : `Locked for security. Please retry in ${remainSec}s.`
+      );
       setPinError(true);
       return;
     }
-    if (pinInput.trim() === venue.adminPin) {
+
+    const matched = await verifyPinWithSaltedHash(venue.id, pinInput.trim(), venue.adminPin);
+    if (matched) {
       setPinError(false);
+      setPinLockMessage(null);
       setPinFailCount(0);
       setPinLockedUntil(0);
+      writePinLockState(venue.id, 0, 0);
       onUnlock();
     } else {
-      const nextFails = pinFailCount + 1;
+      const nextFails = activeFails + 1;
+      const lockMs = nextFails >= 10 ? 300_000 : nextFails >= 5 ? 60_000 : 0;
+      const nextLockedUntil = lockMs > 0 ? now + lockMs : 0;
       setPinFailCount(nextFails);
-      if (nextFails >= 5) {
-        setPinLockedUntil(Date.now() + 30_000);
-      }
+      setPinLockedUntil(nextLockedUntil);
+      writePinLockState(venue.id, nextFails, nextLockedUntil);
+      setPinLockMessage(
+        nextLockedUntil > 0
+          ? lang === 'ko'
+            ? `PIN ${nextFails}회 오류로 ${Math.round(lockMs / 1000)}초간 잠금되었습니다.`
+            : `Locked for ${Math.round(lockMs / 1000)}s after ${nextFails} failed attempts.`
+          : null
+      );
       setPinError(true);
     }
   };
@@ -159,6 +222,11 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
     const check = validateImageFile(file, 10 * 1024 * 1024);
     if (!check.valid) {
       setUploadError(check.error ?? '허용되지 않는 이미지 파일입니다.');
+      return;
+    }
+    const sigCheck = await validateImageFileSignature(file);
+    if (!sigCheck.valid) {
+      setUploadError(sigCheck.error ?? '허용되지 않는 이미지 형식입니다.');
       return;
     }
     setUploadError(null);
@@ -291,7 +359,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
 
           {pinError && (
             <p className="mt-2 text-center text-[12px] font-semibold text-[#8A1E33] dark:text-[#F4A5B5]">
-              {t.adminPinError}
+              {pinLockMessage ?? t.adminPinError}
             </p>
           )}
 
@@ -488,13 +556,18 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
             type="file"
             accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif"
             className="hidden"
-            onChange={(e) => {
+            onChange={async (e) => {
               const file = e.target.files?.[0];
               e.target.value = '';
               if (!file) return;
               const check = validateImageFile(file, 2 * 1024 * 1024);
               if (!check.valid) {
                 setUploadError(check.error ?? '허용되지 않는 이미지 파일입니다.');
+                return;
+              }
+              const sigCheck = await validateImageFileSignature(file);
+              if (!sigCheck.valid) {
+                setUploadError(sigCheck.error ?? '허용되지 않는 이미지 형식입니다.');
                 return;
               }
               setUploadError(null);
